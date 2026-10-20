@@ -9,8 +9,16 @@
 	"exports": {
 		"./convex/*": "./convex/*"
 	},
-	"scripts": {},
+	"scripts": {
+		"dev": "convex dev",
+		"test": "vitest run"
+	},
 	"dependencies": {
 		"convex": "^1.47.0"
+	},
+	"devDependencies": {
+		"@edge-runtime/vm": "^5.0.0",
+		"convex-test": "^0.0.62",
+		"vitest": "^5.0.5"
 	}
 }
