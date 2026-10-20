@@ -1,3 +1,17 @@
 packages:
   - "apps/*"
   - "packages/*"
+trustLockfile: true
+verifyDepsBeforeRun: false
+minimumReleaseAge: 4320
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  lightningcss: true
+  sharp: true
+  workerd: true
+permissions:
+  "@tanstack/devtools-vite":
+    skills: true
+  "@tanstack/react-start":
+    skills: true

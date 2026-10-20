@@ -1,0 +1,7 @@
+pre-commit:
+  commands:
+    format:
+      run: pnpm exec oxfmt {staged_files}
+      stage_fixed: true
+    lint:
+      run: pnpm exec oxlint {staged_files}

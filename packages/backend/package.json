@@ -1,0 +1,16 @@
+{
+	"name": "@quipu/backend",
+	"version": "1.0.0",
+	"private": true,
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
+	"type": "module",
+	"exports": {
+		"./convex/*": "./convex/*"
+	},
+	"scripts": {},
+	"dependencies": {
+		"convex": "^1.47.0"
+	}
+}
