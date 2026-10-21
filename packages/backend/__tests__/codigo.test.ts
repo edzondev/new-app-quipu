@@ -3,13 +3,19 @@ import resendTest from "@convex-dev/resend/test";
 import schema from "../convex/betterAuth/schema";
 import { convexTest } from "convex-test";
 import { defineSchema } from "convex/server";
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { components } from "../convex/_generated/api";
 import { enviarCodigo } from "../convex/lib/correo";
 import { assertEmailAllowed } from "../convex/lib/domainPolicy";
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
+const cloudUrl = process.env.CONVEX_CLOUD_URL;
+
+afterEach(() => {
+	if (cloudUrl === undefined) delete process.env.CONVEX_CLOUD_URL;
+	else process.env.CONVEX_CLOUD_URL = cloudUrl;
+});
 
 function prueba() {
 	const t = convexTest(defineSchema({}), modules);
@@ -199,7 +205,9 @@ test("un dominio no permitido responde 400 en el envío", async () => {
 			body: JSON.stringify({ email: "ana@mailinator.com", type: "sign-in" }),
 		});
 		expect(respuesta.status).toBe(400);
-		expect((await respuesta.json()).code).toBe("EMAIL_NOT_ALLOWED");
+		const cuerpo = await respuesta.json();
+		expect(cuerpo.code).toBe("EMAIL_NOT_ALLOWED");
+		expect(cuerpo.message).toBe("No podemos registrar cuentas con ese dominio de correo.");
 	} finally {
 		console.log = escribir;
 	}
@@ -245,10 +253,61 @@ test("sin clave y fuera de local no se escribe el código", async () => {
 		});
 	} finally {
 		console.log = escribir;
-		process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	}
 	expect(lineas.join("\n")).not.toContain("123456");
 });
+
+test("entrar con un correo sin cuenta no manda código", async () => {
+	delete process.env.RESEND_API_KEY;
+	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
+	const lineas: string[] = [];
+	const escribir = console.log;
+	console.log = (...args: unknown[]) => {
+		lineas.push(args.map(String).join(" "));
+	};
+	try {
+		const t = prueba();
+		const email = "nadie@correo.com";
+		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				origin: "http://localhost:3000",
+				"x-quipu-intencion": "entrar",
+			},
+			body: JSON.stringify({ email, type: "sign-in" }),
+		});
+		expect(respuesta.status).toBe(200);
+		const guardado = await t.query(components.betterAuth.adapter.findOne, {
+			model: "verification",
+			where: [{ field: "identifier", value: `sign-in-otp-${email}` }],
+		});
+		expect(guardado).toBeFalsy();
+	} finally {
+		console.log = escribir;
+	}
+	expect(lineas.join("\n")).not.toContain("[dev] Código para");
+});
+
+for (const ruta of [
+	"/api/auth/email-otp/request-password-reset",
+	"/api/auth/forget-password/email-otp",
+	"/api/auth/email-otp/reset-password",
+	"/api/auth/email-otp/request-email-change",
+]) {
+	test(`${ruta} responde 404`, async () => {
+		const t = prueba();
+		const respuesta = await t.fetch(ruta, {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				origin: "http://localhost:3000",
+			},
+			body: JSON.stringify({ email: "ana@correo.com", otp: "123456", newPassword: "una-clave" }),
+		});
+		expect(respuesta.status).toBe(404);
+	});
+}
 
 test("gmxmail.com se puede usar y el typo de gmail no", () => {
 	expect(() => assertEmailAllowed("ana@gmxmail.com")).not.toThrow();

@@ -27,6 +27,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		trustedOrigins: [siteUrl],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: { enabled: false }, // sin contraseñas
+		disabledPaths: [
+			"/email-otp/request-password-reset",
+			"/forget-password/email-otp",
+			"/email-otp/reset-password",
+			"/email-otp/request-email-change",
+		],
 		hooks: {
 			before: createAuthMiddleware(async (actx) => {
 				if (actx.path !== "/email-otp/send-verification-otp") return;
@@ -36,7 +42,10 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 				try {
 					assertEmailAllowed(email);
 				} catch {
-					throw new APIError("BAD_REQUEST", { code: "EMAIL_NOT_ALLOWED" });
+					throw new APIError("BAD_REQUEST", {
+						code: "EMAIL_NOT_ALLOWED",
+						message: "No podemos registrar cuentas con ese dominio de correo.",
+					});
 				}
 				if (!isRunMutationCtx(ctx)) {
 					throw APIError.from("BAD_REQUEST", {
