@@ -1,19 +1,14 @@
 import * as z from "zod/mini";
 
 export const correo = z.pipe(z.string().check(z.trim(), z.toLowerCase()), z.email());
-export type Correo = z.infer<typeof correo>;
 
 export const nombre = z.pipe(z.string().check(z.trim()), z.string().check(z.minLength(1)));
-export type Nombre = z.infer<typeof nombre>;
 
 export const sueldoEnCentimos = z.int().check(z.minimum(0));
-export type SueldoEnCentimos = z.infer<typeof sueldoEnCentimos>;
 
 export const diaDeCobro = z.int().check(z.minimum(1), z.maximum(31));
-export type DiaDeCobro = z.infer<typeof diaDeCobro>;
 
 export const segundosDeEspera = z.coerce.number();
-export type SegundosDeEspera = z.infer<typeof segundosDeEspera>;
 
 export const fechaEnMs = z.pipe(
 	z.union([
@@ -29,7 +24,6 @@ export const fechaEnMs = z.pipe(
 	]),
 	z.number(),
 );
-export type FechaEnMs = z.infer<typeof fechaEnMs>;
 
 export const fase = z.union([
 	z.literal("datos"),

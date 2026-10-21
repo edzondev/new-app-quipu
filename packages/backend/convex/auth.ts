@@ -10,6 +10,7 @@ import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
+import { mensajesAuth } from "../shared/mensajesAuth";
 import { correo } from "../shared/validaciones";
 import { enviarCodigo } from "./lib/correo";
 import { assertEmailAllowed } from "./lib/domainPolicy";
@@ -53,11 +54,18 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 				let email = "";
 				try {
 					email = correo.parse(actx.body?.email);
+				} catch {
+					throw new APIError("BAD_REQUEST", {
+						code: "INVALID_EMAIL",
+						message: mensajesAuth.INVALID_EMAIL,
+					});
+				}
+				try {
 					assertEmailAllowed(email);
 				} catch {
 					throw new APIError("BAD_REQUEST", {
 						code: "EMAIL_NOT_ALLOWED",
-						message: "No podemos registrar cuentas con ese dominio de correo.",
+						message: mensajesAuth.EMAIL_NOT_ALLOWED,
 					});
 				}
 				if (!isRunMutationCtx(ctx)) {

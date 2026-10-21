@@ -5,6 +5,7 @@ export const mensajesAuth = {
 	OTP_EXPIRED: "Este código venció. Pide otro.",
 	TOO_MANY_ATTEMPTS: "Te equivocaste 3 veces. Pide un código nuevo.",
 	EMAIL_NOT_ALLOWED: "No podemos registrar cuentas con ese dominio de correo.",
+	INVALID_EMAIL: "El correo no tiene una forma válida.",
 	LLAVE: "No pudimos usar tu llave. Prueba con un código al correo.",
 	YA_TENIAS_CUENTA: "Ya tenías una cuenta con este correo. Entraste a ella.",
 	CODIGO_SI_HAY_CUENTA: "Si este correo tiene cuenta, te llegó un código.",
@@ -25,6 +26,7 @@ export function textoDelError(code: string | undefined, message?: string, status
 	if (code === "OTP_EXPIRED") return mensajesAuth.OTP_EXPIRED;
 	if (code === "TOO_MANY_ATTEMPTS") return mensajesAuth.TOO_MANY_ATTEMPTS;
 	if (code === "EMAIL_NOT_ALLOWED") return mensajesAuth.EMAIL_NOT_ALLOWED;
+	if (code === "INVALID_EMAIL") return mensajesAuth.INVALID_EMAIL;
 	if (code === "ESPERA_REENVIO" || status === 429) {
 		const segundos = segundosDeEspera.safeParse(message);
 		if (segundos.success) return avisoDeEspera(segundos.data);

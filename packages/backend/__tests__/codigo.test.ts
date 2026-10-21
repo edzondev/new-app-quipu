@@ -386,3 +386,57 @@ test("gmxmail.com se puede usar y el typo de gmail no", () => {
 		"No podemos registrar cuentas con ese dominio de correo.",
 	);
 });
+
+test("un correo mal formado no pasa el chequeo de forma", () => {
+	for (const email of ["a@b", "ana@correo", "ana@@correo.com"]) {
+		let fallo: unknown;
+		try {
+			assertEmailAllowed(email);
+		} catch (error) {
+			fallo = error;
+		}
+		expect(fallo).toMatchObject({ data: { code: "INVALID_EMAIL" } });
+	}
+});
+
+test("el dominio se lee del correo ya normalizado", () => {
+	expect(() => assertEmailAllowed("  ANA@MAILINATOR.COM  ")).toThrow(
+		"No podemos registrar cuentas con ese dominio de correo.",
+	);
+});
+
+test("un correo mal formado responde 400 INVALID_EMAIL", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	for (const email of ["a@b", "ana@correo", "ana@@correo.com"]) {
+		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+			method: "POST",
+			headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+			body: JSON.stringify({ email, type: "sign-in" }),
+		});
+		expect(respuesta.status).toBe(400);
+		expect(await respuesta.json()).toMatchObject({
+			code: "INVALID_EMAIL",
+			message: "El correo no tiene una forma válida.",
+		});
+	}
+});
+
+test("el hook usa el correo ya normalizado para la espera", async () => {
+	delete process.env.RESEND_API_KEY;
+	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
+	const t = prueba();
+	const primero = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		method: "POST",
+		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+		body: JSON.stringify({ email: "ANA@CORREO.COM", type: "sign-in" }),
+	});
+	expect(primero.status).toBe(200);
+	const segundo = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		method: "POST",
+		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+		body: JSON.stringify({ email: "ana@correo.com", type: "sign-in" }),
+	});
+	expect(segundo.status).toBe(429);
+	expect((await segundo.json()).code).toBe("ESPERA_REENVIO");
+});

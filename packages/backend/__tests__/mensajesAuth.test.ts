@@ -33,6 +33,8 @@ test("cada código de textoDelError tiene su propia frase", () => {
 	expect(textoDelError("EMAIL_NOT_ALLOWED")).toBe(
 		"No podemos registrar cuentas con ese dominio de correo.",
 	);
+	expect(textoDelError("INVALID_EMAIL")).toBe("El correo no tiene una forma válida.");
+	expect(textoDelError("INVALID_EMAIL")).not.toBe(textoDelError("EMAIL_NOT_ALLOWED"));
 	expect(textoDelError("TOO_MANY_ATTEMPTS")).toBe("Te equivocaste 3 veces. Pide un código nuevo.");
 	expect(textoDelError("CODIGO_DESCONOCIDO")).toBe("No pudimos completar eso. Intenta de nuevo.");
 });
