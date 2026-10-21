@@ -3,5 +3,5 @@
 	"useTabs": true,
 	"printWidth": 100,
 	"singleQuote": false,
-	"ignorePatterns": ["**/routeTree.gen.ts", "**/convex/_generated/**"]
+	"ignorePatterns": ["**/routeTree.gen.ts", "**/convex/_generated/**", ".agents/**"]
 }
