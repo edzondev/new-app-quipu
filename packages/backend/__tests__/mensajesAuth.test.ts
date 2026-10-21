@@ -30,4 +30,9 @@ test("cada código de textoDelError tiene su propia frase", () => {
 	]);
 	expect(new Set(frases).size).toBe(frases.length);
 	expect(textoDelError("ESPERA_REENVIO", "65")).toBe(frases[4]);
+	expect(textoDelError("EMAIL_NOT_ALLOWED")).toBe(
+		"No podemos registrar cuentas con ese dominio de correo.",
+	);
+	expect(textoDelError("TOO_MANY_ATTEMPTS")).toBe("Te equivocaste 3 veces. Pide un código nuevo.");
+	expect(textoDelError("CODIGO_DESCONOCIDO")).toBe("No pudimos completar eso. Intenta de nuevo.");
 });
