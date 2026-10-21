@@ -13,16 +13,28 @@ export async function enviarCodigo(
 	assertEmailAllowed(email);
 	const apiKey = process.env.RESEND_API_KEY;
 	if (!apiKey) {
+		if (!esBackendLocal()) throw new Error("Falta RESEND_API_KEY");
 		console.log(`[dev] Código para ${email}: ${otp}`);
 		return;
 	}
 	if (!isRunMutationCtx(ctx)) throw new Error("No se pudo enviar el código");
 	const resend = new Resend(components.resend, { testMode: false, apiKey });
-	const { subject, html } = correoDelCodigo(otp);
+	const { subject, html, text } = correoDelCodigo(otp);
 	return await resend.sendEmail(ctx, {
 		from: process.env.RESEND_FROM ?? "Quipu <hola@quipu-finance.app>",
 		to: email,
 		subject,
 		html,
+		text,
 	});
+}
+
+function esBackendLocal() {
+	const url = process.env.CONVEX_CLOUD_URL ?? "";
+	try {
+		const host = new URL(url).hostname;
+		return host === "127.0.0.1" || host === "localhost";
+	} catch {
+		return false;
+	}
 }

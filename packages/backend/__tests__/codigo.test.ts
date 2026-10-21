@@ -1,3 +1,4 @@
+import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
 import schema from "../convex/betterAuth/schema";
 import { convexTest } from "convex-test";
@@ -5,6 +6,7 @@ import { defineSchema } from "convex/server";
 import { expect, test, vi } from "vitest";
 import { components } from "../convex/_generated/api";
 import { enviarCodigo } from "../convex/lib/correo";
+import { assertEmailAllowed } from "../convex/lib/domainPolicy";
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
@@ -13,10 +15,12 @@ function prueba() {
 	const t = convexTest(defineSchema({}), modules);
 	t.registerComponent("betterAuth", schema, componentModules);
 	resendTest.register(t);
+	rateLimiterTest.register(t);
 	return t;
 }
 
 async function pedirCodigo(t: ReturnType<typeof prueba>, email: string) {
+	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	const lineas: string[] = [];
 	const escribir = console.log;
 	console.log = (...args: unknown[]) => {
@@ -89,6 +93,8 @@ test("con clave de Resend el código va al correo y no al log", async () => {
 		expect(correo?.subject).toBe("Tu código de Quipu: 123456");
 		expect(correo?.html).toContain("123456");
 		expect(correo?.html).not.toContain("href=");
+		expect(correo?.text).toContain("123456");
+		expect(correo?.text).not.toContain("<html");
 		expect(correo?.to).toEqual(["ana@correo.com"]);
 	} finally {
 		console.log = escribir;
@@ -128,19 +134,125 @@ test("a los 601 segundos el código vence", async () => {
 
 test("el código se guarda hasheado y uno nuevo anula al anterior", async () => {
 	delete process.env.RESEND_API_KEY;
+	vi.useFakeTimers({ toFake: ["Date"] });
+	try {
+		const t = prueba();
+		const email = "ana@correo.com";
+		const primero = await pedirCodigo(t, email);
+		const guardado = await t.query(components.betterAuth.adapter.findOne, {
+			model: "verification",
+			where: [{ field: "identifier", value: `sign-in-otp-${email}` }],
+		});
+		expect(guardado).toBeTruthy();
+		expect(JSON.stringify(guardado)).not.toContain(primero);
+		vi.advanceTimersByTime(90_000);
+		const segundo = await pedirCodigo(t, email);
+		expect(segundo).not.toBe(primero);
+		const viejo = await entrar(t, email, primero ?? "");
+		expect(viejo.cuerpo.code).toBe("INVALID_OTP");
+		const nuevo = await entrar(t, email, segundo ?? "");
+		expect(nuevo.status).toBe(200);
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
+test("el registro con contraseña falla", async () => {
 	const t = prueba();
-	const email = "ana@correo.com";
-	const primero = await pedirCodigo(t, email);
-	const guardado = await t.query(components.betterAuth.adapter.findOne, {
-		model: "verification",
-		where: [{ field: "identifier", value: `sign-in-otp-${email}` }],
+	const respuesta = await t.fetch("/api/auth/sign-up/email", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			origin: "http://localhost:3000",
+		},
+		body: JSON.stringify({
+			email: "ana@correo.com",
+			password: "una-clave-larga",
+			name: "Ana",
+		}),
 	});
-	expect(guardado).toBeTruthy();
-	expect(JSON.stringify(guardado)).not.toContain(primero);
-	const segundo = await pedirCodigo(t, email);
-	expect(segundo).not.toBe(primero);
-	const viejo = await entrar(t, email, primero ?? "");
-	expect(viejo.cuerpo.code).toBe("INVALID_OTP");
-	const nuevo = await entrar(t, email, segundo ?? "");
-	expect(nuevo.status).toBe(200);
+	expect(respuesta.ok).toBe(false);
+});
+
+test("el código son seis dígitos", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	const codigo = await pedirCodigo(t, "ana@correo.com");
+	expect(codigo).toMatch(/^\d{6}$/);
+});
+
+test("un dominio no permitido responde 400 en el envío", async () => {
+	delete process.env.RESEND_API_KEY;
+	const lineas: string[] = [];
+	const escribir = console.log;
+	console.log = (...args: unknown[]) => {
+		lineas.push(args.map(String).join(" "));
+	};
+	try {
+		const t = prueba();
+		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				origin: "http://localhost:3000",
+			},
+			body: JSON.stringify({ email: "ana@mailinator.com", type: "sign-in" }),
+		});
+		expect(respuesta.status).toBe(400);
+		expect((await respuesta.json()).code).toBe("EMAIL_NOT_ALLOWED");
+	} finally {
+		console.log = escribir;
+	}
+	expect(lineas.join("\n")).not.toContain("[dev] Código para");
+});
+
+test("el segundo envío antes de 90 s se rechaza", async () => {
+	delete process.env.RESEND_API_KEY;
+	vi.useFakeTimers({ toFake: ["Date"] });
+	try {
+		const t = prueba();
+		const email = "ana@correo.com";
+		await pedirCodigo(t, email);
+		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				origin: "http://localhost:3000",
+			},
+			body: JSON.stringify({ email, type: "sign-in" }),
+		});
+		expect(respuesta.status).toBe(429);
+		expect((await respuesta.json()).code).toBe("ESPERA_REENVIO");
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
+test("sin clave y fuera de local no se escribe el código", async () => {
+	delete process.env.RESEND_API_KEY;
+	process.env.CONVEX_CLOUD_URL = "https://quipu.convex.cloud";
+	const lineas: string[] = [];
+	const escribir = console.log;
+	console.log = (...args: unknown[]) => {
+		lineas.push(args.map(String).join(" "));
+	};
+	try {
+		const t = prueba();
+		await t.run(async (ctx) => {
+			await expect(enviarCodigo(ctx, { email: "ana@correo.com", otp: "123456" })).rejects.toThrow(
+				"Falta RESEND_API_KEY",
+			);
+		});
+	} finally {
+		console.log = escribir;
+		process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
+	}
+	expect(lineas.join("\n")).not.toContain("123456");
+});
+
+test("gmxmail.com se puede usar y el typo de gmail no", () => {
+	expect(() => assertEmailAllowed("ana@gmxmail.com")).not.toThrow();
+	expect(() => assertEmailAllowed("ana@gmxxail.com")).toThrow(
+		"No podemos registrar cuentas con ese dominio de correo.",
+	);
 });
