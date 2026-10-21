@@ -1,3 +1,4 @@
+import { passkey } from "@better-auth/passkey";
 import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
 import { isRunMutationCtx } from "@convex-dev/better-auth/utils";
 import { createClient } from "@convex-dev/better-auth";
@@ -13,6 +14,7 @@ import { enviarCodigo } from "./lib/correo";
 import { assertEmailAllowed } from "./lib/domainPolicy";
 
 const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
+const rpID = process.env.PASSKEY_RP_ID ?? "localhost";
 const authFunctions: AuthFunctions = internal.auth;
 
 export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {
@@ -70,6 +72,15 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		},
 		plugins: [
 			convex({ authConfig }),
+			passkey({
+				rpID,
+				rpName: process.env.PASSKEY_RP_NAME ?? "Quipu",
+				origin: [siteUrl],
+				authenticatorSelection: {
+					residentKey: "preferred",
+					userVerification: "preferred",
+				},
+			}),
 			emailOTP({
 				otpLength: 6,
 				expiresIn: 600, // 10 minutos
