@@ -20,7 +20,18 @@ const authFunctions: AuthFunctions = internal.auth;
 export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {
 	authFunctions,
 	local: { schema: authSchema },
-	// Los triggers se agregan en el Paso 8 (perfil)
+	triggers: {
+		user: {
+			onCreate: async (ctx, user) => {
+				await ctx.db.insert("perfiles", {
+					userId: user._id,
+					nombre: user.name,
+					pasoActual: "paso-1",
+					creadoEn: Date.now(),
+				});
+			},
+		},
+	},
 });
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>

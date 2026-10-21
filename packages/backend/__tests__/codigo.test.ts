@@ -1,10 +1,10 @@
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
-import schema from "../convex/betterAuth/schema";
+import authSchema from "../convex/betterAuth/schema";
 import { convexTest } from "convex-test";
-import { defineSchema } from "convex/server";
 import { afterEach, expect, test, vi } from "vitest";
 import { components } from "../convex/_generated/api";
+import schema from "../convex/schema";
 import { enviarCodigo } from "../convex/lib/correo";
 import { assertEmailAllowed } from "../convex/lib/domainPolicy";
 
@@ -18,8 +18,8 @@ afterEach(() => {
 });
 
 function prueba() {
-	const t = convexTest(defineSchema({}), modules);
-	t.registerComponent("betterAuth", schema, componentModules);
+	const t = convexTest(schema, modules);
+	t.registerComponent("betterAuth", authSchema, componentModules);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
 	return t;

@@ -14,6 +14,7 @@ import type * as lib_correo from "../lib/correo.js";
 import type * as lib_domainPolicy from "../lib/domainPolicy.js";
 import type * as lib_plantillaCorreo from "../lib/plantillaCorreo.js";
 import type * as limites from "../limites.js";
+import type * as perfiles from "../perfiles.js";
 
 import type {
   ApiFromModules,
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   "lib/domainPolicy": typeof lib_domainPolicy;
   "lib/plantillaCorreo": typeof lib_plantillaCorreo;
   limites: typeof limites;
+  perfiles: typeof perfiles;
 }>;
 
 /**
