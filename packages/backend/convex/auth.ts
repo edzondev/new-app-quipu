@@ -10,6 +10,7 @@ import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
+import { correo } from "../shared/validaciones";
 import { enviarCodigo } from "./lib/correo";
 import { assertEmailAllowed } from "./lib/domainPolicy";
 
@@ -49,10 +50,9 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		hooks: {
 			before: createAuthMiddleware(async (actx) => {
 				if (actx.path !== "/email-otp/send-verification-otp") return;
-				const email = String(actx.body?.email ?? "")
-					.trim()
-					.toLowerCase();
+				let email = "";
 				try {
+					email = correo.parse(actx.body?.email);
 					assertEmailAllowed(email);
 				} catch {
 					throw new APIError("BAD_REQUEST", {

@@ -1,3 +1,5 @@
+import { segundosDeEspera } from "./validaciones";
+
 export const mensajesAuth = {
 	INVALID_OTP: "El código no coincide.",
 	OTP_EXPIRED: "Este código venció. Pide otro.",
@@ -24,8 +26,8 @@ export function textoDelError(code: string | undefined, message?: string, status
 	if (code === "TOO_MANY_ATTEMPTS") return mensajesAuth.TOO_MANY_ATTEMPTS;
 	if (code === "EMAIL_NOT_ALLOWED") return mensajesAuth.EMAIL_NOT_ALLOWED;
 	if (code === "ESPERA_REENVIO" || status === 429) {
-		const segundos = Number(message);
-		if (Number.isFinite(segundos)) return avisoDeEspera(segundos);
+		const segundos = segundosDeEspera.safeParse(message);
+		if (segundos.success) return avisoDeEspera(segundos.data);
 		return "Podrás pedir otro código en un momento.";
 	}
 	return mensajesAuth.GENERICO;
