@@ -1,40 +1,14 @@
+import {
+	type Borrador,
+	borradorVacio,
+	cuentaYaExistia,
+	leerBorrador,
+} from "@quipu/backend/shared/crearCuenta.ts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
 
 const CLAVE = "quipu-crear";
-
-type Fase = "datos" | "codigo" | "llave" | "ya-existia";
-
-type Borrador = {
-	nombre: string;
-	correo: string;
-	fase: Fase;
-	esperaHasta: number | null;
-};
-
-const vacio: Borrador = { nombre: "", correo: "", fase: "datos", esperaHasta: null };
-
-function leerBorrador(): Borrador {
-	const texto = sessionStorage.getItem(CLAVE);
-	if (!texto) return vacio;
-	try {
-		const guardado = JSON.parse(texto) as Partial<Borrador>;
-		const esperaHasta =
-			typeof guardado.esperaHasta === "number" && guardado.esperaHasta > Date.now()
-				? guardado.esperaHasta
-				: null;
-		const fase = guardado.fase === "codigo" || guardado.fase === "llave" ? guardado.fase : "datos";
-		return {
-			nombre: guardado.nombre ?? "",
-			correo: guardado.correo ?? "",
-			fase,
-			esperaHasta,
-		};
-	} catch {
-		return vacio;
-	}
-}
 
 function guardarBorrador(borrador: Borrador) {
 	sessionStorage.setItem(CLAVE, JSON.stringify(borrador));
@@ -66,7 +40,7 @@ export const Route = createFileRoute("/crear-cuenta")({ component: CrearCuenta }
 
 function CrearCuenta() {
 	const navigate = useNavigate();
-	const [borrador, setBorrador] = useState<Borrador>(vacio);
+	const [borrador, setBorrador] = useState<Borrador>(borradorVacio);
 	const [codigo, setCodigo] = useState("");
 	const [aviso, setAviso] = useState("");
 	const [enviando, setEnviando] = useState(false);
@@ -75,7 +49,7 @@ function CrearCuenta() {
 	useEffect(() => {
 		// sessionStorage no existe al renderizar en el servidor.
 		// oxlint-disable-next-line react/set-state-in-effect
-		setBorrador(leerBorrador());
+		setBorrador(leerBorrador(sessionStorage.getItem(CLAVE), Date.now()));
 	}, []);
 
 	useEffect(() => {
@@ -107,6 +81,8 @@ function CrearCuenta() {
 				const segundos = Number(error.message);
 				const hasta = Date.now() + (Number.isFinite(segundos) ? segundos * 1000 : 90_000);
 				actualizar({ ...borrador, correo, fase: "codigo", esperaHasta: hasta });
+				setAviso("");
+				return;
 			}
 			setAviso(textoDelError(error.code, error.message));
 			return;
@@ -128,8 +104,8 @@ function CrearCuenta() {
 			setAviso(textoDelError(error?.code, error?.message));
 			return;
 		}
-		const creadoEn = new Date(data.user.createdAt).getTime();
-		if (Date.now() - creadoEn > 2 * 60_000) {
+		const sesion = await authClient.getSession();
+		if (cuentaYaExistia(data.user.createdAt, sesion.data?.session.createdAt)) {
 			actualizar({ ...borrador, fase: "ya-existia", esperaHasta: null });
 			return;
 		}
@@ -138,7 +114,10 @@ function CrearCuenta() {
 
 	async function crearLlave() {
 		const { error } = await authClient.passkey.addPasskey();
-		if (error) return;
+		if (error) {
+			setAviso("No pudimos crear la llave.");
+			return;
+		}
 		sessionStorage.removeItem(CLAVE);
 		await navigate({ to: "/hoy" });
 	}
@@ -147,6 +126,12 @@ function CrearCuenta() {
 		sessionStorage.removeItem(CLAVE);
 		await navigate({ to: "/hoy" });
 	}
+
+	const textoEspera =
+		esperando && borrador.esperaHasta
+			? `Podrás pedir otro código en ${reloj(borrador.esperaHasta, ahora)}`
+			: "";
+	const textoAviso = textoEspera || aviso;
 
 	if (borrador.fase === "ya-existia") {
 		return (
@@ -163,6 +148,11 @@ function CrearCuenta() {
 		return (
 			<main>
 				<h1>¿Creas tu llave en este equipo?</h1>
+				{textoAviso ? (
+					<p className="aviso" role="alert">
+						{textoAviso}
+					</p>
+				) : null}
 				<button type="button" onClick={() => void crearLlave()}>
 					Crear mi llave
 				</button>
@@ -200,7 +190,11 @@ function CrearCuenta() {
 							onChange={(evento) => actualizar({ ...borrador, correo: evento.target.value })}
 						/>
 					</label>
-					{aviso ? <p className="aviso">{aviso}</p> : null}
+					{textoAviso ? (
+						<p className="aviso" role="alert">
+							{textoAviso}
+						</p>
+					) : null}
 					<button type="submit" disabled={enviando || esperando || borrador.nombre.trim() === ""}>
 						{esperando && borrador.esperaHasta
 							? `Reenviar en ${reloj(borrador.esperaHasta, ahora)}`
@@ -224,7 +218,11 @@ function CrearCuenta() {
 							onChange={(evento) => setCodigo(evento.target.value.replace(/\D/g, "").slice(0, 6))}
 						/>
 					</label>
-					{aviso ? <p className="aviso">{aviso}</p> : null}
+					{textoAviso ? (
+						<p className="aviso" role="alert">
+							{textoAviso}
+						</p>
+					) : null}
 					<p>El código dura 10 minutos.</p>
 					<button type="submit" disabled={enviando || codigo.length !== 6}>
 						Continuar
