@@ -21,7 +21,7 @@ La comprobación que sí corre no deja un servidor vivo.
 1. `pnpm install --frozen-lockfile`
 2. `pnpm typecheck` (Turbo corre `tsc --noEmit` en `web` y en `@quipu/backend`)
 3. `pnpm exec oxlint` (el script `pnpm lint` llama a lo mismo)
-4. `pnpm exec oxfmt --check` (hoy sale 1, ver Drive)
+4. `pnpm exec oxfmt --check`
 5. `pnpm --filter @quipu/backend test` (`vitest run` sobre `packages/backend/__tests__`)
 6. `pnpm --filter web build` (Vite + Cloudflare, salida en `apps/web/dist`)
 
@@ -29,7 +29,7 @@ La raíz no tiene script `test`. No uses `pnpm test`.
 
 `pnpm dev` y `pnpm --filter web dev` no llegan a un estado usable en este checkout. `getRouter` en `apps/web/src/router.tsx` lanza `Falta VITE_CONVEX_URL en .env.local` si esa variable no existe. No hay `apps/web/.env.local`. `packages/backend` corre `convex dev`, y eso pide un deployment de Convex que este paso no tiene. El paso 2 define `BETTER_AUTH_SECRET`, `SITE_URL`, `PASSKEY_RP_ID`, `PASSKEY_RP_NAME`, `VITE_CONVEX_SITE_URL` y `VITE_SITE_URL`. Sin eso, no abras el puerto 3000 y no lo cuentes como prueba.
 
-Listo, para esta skill, significa que install, typecheck, oxlint, el test del backend y el build de la web terminan en 0, y que oxfmt no nombra archivos de tu cambio. No significa que la web responda.
+Listo, para esta skill, significa que los seis comandos terminan en 0. No significa que la web responda.
 
 ## Doctor
 
@@ -49,8 +49,8 @@ Qué cubre cada comando.
 - El install congelado fija las versiones del lockfile, incluidas `better-auth@1.6.33` y `convex@1.47.0`.
 - `pnpm typecheck` cubre la web y el backend.
 - `pnpm exec oxlint` aplica `.oxlintrc.json`, incluidas las reglas de Convex. Ignora `**/convex/_generated/**` y `**/routeTree.gen.ts`.
-- `pnpm exec oxfmt --check` aplica `.oxfmtrc.json` (tabs, ancho 100, comillas dobles). Hoy termina en 1. Lista archivos de `.agents/skills/` copiados tal cual (incluido `ponytail`). Esos no se reformatean. Tu cambio falla solo si oxfmt nombra un archivo que tú tocaste.
-- `pnpm --filter @quipu/backend test` corre Vitest en `edge-runtime`. Hoy el único caso es `packages/backend/__tests__/ejemplo.test.ts`.
+- `pnpm exec oxfmt --check` aplica `.oxfmtrc.json` (tabs, ancho 100, comillas dobles). `.agents/**` está en `ignorePatterns`, así que esta skill no entra en el formato. El comando tiene que terminar en 0.
+- `pnpm --filter @quipu/backend test` corre Vitest en `edge-runtime` sobre `packages/backend/__tests__/**/*.test.ts`.
 - `pnpm --filter web build` cubre el empaquetado de la web. No sustituye abrir `http://localhost:3000`.
 
 `apps/web` no tiene script `test` ni Vitest. No agregues uno para esta skill.
