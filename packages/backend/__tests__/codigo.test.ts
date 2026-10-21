@@ -1,10 +1,10 @@
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
-import schema from "../convex/betterAuth/schema";
+import authSchema from "../convex/betterAuth/schema";
 import { convexTest } from "convex-test";
-import { defineSchema } from "convex/server";
 import { afterEach, expect, test, vi } from "vitest";
 import { components } from "../convex/_generated/api";
+import schema from "../convex/schema";
 import { enviarCodigo } from "../convex/lib/correo";
 import { assertEmailAllowed } from "../convex/lib/domainPolicy";
 
@@ -18,8 +18,8 @@ afterEach(() => {
 });
 
 function prueba() {
-	const t = convexTest(defineSchema({}), modules);
-	t.registerComponent("betterAuth", schema, componentModules);
+	const t = convexTest(schema, modules);
+	t.registerComponent("betterAuth", authSchema, componentModules);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
 	return t;
@@ -183,6 +183,45 @@ test("el registro con contraseña falla", async () => {
 test("el código son seis dígitos", async () => {
 	delete process.env.RESEND_API_KEY;
 	const t = prueba();
+	const codigo = await pedirCodigo(t, "ana@correo.com");
+	expect(codigo).toMatch(/^\d{6}$/);
+});
+
+test("verificar el correo o recuperar la contraseña no escribe un código", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	const email = "ana@correo.com";
+	const codigo = await pedirCodigo(t, email);
+	expect((await entrar(t, email, codigo ?? "")).status).toBe(200);
+	for (const type of ["email-verification", "forget-password"]) {
+		const lineas: string[] = [];
+		const escribir = console.log;
+		console.log = (...args: unknown[]) => {
+			lineas.push(args.map(String).join(" "));
+		};
+		try {
+			const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+				method: "POST",
+				headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+				body: JSON.stringify({ email, type }),
+			});
+			expect(respuesta.status).toBe(400);
+		} finally {
+			console.log = escribir;
+		}
+		expect(lineas.some((texto) => texto.startsWith("[dev] Código para "))).toBe(false);
+	}
+});
+
+test("un type inválido no gasta el turno de reenvío", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		method: "POST",
+		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+		body: JSON.stringify({ email: "ana@correo.com", type: "change-email" }),
+	});
+	expect(respuesta.status).toBe(400);
 	const codigo = await pedirCodigo(t, "ana@correo.com");
 	expect(codigo).toMatch(/^\d{6}$/);
 });

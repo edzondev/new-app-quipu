@@ -8,15 +8,29 @@ const limitador = new RateLimiter(components.rateLimiter, {
 	codigosPorHora: { kind: "fixed window", rate: 6, period: HOUR },
 });
 
+type Reserva = {
+	ok: boolean;
+	esperaMs: number;
+	limite: "90s" | "hora" | null;
+};
+
+function rechazo(esperaMs: number, limite: "90s" | "hora"): Reserva {
+	return { ok: false, esperaMs, limite };
+}
+
 export const reservarEnvioDeCodigo = internalMutation({
 	args: { email: v.string() },
-	returns: v.object({ ok: v.boolean(), esperaMs: v.number() }),
-	handler: async (ctx, { email }) => {
+	returns: v.object({
+		ok: v.boolean(),
+		esperaMs: v.number(),
+		limite: v.union(v.literal("90s"), v.literal("hora"), v.null()),
+	}),
+	handler: async (ctx, { email }): Promise<Reserva> => {
 		const hora = await limitador.check(ctx, "codigosPorHora", { key: email });
-		if (!hora.ok) return { ok: false, esperaMs: hora.retryAfter };
+		if (!hora.ok) return rechazo(hora.retryAfter, "hora");
 		const corto = await limitador.limit(ctx, "codigoCada90s", { key: email });
-		if (!corto.ok) return { ok: false, esperaMs: corto.retryAfter };
+		if (!corto.ok) return rechazo(corto.retryAfter, "90s");
 		await limitador.limit(ctx, "codigosPorHora", { key: email });
-		return { ok: true, esperaMs: 0 };
+		return { ok: true, esperaMs: 0, limite: null };
 	},
 });

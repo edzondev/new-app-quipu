@@ -14,13 +14,24 @@ import { enviarCodigo } from "./lib/correo";
 import { assertEmailAllowed } from "./lib/domainPolicy";
 
 const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
-const rpID = process.env.PASSKEY_RP_ID ?? "localhost";
+const rpID = process.env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname;
 const authFunctions: AuthFunctions = internal.auth;
 
 export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {
 	authFunctions,
 	local: { schema: authSchema },
-	// Los triggers se agregan en el Paso 8 (perfil)
+	triggers: {
+		user: {
+			onCreate: async (ctx, user) => {
+				await ctx.db.insert("perfiles", {
+					userId: user._id,
+					nombre: user.name,
+					pasoActual: "paso-1",
+					creadoEn: Date.now(),
+				});
+			},
+		},
+	},
 });
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
@@ -53,6 +64,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 					throw APIError.from("BAD_REQUEST", {
 						code: "SIN_CONTEXTO",
 						message: "Intenta de nuevo.",
+					});
+				}
+				if (actx.body?.type !== "sign-in") {
+					throw new APIError("BAD_REQUEST", {
+						code: "TIPO_INVALIDO",
+						message: "Ese envío no está permitido.",
 					});
 				}
 				const reserva = await ctx.runMutation(internal.limites.reservarEnvioDeCodigo, {
