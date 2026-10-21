@@ -1,3 +1,4 @@
+import resendTest from "@convex-dev/resend/test";
 import schema from "../convex/betterAuth/schema";
 import { convexTest } from "convex-test";
 import { defineSchema } from "convex/server";
@@ -11,6 +12,7 @@ const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
 function prueba() {
 	const t = convexTest(defineSchema({}), modules);
 	t.registerComponent("betterAuth", schema, componentModules);
+	resendTest.register(t);
 	return t;
 }
 
@@ -50,8 +52,8 @@ async function entrar(t: ReturnType<typeof prueba>, email: string, otp: string) 
 	return { status: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-test("con clave de Resend no se escribe el código", async () => {
-	process.env.RESEND_API_KEY = "re_test";
+test("un dominio desechable no recibe código", async () => {
+	delete process.env.RESEND_API_KEY;
 	const lineas: string[] = [];
 	const escribir = console.log;
 	console.log = (...args: unknown[]) => {
@@ -60,15 +62,39 @@ test("con clave de Resend no se escribe el código", async () => {
 	try {
 		const t = prueba();
 		await t.run(async (ctx) => {
-			await expect(enviarCodigo(ctx, { email: "ana@correo.com", otp: "123456" })).rejects.toThrow(
-				"No se pudo enviar el código",
-			);
+			await expect(
+				enviarCodigo(ctx, { email: "ana@mailinator.com", otp: "123456" }),
+			).rejects.toThrow("No podemos registrar cuentas con ese dominio de correo.");
 		});
+	} finally {
+		console.log = escribir;
+	}
+	expect(lineas.join("\n")).not.toContain("123456");
+});
+
+test("con clave de Resend el código va al correo y no al log", async () => {
+	process.env.RESEND_API_KEY = "re_test";
+	const lineas: string[] = [];
+	const escribir = console.log;
+	console.log = (...args: unknown[]) => {
+		lineas.push(args.map(String).join(" "));
+	};
+	try {
+		const t = prueba();
+		const id = await t.run(async (ctx) => {
+			return await enviarCodigo(ctx, { email: "ana@correo.com", otp: "123456" });
+		});
+		expect(id).toBeTruthy();
+		const correo = await t.query(components.resend.lib.get, { emailId: id ?? "" });
+		expect(correo?.subject).toBe("Tu código de Quipu: 123456");
+		expect(correo?.html).toContain("123456");
+		expect(correo?.html).not.toContain("href=");
+		expect(correo?.to).toEqual(["ana@correo.com"]);
 	} finally {
 		console.log = escribir;
 		delete process.env.RESEND_API_KEY;
 	}
-	expect(lineas.join("\n")).not.toContain("123456");
+	expect(lineas.join("\n")).not.toContain("[dev] Código para");
 });
 
 test("un código malo se rechaza y el cuarto intento se bloquea", async () => {
