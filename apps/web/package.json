@@ -14,6 +14,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@better-auth/passkey": "1.6.33",
+		"@convex-dev/better-auth": "0.12.5",
 		"@convex-dev/react-query": "0.1.0",
 		"@quipu/backend": "workspace:*",
 		"@tailwindcss/vite": "4.3.3",
@@ -24,6 +26,7 @@
 		"@tanstack/react-router-devtools": "1.167.2",
 		"@tanstack/react-router-ssr-query": "1.167.3",
 		"@tanstack/react-start": "1.169.3",
+		"better-auth": "1.6.33",
 		"convex": "1.47.0",
 		"react": "19.3.1",
 		"react-dom": "19.3.1",

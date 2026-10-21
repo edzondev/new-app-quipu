@@ -10,3 +10,7 @@ allowBuilds:
   lightningcss: true
   sharp: true
   workerd: true
+overrides:
+  better-auth: 1.6.33
+  "@better-auth/core": 1.6.33
+  "@better-auth/passkey": 1.6.33
