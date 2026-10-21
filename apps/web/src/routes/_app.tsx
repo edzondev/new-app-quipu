@@ -1,6 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api.js";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { authClient } from "#/lib/auth-client";
 
 export const Route = createFileRoute("/_app")({
 	beforeLoad: async ({ context, location }) => {
@@ -20,5 +21,26 @@ export const Route = createFileRoute("/_app")({
 		}
 		return { perfil };
 	},
-	component: () => <Outlet />,
+	component: Marco,
 });
+
+function Marco() {
+	return (
+		<>
+			<Outlet />
+			<p className="salir">
+				<button
+					type="button"
+					className="enlace"
+					onClick={() => {
+						void authClient.signOut({
+							fetchOptions: { onSuccess: () => location.reload() },
+						});
+					}}
+				>
+					Salir
+				</button>
+			</p>
+		</>
+	);
+}

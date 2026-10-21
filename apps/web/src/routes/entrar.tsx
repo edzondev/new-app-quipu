@@ -1,3 +1,4 @@
+import { mensajesAuth } from "@quipu/backend/shared/mensajesAuth.ts";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
@@ -70,7 +71,7 @@ function Entrar() {
 		) {
 			return;
 		}
-		setAviso("No pudimos usar tu llave. Prueba con un código al correo.");
+		setAviso(mensajesAuth.LLAVE);
 	}
 
 	async function pedirCodigo() {
@@ -93,18 +94,18 @@ function Entrar() {
 			return;
 		}
 		if (error?.code === "EMAIL_NOT_ALLOWED") {
-			setAviso("No podemos registrar cuentas con ese dominio de correo.");
+			setAviso(mensajesAuth.EMAIL_NOT_ALLOWED);
 			return;
 		}
 		if (error) {
-			setAviso("No pudimos completar eso. Intenta de nuevo.");
+			setAviso(mensajesAuth.GENERICO);
 			return;
 		}
 		const hasta = Date.now() + 90_000;
 		sessionStorage.setItem(CLAVE, String(hasta));
 		setEsperaHasta(hasta);
 		setFase("codigo");
-		setAviso("Si este correo tiene cuenta, te llegó un código.");
+		setAviso(mensajesAuth.CODIGO_SI_HAY_CUENTA);
 	}
 
 	async function verificar() {
@@ -116,19 +117,19 @@ function Entrar() {
 		});
 		setEnviando(false);
 		if (error?.code === "OTP_EXPIRED") {
-			setAviso("Este código venció. Pide otro.");
+			setAviso(mensajesAuth.OTP_EXPIRED);
 			return;
 		}
 		if (error?.code === "TOO_MANY_ATTEMPTS") {
-			setAviso("Te equivocaste 3 veces. Pide un código nuevo.");
+			setAviso(mensajesAuth.TOO_MANY_ATTEMPTS);
 			return;
 		}
 		if (error?.code === "INVALID_OTP") {
-			setAviso("El código no coincide.");
+			setAviso(mensajesAuth.INVALID_OTP);
 			return;
 		}
 		if (error?.code === "EMAIL_NOT_ALLOWED") {
-			setAviso("No podemos registrar cuentas con ese dominio de correo.");
+			setAviso(mensajesAuth.EMAIL_NOT_ALLOWED);
 			return;
 		}
 		const limitado =
@@ -147,7 +148,7 @@ function Entrar() {
 			return;
 		}
 		if (error) {
-			setAviso("No pudimos completar eso. Intenta de nuevo.");
+			setAviso(mensajesAuth.GENERICO);
 			return;
 		}
 		setAviso("");
