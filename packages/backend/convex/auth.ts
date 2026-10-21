@@ -10,18 +10,13 @@ import authSchema from "./betterAuth/schema";
 import { enviarCodigo } from "./lib/correo";
 
 const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
-// shortcut: internal.auth y components.betterAuth no existen hasta `convex codegen`,
-// y codegen pide un deployment. Quitar los casts cuando exista.
-const authFunctions: AuthFunctions = (internal as unknown as { auth: AuthFunctions }).auth;
+const authFunctions: AuthFunctions = internal.auth;
 
-export const authComponent = createClient<DataModel, typeof authSchema>(
-	(components as unknown as { betterAuth: Parameters<typeof createClient>[0] }).betterAuth,
-	{
-		authFunctions,
-		local: { schema: authSchema },
-		// Los triggers se agregan en el Paso 8 (perfil)
-	},
-);
+export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {
+	authFunctions,
+	local: { schema: authSchema },
+	// Los triggers se agregan en el Paso 8 (perfil)
+});
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 	({

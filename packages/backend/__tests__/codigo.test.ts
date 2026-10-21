@@ -1,58 +1,120 @@
-import type { GenericCtx } from "@convex-dev/better-auth";
 import schema from "../convex/betterAuth/schema";
 import { convexTest } from "convex-test";
-import { componentsGeneric, defineSchema } from "convex/server";
-import { expect, test } from "vitest";
-import { createAuthOptions } from "../convex/auth";
-import type { DataModel } from "../convex/_generated/dataModel";
+import { defineSchema } from "convex/server";
+import { expect, test, vi } from "vitest";
+import { components } from "../convex/_generated/api";
+import { enviarCodigo } from "../convex/lib/correo";
 
-test("entrar no usa contraseña", () => {
-	const options = createAuthOptions({} as GenericCtx<DataModel>);
-	expect(options.emailAndPassword.enabled).toBe(false);
-	expect(options.plugins.map((plugin) => plugin.id)).toContain("email-otp");
+const modules = import.meta.glob("../convex/**/*.ts");
+const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
+
+function prueba() {
+	const t = convexTest(defineSchema({}), modules);
+	t.registerComponent("betterAuth", schema, componentModules);
+	return t;
+}
+
+async function pedirCodigo(t: ReturnType<typeof prueba>, email: string) {
+	const lineas: string[] = [];
+	const escribir = console.log;
+	console.log = (...args: unknown[]) => {
+		lineas.push(args.map(String).join(" "));
+	};
+	try {
+		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				origin: "http://localhost:3000",
+			},
+			body: JSON.stringify({ email, type: "sign-in" }),
+		});
+		expect(respuesta.ok, await respuesta.clone().text()).toBe(true);
+	} finally {
+		console.log = escribir;
+	}
+	const linea = lineas.find((texto) => texto.startsWith("[dev] Código para "));
+	expect(linea).toBeDefined();
+	return linea?.slice("[dev] Código para ".length + email.length + 2);
+}
+
+async function entrar(t: ReturnType<typeof prueba>, email: string, otp: string) {
+	const respuesta = await t.fetch("/api/auth/sign-in/email-otp", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			origin: "http://localhost:3000",
+		},
+		body: JSON.stringify({ email, otp }),
+	});
+	return { status: respuesta.status, cuerpo: await respuesta.json() };
+}
+
+test("con clave de Resend no se escribe el código", async () => {
+	process.env.RESEND_API_KEY = "re_test";
+	const lineas: string[] = [];
+	const escribir = console.log;
+	console.log = (...args: unknown[]) => {
+		lineas.push(args.map(String).join(" "));
+	};
+	try {
+		const t = prueba();
+		await t.run(async (ctx) => {
+			await expect(enviarCodigo(ctx, { email: "ana@correo.com", otp: "123456" })).rejects.toThrow(
+				"No se pudo enviar el código",
+			);
+		});
+	} finally {
+		console.log = escribir;
+		delete process.env.RESEND_API_KEY;
+	}
+	expect(lineas.join("\n")).not.toContain("123456");
 });
 
-test("el código busca una cuenta por correo y no encuentra una que no existe", async () => {
-	const modules = import.meta.glob("../convex/**/*.ts");
-	const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
-	// shortcut: el componente local no tiene _generated hasta codegen, y codegen pide un deployment.
-	const ejemplo = Object.keys(componentModules)[0] ?? "";
-	const raiz = ejemplo.replace(/[^/]+$/, "");
-	const t = convexTest(defineSchema({}), modules);
-	t.registerComponent("betterAuth", schema, {
-		...componentModules,
-		[`${raiz}_generated/api.ts`]: () => Promise.resolve({}),
-	});
+test("un código malo se rechaza y el cuarto intento se bloquea", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	const email = "ana@correo.com";
+	const codigo = await pedirCodigo(t, email);
+	const malo = codigo === "000000" ? "111111" : "000000";
+	for (let intento = 0; intento < 3; intento++) {
+		const rechazo = await entrar(t, email, malo);
+		expect(rechazo.cuerpo.code).toBe("INVALID_OTP");
+	}
+	const bloqueo = await entrar(t, email, malo);
+	expect(bloqueo.cuerpo.code).toBe("TOO_MANY_ATTEMPTS");
+});
 
-	const betterAuth = componentsGeneric().betterAuth as unknown as {
-		adapter: {
-			create: Parameters<typeof t.mutation>[0];
-			findOne: Parameters<typeof t.query>[0];
-		};
-	};
+test("a los 601 segundos el código vence", async () => {
+	delete process.env.RESEND_API_KEY;
+	vi.useFakeTimers({ toFake: ["Date"] });
+	try {
+		const t = prueba();
+		const email = "ana@correo.com";
+		const codigo = await pedirCodigo(t, email);
+		vi.advanceTimersByTime(601_000);
+		const vencido = await entrar(t, email, codigo ?? "");
+		expect(vencido.cuerpo.code).toBe("OTP_EXPIRED");
+	} finally {
+		vi.useRealTimers();
+	}
+});
 
-	await t.mutation(betterAuth.adapter.create, {
-		input: {
-			model: "user",
-			data: {
-				name: "Ana",
-				email: "ana@correo.com",
-				emailVerified: false,
-				createdAt: 1,
-				updatedAt: 1,
-			},
-		},
+test("el código se guarda hasheado y uno nuevo anula al anterior", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	const email = "ana@correo.com";
+	const primero = await pedirCodigo(t, email);
+	const guardado = await t.query(components.betterAuth.adapter.findOne, {
+		model: "verification",
+		where: [{ field: "identifier", value: `sign-in-otp-${email}` }],
 	});
-
-	const ana = await t.query(betterAuth.adapter.findOne, {
-		model: "user",
-		where: [{ field: "email", value: "ana@correo.com" }],
-	});
-	const nadie = await t.query(betterAuth.adapter.findOne, {
-		model: "user",
-		where: [{ field: "email", value: "nadie@correo.com" }],
-	});
-
-	expect(ana).toMatchObject({ email: "ana@correo.com", name: "Ana" });
-	expect(nadie).toBeNull();
+	expect(guardado).toBeTruthy();
+	expect(JSON.stringify(guardado)).not.toContain(primero);
+	const segundo = await pedirCodigo(t, email);
+	expect(segundo).not.toBe(primero);
+	const viejo = await entrar(t, email, primero ?? "");
+	expect(viejo.cuerpo.code).toBe("INVALID_OTP");
+	const nuevo = await entrar(t, email, segundo ?? "");
+	expect(nuevo.status).toBe(200);
 });
