@@ -1,14 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({ component: Inicio });
 
-function Home() {
+function Inicio() {
+	const navigate = useNavigate();
 	return (
-		<div className="p-8">
-			<h1 className="text-4xl font-bold">Welcome to TanStack Start</h1>
-			<p className="mt-4 text-lg">
-				Edit <code>src/routes/index.tsx</code> to get started.
-			</p>
-		</div>
+		<main>
+			<h1>Divide tu dinero antes de gastarlo.</h1>
+			<p>Hoy puedes gastar S/ 42.30</p>
+			<button type="button" onClick={() => navigate({ to: "/crear-cuenta" })}>
+				Crear cuenta
+			</button>
+			<Link to="/entrar">Ya tengo cuenta</Link>
+		</main>
 	);
 }
