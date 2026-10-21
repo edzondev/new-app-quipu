@@ -1,11 +1,6 @@
-export type Fase = "datos" | "codigo" | "llave" | "ya-existia";
+import { type Borrador, borradorDeCrearCuenta, fechaEnMs } from "./validaciones";
 
-export type Borrador = {
-	nombre: string;
-	correo: string;
-	fase: Fase;
-	esperaHasta: number | null;
-};
+export type { Borrador, Fase } from "./validaciones";
 
 export const borradorVacio: Borrador = {
 	nombre: "",
@@ -16,35 +11,21 @@ export const borradorVacio: Borrador = {
 
 const DOS_HORAS_MS = 2 * 60 * 60 * 1000;
 
-function esRegistro(valor: unknown): valor is Record<string, unknown> {
-	return typeof valor === "object" && valor !== null && !Array.isArray(valor);
-}
-
-function aMs(valor: unknown) {
-	if (typeof valor === "number") return valor;
-	if (typeof valor === "string" || valor instanceof Date) return new Date(valor).getTime();
-	return Number.NaN;
-}
-
 export function leerBorrador(texto: string | null, ahora: number): Borrador {
 	if (!texto) return borradorVacio;
 	try {
 		const guardado: unknown = JSON.parse(texto);
-		if (!esRegistro(guardado)) return borradorVacio;
-		const espera = guardado.esperaHasta;
-		const esperaHasta =
-			typeof espera === "number" && Number.isFinite(espera) && espera > ahora ? espera : null;
-		const fase = guardado.fase === "codigo" || guardado.fase === "llave" ? guardado.fase : "datos";
-		const nombre = typeof guardado.nombre === "string" ? guardado.nombre : "";
-		const correo = typeof guardado.correo === "string" ? guardado.correo : "";
-		return { nombre, correo, fase, esperaHasta };
+		const leido = borradorDeCrearCuenta(ahora).safeParse(guardado);
+		if (!leido.success) return borradorVacio;
+		return leido.data;
 	} catch {
 		return borradorVacio;
 	}
 }
 
 export function cuentaYaExistia(creadoEn: unknown, ahoraServidor: unknown) {
-	const creado = aMs(creadoEn);
-	const ahora = aMs(ahoraServidor);
-	return Number.isFinite(creado) && Number.isFinite(ahora) && ahora - creado > DOS_HORAS_MS;
+	const creado = fechaEnMs.safeParse(creadoEn);
+	const ahora = fechaEnMs.safeParse(ahoraServidor);
+	if (!creado.success || !ahora.success) return false;
+	return ahora.data - creado.data > DOS_HORAS_MS;
 }

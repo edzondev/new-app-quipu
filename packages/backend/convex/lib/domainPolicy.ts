@@ -1,4 +1,5 @@
 import { ConvexError } from "convex/values";
+import { correo } from "../../shared/validaciones";
 
 /** Dominios desechables / abusivos observados + typos comunes de Gmail. */
 const BLOCKED_EMAIL_DOMAINS = new Set([
@@ -27,10 +28,7 @@ const GMAIL_TYPO_PATTERNS = [
 export function extractEmailDomain(email: string): string {
 	const at = email.lastIndexOf("@");
 	if (at < 1) return "";
-	return email
-		.slice(at + 1)
-		.trim()
-		.toLowerCase();
+	return email.slice(at + 1);
 }
 
 export function isBlockedEmailDomain(domain: string): boolean {
@@ -39,14 +37,14 @@ export function isBlockedEmailDomain(domain: string): boolean {
 }
 
 export function assertEmailAllowed(email: string): void {
-	const normalized = email.trim().toLowerCase();
-	const domain = extractEmailDomain(normalized);
-	if (!domain) {
+	const leido = correo.safeParse(email);
+	if (!leido.success) {
 		throw new ConvexError({
 			code: "INVALID_EMAIL",
 			message: "Correo inválido.",
 		});
 	}
+	const domain = extractEmailDomain(leido.data);
 	if (isBlockedEmailDomain(domain)) {
 		throw new ConvexError({
 			code: "EMAIL_NOT_ALLOWED",

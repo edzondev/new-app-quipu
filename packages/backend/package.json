@@ -26,7 +26,8 @@
 		"@convex-dev/resend": "0.2.9",
 		"better-auth": "1.6.33",
 		"convex": "1.47.0",
-		"convex-helpers": "0.1.128"
+		"convex-helpers": "0.1.128",
+		"zod": "4.6.7"
 	},
 	"devDependencies": {
 		"@edge-runtime/vm": "5.0.0",

@@ -1,5 +1,6 @@
 import type { GenericCtx } from "@convex-dev/better-auth";
 import { ConvexError, v } from "convex/values";
+import { diaDeCobro, sueldoEnCentimos } from "../shared/validaciones";
 import { authComponent } from "./auth";
 import type { DataModel } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
@@ -26,14 +27,6 @@ async function ensureUsuario(ctx: GenericCtx<DataModel>) {
 
 async function requireUsuario(ctx: GenericCtx<DataModel>) {
 	return await authComponent.getAuthUser(ctx);
-}
-
-function sueldoValido(valor: number | undefined) {
-	return valor === undefined || (Number.isInteger(valor) && valor >= 0);
-}
-
-function diaValido(valor: number | undefined) {
-	return valor === undefined || (Number.isInteger(valor) && valor >= 1 && valor <= 31);
 }
 
 export const miPerfil = query({
@@ -76,7 +69,12 @@ export const guardarPrimerosPasos = mutation({
 			.withIndex("by_userId", (q) => q.eq("userId", usuario._id))
 			.unique();
 		if (!fila) throw new ConvexError("Sin perfil");
-		if (!sueldoValido(args.borradorSueldoCentimos) || !diaValido(args.borradorDiaDeCobro)) {
+		if (
+			(args.borradorSueldoCentimos !== undefined &&
+				!sueldoEnCentimos.safeParse(args.borradorSueldoCentimos).success) ||
+			(args.borradorDiaDeCobro !== undefined &&
+				!diaDeCobro.safeParse(args.borradorDiaDeCobro).success)
+		) {
 			throw new ConvexError("Esos datos no sirven.");
 		}
 		await ctx.db.patch("perfiles", fila._id, {

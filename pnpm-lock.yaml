@@ -298,6 +298,9 @@ importers:
       convex-helpers:
         specifier: 0.1.128
         version: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@edge-runtime/vm':
         specifier: 5.0.0
