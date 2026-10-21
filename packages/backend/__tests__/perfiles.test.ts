@@ -148,6 +148,24 @@ test("el borrador rechaza sueldo o día que no son enteros válidos", async () =
 			borradorDiaDeCobro: Number.NaN,
 		}),
 	).rejects.toThrow();
+	await expect(
+		yo.mutation(api.perfiles.guardarPrimerosPasos, {
+			paso: "paso-2",
+			borradorDiaDeCobro: 1.5,
+		}),
+	).rejects.toThrow("Esos datos no sirven.");
+	await expect(
+		yo.mutation(api.perfiles.guardarPrimerosPasos, {
+			paso: "paso-2",
+			borradorSueldoCentimos: 12.75,
+		}),
+	).rejects.toThrow("Esos datos no sirven.");
+	await expect(
+		yo.mutation(api.perfiles.guardarPrimerosPasos, {
+			paso: "paso-2",
+			borradorSueldoCentimos: 1.5,
+		}),
+	).rejects.toThrow("Esos datos no sirven.");
 	expect((await yo.query(api.perfiles.miPerfil, {}))?.pasoActual).toBe("paso-1");
 });
 
@@ -155,16 +173,16 @@ test("guardar el paso de una persona no cambia el perfil de otra", async () => {
 	const t = prueba();
 	const ana = await abrirSesion(t, "ana@correo.com", "Ana");
 	const luis = await abrirSesion(t, "luis@correo.com", "Luis");
-	await ana.mutation(api.perfiles.guardarPrimerosPasos, {
+	await luis.mutation(api.perfiles.guardarPrimerosPasos, {
 		paso: "paso-2",
 		borradorSueldoCentimos: 100,
 		borradorDiaDeCobro: 2,
 	});
 	const deAna = await ana.query(api.perfiles.miPerfil, {});
 	const deLuis = await luis.query(api.perfiles.miPerfil, {});
-	expect(deAna?.borradorSueldoCentimos).toBe(100);
-	expect(deAna?.pasoActual).toBe("paso-2");
-	expect(deLuis?.nombre).toBe("Luis");
-	expect(deLuis?.pasoActual).toBe("paso-1");
-	expect(deLuis?.borradorSueldoCentimos).toBeUndefined();
+	expect(deLuis?.borradorSueldoCentimos).toBe(100);
+	expect(deLuis?.pasoActual).toBe("paso-2");
+	expect(deAna?.nombre).toBe("Ana");
+	expect(deAna?.pasoActual).toBe("paso-1");
+	expect(deAna?.borradorSueldoCentimos).toBeUndefined();
 });
