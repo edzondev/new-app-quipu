@@ -61,5 +61,14 @@ export function correoDelCodigo(codigo: string) {
   </table>
 </body>
 </html>`;
-	return { subject: `Tu código de Quipu: ${codigo}`, html };
+	const text = [
+		"Tu código para entrar",
+		"",
+		codigo,
+		"",
+		"Escríbelo en Quipu. Vence en 10 minutos.",
+		"",
+		"Si no pediste este código, puedes ignorar este correo.",
+	].join("\n");
+	return { subject: `Tu código de Quipu: ${codigo}`, html, text };
 }
