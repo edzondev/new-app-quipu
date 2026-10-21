@@ -21,18 +21,12 @@ function reloj(hasta: number, ahora: number) {
 	return `${minutos}:${resto.toString().padStart(2, "0")}`;
 }
 
-function textoDelError(code: string | undefined, message: string | undefined) {
+function textoDelError(code: string | undefined) {
 	if (code === "INVALID_OTP") return "El código no coincide.";
 	if (code === "OTP_EXPIRED") return "Este código venció. Pide otro.";
 	if (code === "TOO_MANY_ATTEMPTS") return "Te equivocaste 3 veces. Pide un código nuevo.";
 	if (code === "EMAIL_NOT_ALLOWED")
 		return "No podemos registrar cuentas con ese dominio de correo.";
-	if (code === "ESPERA_REENVIO") {
-		const segundos = Number(message);
-		if (Number.isFinite(segundos))
-			return `Podrás pedir otro código en ${reloj(segundos * 1000, 0)}`;
-		return "Podrás pedir otro código en un momento.";
-	}
 	return "No pudimos completar eso. Intenta de nuevo.";
 }
 
@@ -53,10 +47,10 @@ function CrearCuenta() {
 	}, []);
 
 	useEffect(() => {
-		if (!borrador.esperaHasta || borrador.esperaHasta <= Date.now()) return;
+		if (!borrador.esperaHasta || borrador.esperaHasta <= ahora) return;
 		const id = setInterval(() => setAhora(Date.now()), 1000);
 		return () => clearInterval(id);
-	}, [borrador.esperaHasta]);
+	}, [borrador.esperaHasta, ahora]);
 
 	function actualizar(siguiente: Borrador) {
 		setBorrador(siguiente);
@@ -84,7 +78,7 @@ function CrearCuenta() {
 				setAviso("");
 				return;
 			}
-			setAviso(textoDelError(error.code, error.message));
+			setAviso(textoDelError(error.code));
 			return;
 		}
 		actualizar({ ...borrador, correo, fase: "codigo", esperaHasta: Date.now() + 90_000 });
@@ -101,7 +95,7 @@ function CrearCuenta() {
 		});
 		setEnviando(false);
 		if (error || !data?.user) {
-			setAviso(textoDelError(error?.code, error?.message));
+			setAviso(textoDelError(error?.code));
 			return;
 		}
 		const sesion = await authClient.getSession();
@@ -113,7 +107,10 @@ function CrearCuenta() {
 	}
 
 	async function crearLlave() {
+		if (enviando) return;
+		setEnviando(true);
 		const { error } = await authClient.passkey.addPasskey();
+		setEnviando(false);
 		if (error) {
 			setAviso("No pudimos crear la llave.");
 			return;
@@ -153,7 +150,7 @@ function CrearCuenta() {
 						{textoAviso}
 					</p>
 				) : null}
-				<button type="button" onClick={() => void crearLlave()}>
+				<button type="button" disabled={enviando} onClick={() => void crearLlave()}>
 					Crear mi llave
 				</button>
 				<button type="button" className="clara" onClick={() => void seguir()}>

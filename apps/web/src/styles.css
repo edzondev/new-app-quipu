@@ -61,8 +61,7 @@ input {
 	font: inherit;
 }
 
-button,
-.pastilla {
+button {
 	display: flex;
 	justify-content: center;
 	width: 100%;
@@ -76,7 +75,6 @@ button,
 	cursor: pointer;
 }
 
-.pastilla.clara,
 button.clara {
 	background: transparent;
 	color: var(--tinta);
