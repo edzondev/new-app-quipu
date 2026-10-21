@@ -14,7 +14,7 @@ import { enviarCodigo } from "./lib/correo";
 import { assertEmailAllowed } from "./lib/domainPolicy";
 
 const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
-const rpID = process.env.PASSKEY_RP_ID ?? "localhost";
+const rpID = process.env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname;
 const authFunctions: AuthFunctions = internal.auth;
 
 export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {

@@ -1,22 +1,83 @@
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
-import schema from "../convex/betterAuth/schema";
 import { convexTest } from "convex-test";
-import { defineSchema } from "convex/server";
-import { expect, test } from "vitest";
+import { afterAll, afterEach, expect, test } from "vitest";
+import authSchema from "../convex/betterAuth/schema";
+import schema from "../convex/schema";
+
+const sitio = "http://quipu.test";
+process.env.SITE_URL = sitio;
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
+const cloudUrl = process.env.CONVEX_CLOUD_URL;
 
-test("crear una llave pide sesión", async () => {
-	const t = convexTest(defineSchema({}), modules);
-	t.registerComponent("betterAuth", schema, componentModules);
+afterEach(() => {
+	if (cloudUrl === undefined) delete process.env.CONVEX_CLOUD_URL;
+	else process.env.CONVEX_CLOUD_URL = cloudUrl;
+});
+
+afterAll(() => {
+	delete process.env.SITE_URL;
+});
+
+function prueba() {
+	const t = convexTest(schema, modules);
+	t.registerComponent("betterAuth", authSchema, componentModules);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
+	return t;
+}
+
+test("crear una llave pide sesión", async () => {
+	const t = prueba();
 	const respuesta = await t.fetch("/api/auth/passkey/generate-register-options", {
 		method: "GET",
-		headers: { origin: "http://localhost:3000" },
+		headers: { origin: sitio },
 	});
-	expect(respuesta.status).not.toBe(404);
-	expect(respuesta.ok).toBe(false);
+	expect(respuesta.status).toBe(401);
+	expect((await respuesta.json()).code).toBe("UNAUTHORIZED");
+});
+
+test("con sesión la llave anuncia el dominio del sitio y el nombre Quipu", async () => {
+	delete process.env.RESEND_API_KEY;
+	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
+	process.env.SITE_URL = sitio;
+	const t = prueba();
+	const email = "ana@correo.com";
+	const lineas: string[] = [];
+	const escribir = console.log;
+	console.log = (...args: unknown[]) => {
+		lineas.push(args.map(String).join(" "));
+	};
+	try {
+		const envio = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+			method: "POST",
+			headers: { "content-type": "application/json", origin: sitio },
+			body: JSON.stringify({ email, type: "sign-in" }),
+		});
+		expect(envio.ok, await envio.clone().text()).toBe(true);
+	} finally {
+		console.log = escribir;
+	}
+	const linea = lineas.find((texto) => texto.startsWith("[dev] Código para "));
+	const codigo = linea?.slice("[dev] Código para ".length + email.length + 2);
+	const entrada = await t.fetch("/api/auth/sign-in/email-otp", {
+		method: "POST",
+		headers: { "content-type": "application/json", origin: sitio },
+		body: JSON.stringify({ email, otp: codigo, name: "Ana" }),
+	});
+	expect(entrada.status, await entrada.clone().text()).toBe(200);
+	const cookie = entrada.headers
+		.getSetCookie()
+		.map((parte) => parte.split(";")[0])
+		.join("; ");
+	const opciones = await t.fetch("/api/auth/passkey/generate-register-options", {
+		method: "GET",
+		headers: { origin: sitio, cookie },
+	});
+	expect(opciones.status, await opciones.clone().text()).toBe(200);
+	const cuerpo = await opciones.json();
+	expect(cuerpo.rp.id).toBe("quipu.test");
+	expect(cuerpo.rp.name).toBe("Quipu");
 });
