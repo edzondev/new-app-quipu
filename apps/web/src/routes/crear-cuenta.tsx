@@ -4,7 +4,7 @@ import {
 	cuentaYaExistia,
 	leerBorrador,
 } from "@quipu/backend/shared/crearCuenta.ts";
-import { avisoDeEspera, mensajesAuth } from "@quipu/backend/shared/mensajesAuth.ts";
+import { mensajesAuth, textoDelError } from "@quipu/backend/shared/mensajesAuth.ts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
@@ -20,19 +20,6 @@ function reloj(hasta: number, ahora: number) {
 	const minutos = Math.floor(segundos / 60);
 	const resto = segundos % 60;
 	return `${minutos}:${resto.toString().padStart(2, "0")}`;
-}
-
-function textoDelError(code: string | undefined, message: string | undefined) {
-	if (code === "INVALID_OTP") return mensajesAuth.INVALID_OTP;
-	if (code === "OTP_EXPIRED") return mensajesAuth.OTP_EXPIRED;
-	if (code === "TOO_MANY_ATTEMPTS") return mensajesAuth.TOO_MANY_ATTEMPTS;
-	if (code === "EMAIL_NOT_ALLOWED") return mensajesAuth.EMAIL_NOT_ALLOWED;
-	if (code === "ESPERA_REENVIO") {
-		const segundos = Number(message);
-		if (Number.isFinite(segundos)) return avisoDeEspera(segundos);
-		return mensajesAuth.GENERICO;
-	}
-	return mensajesAuth.GENERICO;
 }
 
 export const Route = createFileRoute("/crear-cuenta")({ component: CrearCuenta });
