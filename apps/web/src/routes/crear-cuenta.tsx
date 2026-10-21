@@ -4,6 +4,7 @@ import {
 	cuentaYaExistia,
 	leerBorrador,
 } from "@quipu/backend/shared/crearCuenta.ts";
+import { mensajesAuth, textoDelError } from "@quipu/backend/shared/mensajesAuth.ts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
@@ -19,15 +20,6 @@ function reloj(hasta: number, ahora: number) {
 	const minutos = Math.floor(segundos / 60);
 	const resto = segundos % 60;
 	return `${minutos}:${resto.toString().padStart(2, "0")}`;
-}
-
-function textoDelError(code: string | undefined) {
-	if (code === "INVALID_OTP") return "El código no coincide.";
-	if (code === "OTP_EXPIRED") return "Este código venció. Pide otro.";
-	if (code === "TOO_MANY_ATTEMPTS") return "Te equivocaste 3 veces. Pide un código nuevo.";
-	if (code === "EMAIL_NOT_ALLOWED")
-		return "No podemos registrar cuentas con ese dominio de correo.";
-	return "No pudimos completar eso. Intenta de nuevo.";
 }
 
 export const Route = createFileRoute("/crear-cuenta")({ component: CrearCuenta });
@@ -78,7 +70,7 @@ function CrearCuenta() {
 				setAviso("");
 				return;
 			}
-			setAviso(textoDelError(error.code));
+			setAviso(textoDelError(error.code, error.message));
 			return;
 		}
 		actualizar({ ...borrador, correo, fase: "codigo", esperaHasta: Date.now() + 90_000 });
@@ -95,7 +87,7 @@ function CrearCuenta() {
 		});
 		setEnviando(false);
 		if (error || !data?.user) {
-			setAviso(textoDelError(error?.code));
+			setAviso(textoDelError(error?.code, error?.message));
 			return;
 		}
 		const sesion = await authClient.getSession();
@@ -133,7 +125,7 @@ function CrearCuenta() {
 	if (borrador.fase === "ya-existia") {
 		return (
 			<main>
-				<p>Ya tenías una cuenta con este correo. Entraste a ella.</p>
+				<p>{mensajesAuth.YA_TENIAS_CUENTA}</p>
 				<button type="button" onClick={() => void seguir()}>
 					Seguir
 				</button>
@@ -220,7 +212,7 @@ function CrearCuenta() {
 							{textoAviso}
 						</p>
 					) : null}
-					<p>El código dura 10 minutos.</p>
+					<p>{mensajesAuth.CODIGO_DURA}</p>
 					<button type="submit" disabled={enviando || codigo.length !== 6}>
 						Continuar
 					</button>

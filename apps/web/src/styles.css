@@ -101,3 +101,9 @@ button.enlace {
 	color: inherit;
 	text-decoration: underline;
 }
+
+.salir {
+	max-width: 28rem;
+	margin: 0 auto;
+	padding: 0 1.25rem 2rem;
+}

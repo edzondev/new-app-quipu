@@ -1,3 +1,4 @@
+import { mensajesAuth, textoDelError } from "@quipu/backend/shared/mensajesAuth.ts";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
@@ -70,7 +71,7 @@ function Entrar() {
 		) {
 			return;
 		}
-		setAviso("No pudimos usar tu llave. Prueba con un código al correo.");
+		setAviso(mensajesAuth.LLAVE);
 	}
 
 	async function pedirCodigo() {
@@ -92,19 +93,17 @@ function Entrar() {
 			setFase("codigo");
 			return;
 		}
-		if (error?.code === "EMAIL_NOT_ALLOWED") {
-			setAviso("No podemos registrar cuentas con ese dominio de correo.");
-			return;
-		}
 		if (error) {
-			setAviso("No pudimos completar eso. Intenta de nuevo.");
+			setAviso(
+				textoDelError(error.code, error.message, "status" in error ? error.status : undefined),
+			);
 			return;
 		}
 		const hasta = Date.now() + 90_000;
 		sessionStorage.setItem(CLAVE, String(hasta));
 		setEsperaHasta(hasta);
 		setFase("codigo");
-		setAviso("Si este correo tiene cuenta, te llegó un código.");
+		setAviso(textoDelError("CODIGO_SI_HAY_CUENTA"));
 	}
 
 	async function verificar() {
@@ -115,43 +114,21 @@ function Entrar() {
 			otp: codigo,
 		});
 		setEnviando(false);
-		if (error?.code === "OTP_EXPIRED") {
-			setAviso("Este código venció. Pide otro.");
+		if (!error) {
+			setAviso("");
+			setFase("llave");
 			return;
 		}
-		if (error?.code === "TOO_MANY_ATTEMPTS") {
-			setAviso("Te equivocaste 3 veces. Pide un código nuevo.");
+		const status = "status" in error ? error.status : undefined;
+		const segundos = Number(error.message);
+		if ((error.code === "ESPERA_REENVIO" || status === 429) && Number.isFinite(segundos)) {
+			const hasta = Date.now() + segundos * 1000;
+			sessionStorage.setItem(CLAVE, String(hasta));
+			setEsperaHasta(hasta);
+			setAviso("");
 			return;
 		}
-		if (error?.code === "INVALID_OTP") {
-			setAviso("El código no coincide.");
-			return;
-		}
-		if (error?.code === "EMAIL_NOT_ALLOWED") {
-			setAviso("No podemos registrar cuentas con ese dominio de correo.");
-			return;
-		}
-		const limitado =
-			error?.code === "ESPERA_REENVIO" ||
-			(error != null && "status" in error && error.status === 429);
-		if (error && limitado) {
-			const segundos = Number(error.message);
-			if (Number.isFinite(segundos)) {
-				const hasta = Date.now() + segundos * 1000;
-				sessionStorage.setItem(CLAVE, String(hasta));
-				setEsperaHasta(hasta);
-				setAviso("");
-				return;
-			}
-			setAviso("Podrás pedir otro código en un momento.");
-			return;
-		}
-		if (error) {
-			setAviso("No pudimos completar eso. Intenta de nuevo.");
-			return;
-		}
-		setAviso("");
-		setFase("llave");
+		setAviso(textoDelError(error.code, error.message, status));
 	}
 
 	async function crearLlave() {
