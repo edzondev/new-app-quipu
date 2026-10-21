@@ -19,7 +19,13 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"convex": "1.47.0"
+		"@better-auth/passkey": "1.6.33",
+		"@convex-dev/better-auth": "0.12.5",
+		"@convex-dev/rate-limiter": "0.4.2",
+		"@convex-dev/resend": "0.2.9",
+		"better-auth": "1.6.33",
+		"convex": "1.47.0",
+		"convex-helpers": "0.1.128"
 	},
 	"devDependencies": {
 		"@edge-runtime/vm": "5.0.0",
