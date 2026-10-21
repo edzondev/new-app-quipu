@@ -66,14 +66,16 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 						message: "Intenta de nuevo.",
 					});
 				}
-				const reserva = await ctx.runMutation(internal.limites.reservarEnvioDeCodigo, {
-					email,
-				});
-				if (!reserva.ok) {
-					throw APIError.from("TOO_MANY_REQUESTS", {
-						code: "ESPERA_REENVIO",
-						message: String(Math.ceil(reserva.esperaMs / 1000)),
+				if (actx.body?.type === "sign-in") {
+					const reserva = await ctx.runMutation(internal.limites.reservarEnvioDeCodigo, {
+						email,
 					});
+					if (!reserva.ok) {
+						throw APIError.from("TOO_MANY_REQUESTS", {
+							code: "ESPERA_REENVIO",
+							message: String(Math.ceil(reserva.esperaMs / 1000)),
+						});
+					}
 				}
 				if (actx.headers?.get("x-quipu-intencion") === "entrar") {
 					const existe = await actx.context.internalAdapter.findUserByEmail(email);

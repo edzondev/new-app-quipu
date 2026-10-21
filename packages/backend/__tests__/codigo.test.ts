@@ -187,6 +187,19 @@ test("el código son seis dígitos", async () => {
 	expect(codigo).toMatch(/^\d{6}$/);
 });
 
+test("un type inválido no gasta el turno de reenvío", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		method: "POST",
+		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+		body: JSON.stringify({ email: "ana@correo.com", type: "change-email" }),
+	});
+	expect(respuesta.status).toBe(400);
+	const codigo = await pedirCodigo(t, "ana@correo.com");
+	expect(codigo).toMatch(/^\d{6}$/);
+});
+
 test("un dominio no permitido responde 400 en el envío", async () => {
 	delete process.env.RESEND_API_KEY;
 	const lineas: string[] = [];

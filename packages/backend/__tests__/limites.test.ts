@@ -23,20 +23,30 @@ test("el segundo código antes de 90 s se rechaza; a los 90 s se permite", async
 
 test("el séptimo código en una hora se rechaza", async () => {
 	vi.useFakeTimers({ toFake: ["Date"] });
-	// La ventana fija nace en un instante al azar. En cero no se cruza al avanzar 6 × 90 s.
-	const aleatorio = Math.random;
-	Math.random = () => 0;
 	try {
 		const t = convexTest(schema, modules);
 		rateLimiterTest.register(t);
 		const email = "ana@correo.com";
+		let esperaDeLaHora = 0;
+		for (let envio = 0; envio < 13; envio++) {
+			const reserva = await t.mutation(internal.limites.reservarEnvioDeCodigo, { email });
+			if (!reserva.ok && reserva.esperaMs > 90_000) {
+				esperaDeLaHora = reserva.esperaMs;
+				break;
+			}
+			expect(reserva.ok).toBe(true);
+			vi.advanceTimersByTime(90_000);
+		}
+		expect(esperaDeLaHora).toBeGreaterThan(90_000);
+		vi.advanceTimersByTime(esperaDeLaHora + 1);
 		for (let envio = 0; envio < 6; envio++) {
 			expect((await t.mutation(internal.limites.reservarEnvioDeCodigo, { email })).ok).toBe(true);
 			vi.advanceTimersByTime(90_000);
 		}
-		expect((await t.mutation(internal.limites.reservarEnvioDeCodigo, { email })).ok).toBe(false);
+		const septimo = await t.mutation(internal.limites.reservarEnvioDeCodigo, { email });
+		expect(septimo.ok).toBe(false);
+		expect(septimo.esperaMs).toBeGreaterThan(90_000);
 	} finally {
-		Math.random = aleatorio;
 		vi.useRealTimers();
 	}
 });
