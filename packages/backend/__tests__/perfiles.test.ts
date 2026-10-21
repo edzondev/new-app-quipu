@@ -151,6 +151,12 @@ test("el borrador rechaza sueldo o día que no son enteros válidos", async () =
 	await expect(
 		yo.mutation(api.perfiles.guardarPrimerosPasos, {
 			paso: "paso-2",
+			borradorDiaDeCobro: 1.5,
+		}),
+	).rejects.toThrow("Esos datos no sirven.");
+	await expect(
+		yo.mutation(api.perfiles.guardarPrimerosPasos, {
+			paso: "paso-2",
 			borradorSueldoCentimos: 12.75,
 		}),
 	).rejects.toThrow("Esos datos no sirven.");
