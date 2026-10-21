@@ -13,7 +13,9 @@ test("el segundo código antes de 90 s se rechaza; a los 90 s se permite", async
 		rateLimiterTest.register(t);
 		const email = "ana@correo.com";
 		expect((await t.mutation(internal.limites.reservarEnvioDeCodigo, { email })).ok).toBe(true);
-		expect((await t.mutation(internal.limites.reservarEnvioDeCodigo, { email })).ok).toBe(false);
+		const segundo = await t.mutation(internal.limites.reservarEnvioDeCodigo, { email });
+		expect(segundo.ok).toBe(false);
+		expect(segundo.limite).toBe("90s");
 		vi.advanceTimersByTime(90_000);
 		expect((await t.mutation(internal.limites.reservarEnvioDeCodigo, { email })).ok).toBe(true);
 	} finally {
@@ -30,14 +32,14 @@ test("el séptimo código en una hora se rechaza", async () => {
 		let esperaDeLaHora = 0;
 		for (let envio = 0; envio < 13; envio++) {
 			const reserva = await t.mutation(internal.limites.reservarEnvioDeCodigo, { email });
-			if (!reserva.ok && reserva.esperaMs > 90_000) {
+			if (!reserva.ok) {
+				expect(reserva.limite).toBe("hora");
 				esperaDeLaHora = reserva.esperaMs;
 				break;
 			}
-			expect(reserva.ok).toBe(true);
 			vi.advanceTimersByTime(90_000);
 		}
-		expect(esperaDeLaHora).toBeGreaterThan(90_000);
+		expect(esperaDeLaHora).toBeGreaterThan(0);
 		vi.advanceTimersByTime(esperaDeLaHora + 1);
 		for (let envio = 0; envio < 6; envio++) {
 			expect((await t.mutation(internal.limites.reservarEnvioDeCodigo, { email })).ok).toBe(true);
@@ -45,7 +47,7 @@ test("el séptimo código en una hora se rechaza", async () => {
 		}
 		const septimo = await t.mutation(internal.limites.reservarEnvioDeCodigo, { email });
 		expect(septimo.ok).toBe(false);
-		expect(septimo.esperaMs).toBeGreaterThan(90_000);
+		expect(septimo.limite).toBe("hora");
 	} finally {
 		vi.useRealTimers();
 	}

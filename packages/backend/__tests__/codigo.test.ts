@@ -187,6 +187,32 @@ test("el código son seis dígitos", async () => {
 	expect(codigo).toMatch(/^\d{6}$/);
 });
 
+test("verificar el correo o recuperar la contraseña no escribe un código", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = prueba();
+	const email = "ana@correo.com";
+	const codigo = await pedirCodigo(t, email);
+	expect((await entrar(t, email, codigo ?? "")).status).toBe(200);
+	for (const type of ["email-verification", "forget-password"]) {
+		const lineas: string[] = [];
+		const escribir = console.log;
+		console.log = (...args: unknown[]) => {
+			lineas.push(args.map(String).join(" "));
+		};
+		try {
+			const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+				method: "POST",
+				headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+				body: JSON.stringify({ email, type }),
+			});
+			expect(respuesta.status).toBe(400);
+		} finally {
+			console.log = escribir;
+		}
+		expect(lineas.some((texto) => texto.startsWith("[dev] Código para "))).toBe(false);
+	}
+});
+
 test("un type inválido no gasta el turno de reenvío", async () => {
 	delete process.env.RESEND_API_KEY;
 	const t = prueba();

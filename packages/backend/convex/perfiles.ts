@@ -28,6 +28,14 @@ async function requireUsuario(ctx: GenericCtx<DataModel>) {
 	return await authComponent.getAuthUser(ctx);
 }
 
+function sueldoValido(valor: number | undefined) {
+	return valor === undefined || (Number.isInteger(valor) && valor >= 0);
+}
+
+function diaValido(valor: number | undefined) {
+	return valor === undefined || (Number.isInteger(valor) && valor >= 1 && valor <= 31);
+}
+
 export const miPerfil = query({
 	args: {},
 	returns: v.union(perfil, v.null()),
@@ -68,6 +76,9 @@ export const guardarPrimerosPasos = mutation({
 			.withIndex("by_userId", (q) => q.eq("userId", usuario._id))
 			.unique();
 		if (!fila) throw new ConvexError("Sin perfil");
+		if (!sueldoValido(args.borradorSueldoCentimos) || !diaValido(args.borradorDiaDeCobro)) {
+			throw new ConvexError("Esos datos no sirven.");
+		}
 		await ctx.db.patch("perfiles", fila._id, {
 			pasoActual: args.paso,
 			...(args.borradorSueldoCentimos !== undefined
