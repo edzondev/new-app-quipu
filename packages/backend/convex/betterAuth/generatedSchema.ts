@@ -72,6 +72,18 @@ export const tables = {
 		createdAt: v.number(),
 		expiresAt: v.optional(v.union(v.null(), v.number())),
 	}),
+	passkey: defineTable({
+		name: v.optional(v.union(v.null(), v.string())),
+		publicKey: v.string(),
+		userId: v.string(),
+		credentialID: v.string(),
+		counter: v.number(),
+		deviceType: v.string(),
+		backedUp: v.boolean(),
+		transports: v.optional(v.union(v.null(), v.string())),
+		createdAt: v.optional(v.union(v.null(), v.number())),
+		aaguid: v.optional(v.union(v.null(), v.string())),
+	}).index("userId", ["userId"]),
 };
 
 const schema = defineSchema(tables);
