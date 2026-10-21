@@ -328,6 +328,38 @@ test("entrar con un correo sin cuenta no manda código", async () => {
 	expect(lineas.join("\n")).not.toContain("[dev] Código para");
 });
 
+test("entrar responde igual con cuenta y sin cuenta", async () => {
+	delete process.env.RESEND_API_KEY;
+	vi.useFakeTimers({ toFake: ["Date"] });
+	try {
+		const t = prueba();
+		const email = "ana@correo.com";
+		const codigo = await pedirCodigo(t, email);
+		expect((await entrar(t, email, codigo ?? "")).status).toBe(200);
+		vi.advanceTimersByTime(90_000);
+
+		async function pedir(correo: string) {
+			const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					origin: "http://localhost:3000",
+					"x-quipu-intencion": "entrar",
+				},
+				body: JSON.stringify({ email: correo, type: "sign-in" }),
+			});
+			return { status: respuesta.status, cuerpo: await respuesta.json() };
+		}
+
+		const conCuenta = await pedir(email);
+		const sinCuenta = await pedir("nadie@correo.com");
+		expect(conCuenta).toEqual(sinCuenta);
+		expect(conCuenta.cuerpo).toEqual({ success: true });
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
 for (const ruta of [
 	"/api/auth/email-otp/request-password-reset",
 	"/api/auth/forget-password/email-otp",

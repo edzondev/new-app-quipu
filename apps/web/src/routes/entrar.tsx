@@ -4,6 +4,13 @@ import { authClient } from "#/lib/auth-client";
 
 const CLAVE = "quipu-entrar";
 
+function browserSupportsWebAuthn() {
+	return (
+		globalThis.PublicKeyCredential !== undefined &&
+		typeof globalThis.PublicKeyCredential === "function"
+	);
+}
+
 function reloj(hasta: number, ahora: number) {
 	const segundos = Math.max(0, Math.ceil((hasta - ahora) / 1000));
 	const minutos = Math.floor(segundos / 60);
@@ -27,11 +34,14 @@ function Entrar() {
 	const [enviando, setEnviando] = useState(false);
 	const [esperaHasta, setEsperaHasta] = useState<number | null>(null);
 	const [ahora, setAhora] = useState(() => Date.now());
+	const [puedeLlave, setPuedeLlave] = useState(false);
 
 	useEffect(() => {
-		// sessionStorage no existe al renderizar en el servidor.
+		// sessionStorage y PublicKeyCredential no existen al renderizar en el servidor.
 		// oxlint-disable-next-line react/set-state-in-effect
 		setEsperaHasta(leerEspera());
+		// oxlint-disable-next-line react/set-state-in-effect
+		setPuedeLlave(browserSupportsWebAuthn());
 	}, []);
 
 	useEffect(() => {
@@ -41,6 +51,9 @@ function Entrar() {
 	}, [esperaHasta]);
 
 	const esperando = esperaHasta !== null && esperaHasta > ahora;
+	const textoEspera =
+		esperando && esperaHasta ? `Podrás pedir otro código en ${reloj(esperaHasta, ahora)}` : "";
+	const textoAviso = aviso || textoEspera;
 
 	async function entrarConLlave() {
 		setAviso("");
@@ -50,7 +63,13 @@ function Entrar() {
 			return;
 		}
 		const code = "code" in error ? error.code : undefined;
-		if (code === "ERROR_CEREMONY_ABORTED" || code === "AUTH_CANCELLED") return;
+		if (
+			code === "ERROR_CEREMONY_ABORTED" ||
+			code === "AUTH_CANCELLED" ||
+			code === "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY"
+		) {
+			return;
+		}
 		setAviso("No pudimos usar tu llave. Prueba con un código al correo.");
 	}
 
@@ -104,8 +123,31 @@ function Entrar() {
 			setAviso("Te equivocaste 3 veces. Pide un código nuevo.");
 			return;
 		}
-		if (error) {
+		if (error?.code === "INVALID_OTP") {
 			setAviso("El código no coincide.");
+			return;
+		}
+		if (error?.code === "EMAIL_NOT_ALLOWED") {
+			setAviso("No podemos registrar cuentas con ese dominio de correo.");
+			return;
+		}
+		const limitado =
+			error?.code === "ESPERA_REENVIO" ||
+			(error != null && "status" in error && error.status === 429);
+		if (error && limitado) {
+			const segundos = Number(error.message);
+			if (Number.isFinite(segundos)) {
+				const hasta = Date.now() + segundos * 1000;
+				sessionStorage.setItem(CLAVE, String(hasta));
+				setEsperaHasta(hasta);
+				setAviso("");
+				return;
+			}
+			setAviso("Podrás pedir otro código en un momento.");
+			return;
+		}
+		if (error) {
+			setAviso("No pudimos completar eso. Intenta de nuevo.");
 			return;
 		}
 		setAviso("");
@@ -139,9 +181,13 @@ function Entrar() {
 	return (
 		<main>
 			<h1>Entrar</h1>
-			<button type="button" onClick={() => void entrarConLlave()}>
-				Entrar con mi llave
-			</button>
+			{puedeLlave ? (
+				<button type="button" onClick={() => void entrarConLlave()}>
+					Entrar con mi llave
+				</button>
+			) : (
+				<p>Usa el código</p>
+			)}
 			<form
 				onSubmit={(evento) => {
 					evento.preventDefault();
@@ -179,7 +225,11 @@ function Entrar() {
 						/>
 					</label>
 				) : null}
-				{aviso ? <p className="aviso">{aviso}</p> : null}
+				{textoAviso ? (
+					<p className="aviso" role="alert">
+						{textoAviso}
+					</p>
+				) : null}
 				{fase === "codigo" ? (
 					esperando && esperaHasta ? (
 						<p>Reenviar en {reloj(esperaHasta, ahora)}</p>
