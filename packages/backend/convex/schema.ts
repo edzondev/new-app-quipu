@@ -2,17 +2,17 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-	perfiles: defineTable({
+	profiles: defineTable({
 		userId: v.string(),
-		nombre: v.string(),
-		pasoActual: v.union(
-			v.literal("paso-1"),
-			v.literal("paso-2"),
-			v.literal("paso-3"),
-			v.literal("listo"),
+		name: v.string(),
+		currentStep: v.union(
+			v.literal("step-1"),
+			v.literal("step-2"),
+			v.literal("step-3"),
+			v.literal("done"),
 		),
-		borradorSueldoCentimos: v.optional(v.number()),
-		borradorDiaDeCobro: v.optional(v.number()),
-		creadoEn: v.number(),
+		draftSalaryCents: v.optional(v.number()),
+		draftPayday: v.optional(v.number()),
+		createdAt: v.number(),
 	}).index("by_userId", ["userId"]),
 });

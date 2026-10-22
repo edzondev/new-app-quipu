@@ -11,8 +11,8 @@ function Paso() {
 		<main>
 			<p>Seguimos donde te quedaste.</p>
 			<p>{paso}</p>
-			{perfil?.borradorSueldoCentimos !== undefined ? <p>{perfil.borradorSueldoCentimos}</p> : null}
-			{perfil?.borradorDiaDeCobro !== undefined ? <p>{perfil.borradorDiaDeCobro}</p> : null}
+			{perfil?.draftSalaryCents !== undefined ? <p>{perfil.draftSalaryCents}</p> : null}
+			{perfil?.draftPayday !== undefined ? <p>{perfil.draftPayday}</p> : null}
 		</main>
 	);
 }

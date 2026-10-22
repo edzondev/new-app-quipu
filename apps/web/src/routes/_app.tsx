@@ -6,20 +6,20 @@ import { authClient } from "#/lib/auth-client";
 export const Route = createFileRoute("/_app")({
 	beforeLoad: async ({ context, location }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/entrar" });
-		const perfil = await context.queryClient.ensureQueryData(
-			convexQuery(api.perfiles.miPerfil, {}),
+		const profile = await context.queryClient.ensureQueryData(
+			convexQuery(api.profiles.myProfile, {}),
 		);
 		if (
-			perfil &&
-			perfil.pasoActual !== "listo" &&
+			profile &&
+			profile.currentStep !== "done" &&
 			!location.pathname.startsWith("/primeros-pasos")
 		) {
 			throw redirect({
 				to: "/primeros-pasos/$paso",
-				params: { paso: perfil.pasoActual },
+				params: { paso: profile.currentStep },
 			});
 		}
-		return { perfil };
+		return { perfil: profile };
 	},
 	component: Marco,
 });

@@ -1,9 +1,9 @@
-import { mensajesAuth, textoDelError } from "@quipu/backend/shared/mensajesAuth.ts";
+import { authMessages, errorText } from "@quipu/backend/shared/authMessages.ts";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
 
-const CLAVE = "quipu-entrar";
+const KEY = "quipu-entrar";
 
 function browserSupportsWebAuthn() {
 	return (
@@ -12,143 +12,141 @@ function browserSupportsWebAuthn() {
 	);
 }
 
-function reloj(hasta: number, ahora: number) {
-	const segundos = Math.max(0, Math.ceil((hasta - ahora) / 1000));
-	const minutos = Math.floor(segundos / 60);
-	const resto = segundos % 60;
-	return `${minutos}:${resto.toString().padStart(2, "0")}`;
+function clock(until: number, now: number) {
+	const seconds = Math.max(0, Math.ceil((until - now) / 1000));
+	const minutes = Math.floor(seconds / 60);
+	const remainder = seconds % 60;
+	return `${minutes}:${remainder.toString().padStart(2, "0")}`;
 }
 
-function leerEspera() {
-	const hasta = Number(sessionStorage.getItem(CLAVE) ?? 0);
-	return hasta > Date.now() ? hasta : null;
+function readWait() {
+	const until = Number(sessionStorage.getItem(KEY) ?? 0);
+	return until > Date.now() ? until : null;
 }
 
 export const Route = createFileRoute("/entrar")({ component: Entrar });
 
 function Entrar() {
 	const navigate = useNavigate();
-	const [correo, setCorreo] = useState("");
-	const [codigo, setCodigo] = useState("");
-	const [fase, setFase] = useState<"elegir" | "codigo" | "llave">("elegir");
-	const [aviso, setAviso] = useState("");
-	const [enviando, setEnviando] = useState(false);
-	const [esperaHasta, setEsperaHasta] = useState<number | null>(null);
-	const [ahora, setAhora] = useState(() => Date.now());
-	const [puedeLlave, setPuedeLlave] = useState(false);
+	const [email, setEmail] = useState("");
+	const [code, setCode] = useState("");
+	const [phase, setPhase] = useState<"choose" | "code" | "passkey">("choose");
+	const [notice, setNotice] = useState("");
+	const [sending, setSending] = useState(false);
+	const [waitUntil, setWaitUntil] = useState<number | null>(null);
+	const [now, setNow] = useState(() => Date.now());
+	const [canPasskey, setCanPasskey] = useState(false);
 
 	useEffect(() => {
-		// sessionStorage y PublicKeyCredential no existen al renderizar en el servidor.
+		// sessionStorage and PublicKeyCredential do not exist during server render.
 		// oxlint-disable-next-line react/set-state-in-effect
-		setEsperaHasta(leerEspera());
+		setWaitUntil(readWait());
 		// oxlint-disable-next-line react/set-state-in-effect
-		setPuedeLlave(browserSupportsWebAuthn());
+		setCanPasskey(browserSupportsWebAuthn());
 	}, []);
 
 	useEffect(() => {
-		if (!esperaHasta || esperaHasta <= Date.now()) return;
-		const id = setInterval(() => setAhora(Date.now()), 1000);
+		if (!waitUntil || waitUntil <= Date.now()) return;
+		const id = setInterval(() => setNow(Date.now()), 1000);
 		return () => clearInterval(id);
-	}, [esperaHasta]);
+	}, [waitUntil]);
 
-	const esperando = esperaHasta !== null && esperaHasta > ahora;
-	const textoEspera =
-		esperando && esperaHasta ? `Podrás pedir otro código en ${reloj(esperaHasta, ahora)}` : "";
-	const textoAviso = aviso || textoEspera;
+	const waiting = waitUntil !== null && waitUntil > now;
+	const waitText =
+		waiting && waitUntil ? `Podrás pedir otro código en ${clock(waitUntil, now)}` : "";
+	const alertText = notice || waitText;
 
-	async function entrarConLlave() {
-		setAviso("");
+	async function signInWithPasskey() {
+		setNotice("");
 		const { error } = await authClient.signIn.passkey();
 		if (!error) {
 			await navigate({ to: "/hoy" });
 			return;
 		}
-		const code = "code" in error ? error.code : undefined;
+		const codeName = "code" in error ? error.code : undefined;
 		if (
-			code === "ERROR_CEREMONY_ABORTED" ||
-			code === "AUTH_CANCELLED" ||
-			code === "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY"
+			codeName === "ERROR_CEREMONY_ABORTED" ||
+			codeName === "AUTH_CANCELLED" ||
+			codeName === "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY"
 		) {
 			return;
 		}
-		setAviso(mensajesAuth.LLAVE);
+		setNotice(authMessages.PASSKEY);
 	}
 
-	async function pedirCodigo() {
-		if (enviando || esperando) return;
-		const email = correo.trim().toLowerCase();
-		setEnviando(true);
-		setAviso("");
+	async function requestCode() {
+		if (sending || waiting) return;
+		const address = email.trim().toLowerCase();
+		setSending(true);
+		setNotice("");
 		const { error } = await authClient.emailOtp.sendVerificationOtp({
-			email,
+			email: address,
 			type: "sign-in",
-			fetchOptions: { headers: { "x-quipu-intencion": "entrar" } },
+			fetchOptions: { headers: { "x-quipu-intent": "sign-in" } },
 		});
-		setEnviando(false);
-		if (error?.code === "ESPERA_REENVIO") {
-			const segundos = Number(error.message);
-			const hasta = Date.now() + (Number.isFinite(segundos) ? segundos * 1000 : 90_000);
-			sessionStorage.setItem(CLAVE, String(hasta));
-			setEsperaHasta(hasta);
-			setFase("codigo");
+		setSending(false);
+		if (error?.code === "WAIT_TO_RESEND") {
+			const seconds = Number(error.message);
+			const until = Date.now() + (Number.isFinite(seconds) ? seconds * 1000 : 90_000);
+			sessionStorage.setItem(KEY, String(until));
+			setWaitUntil(until);
+			setPhase("code");
 			return;
 		}
 		if (error) {
-			setAviso(
-				textoDelError(error.code, error.message, "status" in error ? error.status : undefined),
-			);
+			setNotice(errorText(error.code, error.message, "status" in error ? error.status : undefined));
 			return;
 		}
-		const hasta = Date.now() + 90_000;
-		sessionStorage.setItem(CLAVE, String(hasta));
-		setEsperaHasta(hasta);
-		setFase("codigo");
-		setAviso(textoDelError("CODIGO_SI_HAY_CUENTA"));
+		const until = Date.now() + 90_000;
+		sessionStorage.setItem(KEY, String(until));
+		setWaitUntil(until);
+		setPhase("code");
+		setNotice(errorText("CODE_IF_ACCOUNT_EXISTS"));
 	}
 
-	async function verificar() {
-		if (enviando) return;
-		setEnviando(true);
+	async function verify() {
+		if (sending) return;
+		setSending(true);
 		const { error } = await authClient.signIn.emailOtp({
-			email: correo.trim().toLowerCase(),
-			otp: codigo,
+			email: email.trim().toLowerCase(),
+			otp: code,
 		});
-		setEnviando(false);
+		setSending(false);
 		if (!error) {
-			setAviso("");
-			setFase("llave");
+			setNotice("");
+			setPhase("passkey");
 			return;
 		}
 		const status = "status" in error ? error.status : undefined;
-		const segundos = Number(error.message);
-		if ((error.code === "ESPERA_REENVIO" || status === 429) && Number.isFinite(segundos)) {
-			const hasta = Date.now() + segundos * 1000;
-			sessionStorage.setItem(CLAVE, String(hasta));
-			setEsperaHasta(hasta);
-			setAviso("");
+		const seconds = Number(error.message);
+		if ((error.code === "WAIT_TO_RESEND" || status === 429) && Number.isFinite(seconds)) {
+			const until = Date.now() + seconds * 1000;
+			sessionStorage.setItem(KEY, String(until));
+			setWaitUntil(until);
+			setNotice("");
 			return;
 		}
-		setAviso(textoDelError(error.code, error.message, status));
+		setNotice(errorText(error.code, error.message, status));
 	}
 
-	async function crearLlave() {
+	async function createPasskey() {
 		const { error } = await authClient.passkey.addPasskey();
 		if (error) return;
 		await navigate({ to: "/hoy" });
 	}
 
-	async function seguir() {
+	async function continueOn() {
 		await navigate({ to: "/hoy" });
 	}
 
-	if (fase === "llave") {
+	if (phase === "passkey") {
 		return (
 			<main>
 				<h1>¿Creas tu llave en este equipo?</h1>
-				<button type="button" onClick={() => void crearLlave()}>
+				<button type="button" onClick={() => void createPasskey()}>
 					Crear mi llave
 				</button>
-				<button type="button" className="clara" onClick={() => void seguir()}>
+				<button type="button" className="clara" onClick={() => void continueOn()}>
 					Ahora no
 				</button>
 			</main>
@@ -158,26 +156,26 @@ function Entrar() {
 	return (
 		<main>
 			<h1>Entrar</h1>
-			{puedeLlave ? (
-				<button type="button" onClick={() => void entrarConLlave()}>
+			{canPasskey ? (
+				<button type="button" onClick={() => void signInWithPasskey()}>
 					Entrar con mi llave
 				</button>
 			) : (
 				<p>Usa el código</p>
 			)}
 			<form
-				onSubmit={(evento) => {
-					evento.preventDefault();
-					if (fase === "codigo") void verificar();
-					else void pedirCodigo();
+				onSubmit={(event) => {
+					event.preventDefault();
+					if (phase === "code") void verify();
+					else void requestCode();
 				}}
 			>
-				{fase === "codigo" ? (
-					<button type="submit" disabled={enviando || codigo.length !== 6}>
+				{phase === "code" ? (
+					<button type="submit" disabled={sending || code.length !== 6}>
 						Continuar
 					</button>
 				) : (
-					<button type="submit" disabled={enviando || esperando || correo.trim() === ""}>
+					<button type="submit" disabled={sending || waiting || email.trim() === ""}>
 						Recibir código por correo
 					</button>
 				)}
@@ -185,39 +183,39 @@ function Entrar() {
 					Correo
 					<input
 						type="email"
-						value={correo}
+						value={email}
 						autoComplete="username webauthn"
-						onChange={(evento) => setCorreo(evento.target.value)}
+						onChange={(event) => setEmail(event.target.value)}
 					/>
 				</label>
-				{fase === "codigo" ? (
+				{phase === "code" ? (
 					<label>
 						Código
 						<input
-							value={codigo}
+							value={code}
 							inputMode="numeric"
 							autoComplete="one-time-code"
 							maxLength={6}
-							onChange={(evento) => setCodigo(evento.target.value.replace(/\D/g, "").slice(0, 6))}
+							onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
 						/>
 					</label>
 				) : null}
-				{textoAviso ? (
+				{alertText ? (
 					<p className="aviso" role="alert">
-						{textoAviso}
+						{alertText}
 					</p>
 				) : null}
-				{fase === "codigo" ? (
-					esperando && esperaHasta ? (
-						<p>Reenviar en {reloj(esperaHasta, ahora)}</p>
+				{phase === "code" ? (
+					waiting && waitUntil ? (
+						<p>Reenviar en {clock(waitUntil, now)}</p>
 					) : (
-						<button type="button" className="enlace" onClick={() => void pedirCodigo()}>
+						<button type="button" className="enlace" onClick={() => void requestCode()}>
 							Reenviar
 						</button>
 					)
 				) : null}
 			</form>
-			{fase === "codigo" ? (
+			{phase === "code" ? (
 				<Link to="/crear-cuenta">¿Aún no tienes cuenta? Crear cuenta</Link>
 			) : null}
 		</main>
