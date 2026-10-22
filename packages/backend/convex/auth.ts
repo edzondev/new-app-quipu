@@ -1,21 +1,22 @@
 import { passkey } from "@better-auth/passkey";
 import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
-import { isRunMutationCtx } from "@convex-dev/better-auth/utils";
 import { createClient } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
+import { isRunMutationCtx } from "@convex-dev/better-auth/utils";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { type BetterAuthOptions, betterAuth } from "better-auth/minimal";
 import { emailOTP } from "better-auth/plugins";
+import { email } from "../shared/validation";
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
+import { env } from "./_generated/server";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
-import { email } from "../shared/validation";
-import { sendCode } from "./lib/email";
 import { assertEmailAllowed } from "./lib/domainPolicy";
+import { sendCode } from "./lib/email";
 
-const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
-const rpID = process.env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname;
+const siteUrl = env.SITE_URL ?? "http://localhost:3000";
+const rpID = env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname;
 const authFunctions: AuthFunctions = internal.auth;
 
 export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {
@@ -91,7 +92,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 			convex({ authConfig }),
 			passkey({
 				rpID,
-				rpName: process.env.PASSKEY_RP_NAME ?? "Quipu",
+				rpName: env.PASSKEY_RP_NAME ?? "Quipu",
 				origin: [siteUrl],
 				authenticatorSelection: {
 					residentKey: "preferred",

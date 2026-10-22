@@ -3,7 +3,7 @@
  * To regenerate the schema, from your project root:
  *
  *   cd convex/betterAuth
- *   npx auth generate --output generatedSchema.ts
+ *   npx auth generate --output D:\Proyectos\Quipu\new-app-quipu\packages\backend\convex\betterAuth\generatedSchema.ts
  *
  * To customize the schema, generate to an alternate file and import
  * the table definitions to your schema file. See
