@@ -21,7 +21,7 @@ afterAll(() => {
 	delete process.env.SITE_URL;
 });
 
-function prueba() {
+function testHarness() {
 	const t = convexTest(schema, modules);
 	t.registerComponent("betterAuth", authSchema, componentModules);
 	resendTest.register(t);
@@ -29,8 +29,8 @@ function prueba() {
 	return t;
 }
 
-test("crear una llave pide sesión", async () => {
-	const t = prueba();
+test("creating a passkey requires a session", async () => {
+	const t = testHarness();
 	const respuesta = await t.fetch("/api/auth/passkey/generate-register-options", {
 		method: "GET",
 		headers: { origin: sitio },
@@ -39,11 +39,11 @@ test("crear una llave pide sesión", async () => {
 	expect((await respuesta.json()).code).toBe("UNAUTHORIZED");
 });
 
-test("con sesión la llave anuncia el dominio del sitio y el nombre Quipu", async () => {
+test("with a session the passkey announces the site domain and Quipu name", async () => {
 	delete process.env.RESEND_API_KEY;
 	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	process.env.SITE_URL = sitio;
-	const t = prueba();
+	const t = testHarness();
 	const email = "ana@correo.com";
 	const lineas: string[] = [];
 	const escribir = console.log;
@@ -60,8 +60,8 @@ test("con sesión la llave anuncia el dominio del sitio y el nombre Quipu", asyn
 	} finally {
 		console.log = escribir;
 	}
-	const linea = lineas.find((texto) => texto.startsWith("[dev] Código para "));
-	const codigo = linea?.slice("[dev] Código para ".length + email.length + 2);
+	const linea = lineas.find((texto) => texto.startsWith("[dev] Code for "));
+	const codigo = linea?.slice("[dev] Code for ".length + email.length + 2);
 	const entrada = await t.fetch("/api/auth/sign-in/email-otp", {
 		method: "POST",
 		headers: { "content-type": "application/json", origin: sitio },

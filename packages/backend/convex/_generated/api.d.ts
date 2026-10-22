@@ -10,11 +10,11 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
-import type * as lib_correo from "../lib/correo.js";
 import type * as lib_domainPolicy from "../lib/domainPolicy.js";
-import type * as lib_plantillaCorreo from "../lib/plantillaCorreo.js";
-import type * as limites from "../limites.js";
-import type * as perfiles from "../perfiles.js";
+import type * as lib_email from "../lib/email.js";
+import type * as lib_emailTemplate from "../lib/emailTemplate.js";
+import type * as profiles from "../profiles.js";
+import type * as rateLimits from "../rateLimits.js";
 
 import type {
   ApiFromModules,
@@ -25,11 +25,11 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
-  "lib/correo": typeof lib_correo;
   "lib/domainPolicy": typeof lib_domainPolicy;
-  "lib/plantillaCorreo": typeof lib_plantillaCorreo;
-  limites: typeof limites;
-  perfiles: typeof perfiles;
+  "lib/email": typeof lib_email;
+  "lib/emailTemplate": typeof lib_emailTemplate;
+  profiles: typeof profiles;
+  rateLimits: typeof rateLimits;
 }>;
 
 /**

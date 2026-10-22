@@ -10,8 +10,8 @@ import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
-import { correo } from "../shared/validaciones";
-import { enviarCodigo } from "./lib/correo";
+import { email } from "../shared/validation";
+import { sendCode } from "./lib/email";
 import { assertEmailAllowed } from "./lib/domainPolicy";
 
 const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
@@ -24,11 +24,11 @@ export const authComponent = createClient<DataModel, typeof authSchema>(componen
 	triggers: {
 		user: {
 			onCreate: async (ctx, user) => {
-				await ctx.db.insert("perfiles", {
+				await ctx.db.insert("profiles", {
 					userId: user._id,
-					nombre: user.name,
-					pasoActual: "paso-1",
-					creadoEn: Date.now(),
+					name: user.name,
+					currentStep: "step-1",
+					createdAt: Date.now(),
 				});
 			},
 		},
@@ -40,7 +40,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		baseURL: siteUrl,
 		trustedOrigins: [siteUrl],
 		database: authComponent.adapter(ctx),
-		emailAndPassword: { enabled: false }, // sin contraseñas
+		emailAndPassword: { enabled: false }, // no passwords
 		disabledPaths: [
 			"/email-otp/request-password-reset",
 			"/forget-password/email-otp",
@@ -50,40 +50,40 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		hooks: {
 			before: createAuthMiddleware(async (actx) => {
 				if (actx.path !== "/email-otp/send-verification-otp") return;
-				let email = "";
+				let address = "";
 				try {
-					email = correo.parse(actx.body?.email);
-					assertEmailAllowed(email);
+					address = email.parse(actx.body?.email);
+					assertEmailAllowed(address);
 				} catch {
 					throw new APIError("BAD_REQUEST", {
 						code: "EMAIL_NOT_ALLOWED",
-						message: "No podemos registrar cuentas con ese dominio de correo.",
+						message: "We cannot register accounts with that email domain.",
 					});
 				}
 				if (!isRunMutationCtx(ctx)) {
 					throw APIError.from("BAD_REQUEST", {
-						code: "SIN_CONTEXTO",
-						message: "Intenta de nuevo.",
+						code: "NO_CONTEXT",
+						message: "Try again.",
 					});
 				}
 				if (actx.body?.type !== "sign-in") {
 					throw new APIError("BAD_REQUEST", {
-						code: "TIPO_INVALIDO",
-						message: "Ese envío no está permitido.",
+						code: "INVALID_TYPE",
+						message: "That send type is not allowed.",
 					});
 				}
-				const reserva = await ctx.runMutation(internal.limites.reservarEnvioDeCodigo, {
-					email,
+				const reservation = await ctx.runMutation(internal.rateLimits.reserveCodeSend, {
+					email: address,
 				});
-				if (!reserva.ok) {
+				if (!reservation.ok) {
 					throw APIError.from("TOO_MANY_REQUESTS", {
-						code: "ESPERA_REENVIO",
-						message: String(Math.ceil(reserva.esperaMs / 1000)),
+						code: "WAIT_TO_RESEND",
+						message: String(Math.ceil(reservation.waitMs / 1000)),
 					});
 				}
-				if (actx.headers?.get("x-quipu-intencion") === "entrar") {
-					const existe = await actx.context.internalAdapter.findUserByEmail(email);
-					if (!existe) return { success: true };
+				if (actx.headers?.get("x-quipu-intent") === "sign-in") {
+					const exists = await actx.context.internalAdapter.findUserByEmail(address);
+					if (!exists) return { success: true };
 				}
 			}),
 		},
@@ -100,12 +100,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 			}),
 			emailOTP({
 				otpLength: 6,
-				expiresIn: 600, // 10 minutos
+				expiresIn: 600, // 10 minutes
 				allowedAttempts: 3,
-				storeOTP: "hashed", // se guarda cifrado
-				// resendStrategy queda en "rotate" (por defecto): el código nuevo invalida al anterior
-				sendVerificationOTP: async ({ email, otp }) => {
-					await enviarCodigo(ctx, { email, otp });
+				storeOTP: "hashed", // stored hashed
+				// resendStrategy stays "rotate" (default): a new code invalidates the previous one
+				sendVerificationOTP: async ({ email: address, otp }) => {
+					await sendCode(ctx, { email: address, otp });
 				},
 			}),
 		],

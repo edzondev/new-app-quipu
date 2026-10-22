@@ -15,7 +15,7 @@ afterEach(() => {
 	else process.env.CONVEX_CLOUD_URL = cloudUrl;
 });
 
-function prueba() {
+function testHarness() {
 	const t = convexTest(schema, modules);
 	t.registerComponent("betterAuth", authSchema, componentModules);
 	resendTest.register(t);
@@ -23,12 +23,12 @@ function prueba() {
 	return t;
 }
 
-test("crear la cuenta deja el perfil en el paso 1 y se puede guardar el borrador", async () => {
+test("creating an account leaves the profile on step 1 and can save the draft", async () => {
 	delete process.env.RESEND_API_KEY;
 	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
-	const t = prueba();
+	const t = testHarness();
 	const email = "ana@correo.com";
-	expect(await t.query(api.perfiles.miPerfil, {})).toBeNull();
+	expect(await t.query(api.profiles.myProfile, {})).toBeNull();
 
 	const lineas: string[] = [];
 	const escribir = console.log;
@@ -45,8 +45,8 @@ test("crear la cuenta deja el perfil en el paso 1 y se puede guardar el borrador
 	} finally {
 		console.log = escribir;
 	}
-	const linea = lineas.find((texto) => texto.startsWith("[dev] Código para "));
-	const codigo = linea?.slice("[dev] Código para ".length + email.length + 2);
+	const linea = lineas.find((texto) => texto.startsWith("[dev] Code for "));
+	const codigo = linea?.slice("[dev] Code for ".length + email.length + 2);
 	const entrada = await t.fetch("/api/auth/sign-in/email-otp", {
 		method: "POST",
 		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
@@ -63,22 +63,22 @@ test("crear la cuenta deja el perfil en el paso 1 y se puede guardar el borrador
 		where: [{ field: "userId", value: usuario._id }],
 	});
 	const yo = t.withIdentity({ subject: usuario._id, sessionId: sesion._id });
-	const inicial = await yo.query(api.perfiles.miPerfil, {});
-	expect(inicial?.nombre).toBe("Ana");
-	expect(inicial?.pasoActual).toBe("paso-1");
+	const inicial = await yo.query(api.profiles.myProfile, {});
+	expect(inicial?.name).toBe("Ana");
+	expect(inicial?.currentStep).toBe("step-1");
 
-	await yo.mutation(api.perfiles.guardarPrimerosPasos, {
-		paso: "paso-2",
-		borradorSueldoCentimos: 4230,
-		borradorDiaDeCobro: 15,
+	await yo.mutation(api.profiles.saveOnboardingSteps, {
+		step: "step-2",
+		draftSalaryCents: 4230,
+		draftPayday: 15,
 	});
-	const guardado = await yo.query(api.perfiles.miPerfil, {});
-	expect(guardado?.pasoActual).toBe("paso-2");
-	expect(guardado?.borradorSueldoCentimos).toBe(4230);
-	expect(guardado?.borradorDiaDeCobro).toBe(15);
+	const guardado = await yo.query(api.profiles.myProfile, {});
+	expect(guardado?.currentStep).toBe("step-2");
+	expect(guardado?.draftSalaryCents).toBe(4230);
+	expect(guardado?.draftPayday).toBe(15);
 });
 
-async function abrirSesion(t: ReturnType<typeof prueba>, email: string, nombre: string) {
+async function openSession(t: ReturnType<typeof testHarness>, email: string, nombre: string) {
 	delete process.env.RESEND_API_KEY;
 	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	const lineas: string[] = [];
@@ -96,8 +96,8 @@ async function abrirSesion(t: ReturnType<typeof prueba>, email: string, nombre: 
 	} finally {
 		console.log = escribir;
 	}
-	const linea = lineas.find((texto) => texto.startsWith("[dev] Código para "));
-	const codigo = linea?.slice("[dev] Código para ".length + email.length + 2);
+	const linea = lineas.find((texto) => texto.startsWith("[dev] Code for "));
+	const codigo = linea?.slice("[dev] Code for ".length + email.length + 2);
 	const entrada = await t.fetch("/api/auth/sign-in/email-otp", {
 		method: "POST",
 		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
@@ -115,74 +115,74 @@ async function abrirSesion(t: ReturnType<typeof prueba>, email: string, nombre: 
 	return t.withIdentity({ subject: usuario._id, sessionId: sesion._id });
 }
 
-test("el borrador rechaza sueldo o día que no son enteros válidos", async () => {
-	const t = prueba();
-	const yo = await abrirSesion(t, "ana@correo.com", "Ana");
+test("the draft rejects salary or payday values that are not valid integers", async () => {
+	const t = testHarness();
+	const yo = await openSession(t, "ana@correo.com", "Ana");
 	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorSueldoCentimos: -1,
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftSalaryCents: -1,
 		}),
-	).rejects.toThrow("Esos datos no sirven.");
+	).rejects.toThrow("Those values are invalid.");
 	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorSueldoCentimos: Number.NaN,
-		}),
-	).rejects.toThrow();
-	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorDiaDeCobro: 99,
-		}),
-	).rejects.toThrow("Esos datos no sirven.");
-	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorDiaDeCobro: -1,
-		}),
-	).rejects.toThrow("Esos datos no sirven.");
-	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorDiaDeCobro: Number.NaN,
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftSalaryCents: Number.NaN,
 		}),
 	).rejects.toThrow();
 	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorDiaDeCobro: 1.5,
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftPayday: 99,
 		}),
-	).rejects.toThrow("Esos datos no sirven.");
+	).rejects.toThrow("Those values are invalid.");
 	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorSueldoCentimos: 12.75,
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftPayday: -1,
 		}),
-	).rejects.toThrow("Esos datos no sirven.");
+	).rejects.toThrow("Those values are invalid.");
 	await expect(
-		yo.mutation(api.perfiles.guardarPrimerosPasos, {
-			paso: "paso-2",
-			borradorSueldoCentimos: 1.5,
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftPayday: Number.NaN,
 		}),
-	).rejects.toThrow("Esos datos no sirven.");
-	expect((await yo.query(api.perfiles.miPerfil, {}))?.pasoActual).toBe("paso-1");
+	).rejects.toThrow();
+	await expect(
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftPayday: 1.5,
+		}),
+	).rejects.toThrow("Those values are invalid.");
+	await expect(
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftSalaryCents: 12.75,
+		}),
+	).rejects.toThrow("Those values are invalid.");
+	await expect(
+		yo.mutation(api.profiles.saveOnboardingSteps, {
+			step: "step-2",
+			draftSalaryCents: 1.5,
+		}),
+	).rejects.toThrow("Those values are invalid.");
+	expect((await yo.query(api.profiles.myProfile, {}))?.currentStep).toBe("step-1");
 });
 
-test("guardar el paso de una persona no cambia el perfil de otra", async () => {
-	const t = prueba();
-	const ana = await abrirSesion(t, "ana@correo.com", "Ana");
-	const luis = await abrirSesion(t, "luis@correo.com", "Luis");
-	await luis.mutation(api.perfiles.guardarPrimerosPasos, {
-		paso: "paso-2",
-		borradorSueldoCentimos: 100,
-		borradorDiaDeCobro: 2,
+test("saving one person's step does not change another profile", async () => {
+	const t = testHarness();
+	const ana = await openSession(t, "ana@correo.com", "Ana");
+	const luis = await openSession(t, "luis@correo.com", "Luis");
+	await luis.mutation(api.profiles.saveOnboardingSteps, {
+		step: "step-2",
+		draftSalaryCents: 100,
+		draftPayday: 2,
 	});
-	const deAna = await ana.query(api.perfiles.miPerfil, {});
-	const deLuis = await luis.query(api.perfiles.miPerfil, {});
-	expect(deLuis?.borradorSueldoCentimos).toBe(100);
-	expect(deLuis?.pasoActual).toBe("paso-2");
-	expect(deAna?.nombre).toBe("Ana");
-	expect(deAna?.pasoActual).toBe("paso-1");
-	expect(deAna?.borradorSueldoCentimos).toBeUndefined();
+	const deAna = await ana.query(api.profiles.myProfile, {});
+	const deLuis = await luis.query(api.profiles.myProfile, {});
+	expect(deLuis?.draftSalaryCents).toBe(100);
+	expect(deLuis?.currentStep).toBe("step-2");
+	expect(deAna?.name).toBe("Ana");
+	expect(deAna?.currentStep).toBe("step-1");
+	expect(deAna?.draftSalaryCents).toBeUndefined();
 });

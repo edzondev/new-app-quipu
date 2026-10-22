@@ -1,151 +1,149 @@
 import {
-	type Borrador,
-	borradorVacio,
-	cuentaYaExistia,
-	leerBorrador,
-} from "@quipu/backend/shared/crearCuenta.ts";
-import { mensajesAuth, textoDelError } from "@quipu/backend/shared/mensajesAuth.ts";
+	type Draft,
+	accountAlreadyExisted,
+	emptyDraft,
+	readDraft,
+} from "@quipu/backend/shared/createAccount.ts";
+import { authMessages, errorText } from "@quipu/backend/shared/authMessages.ts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
 
-const CLAVE = "quipu-crear";
+const KEY = "quipu-crear";
 
-function guardarBorrador(borrador: Borrador) {
-	sessionStorage.setItem(CLAVE, JSON.stringify(borrador));
+function saveDraft(draft: Draft) {
+	sessionStorage.setItem(KEY, JSON.stringify(draft));
 }
 
-function reloj(hasta: number, ahora: number) {
-	const segundos = Math.max(0, Math.ceil((hasta - ahora) / 1000));
-	const minutos = Math.floor(segundos / 60);
-	const resto = segundos % 60;
-	return `${minutos}:${resto.toString().padStart(2, "0")}`;
+function clock(until: number, now: number) {
+	const seconds = Math.max(0, Math.ceil((until - now) / 1000));
+	const minutes = Math.floor(seconds / 60);
+	const remainder = seconds % 60;
+	return `${minutes}:${remainder.toString().padStart(2, "0")}`;
 }
 
 export const Route = createFileRoute("/crear-cuenta")({ component: CrearCuenta });
 
 function CrearCuenta() {
 	const navigate = useNavigate();
-	const [borrador, setBorrador] = useState<Borrador>(borradorVacio);
-	const [codigo, setCodigo] = useState("");
-	const [aviso, setAviso] = useState("");
-	const [enviando, setEnviando] = useState(false);
-	const [ahora, setAhora] = useState(() => Date.now());
+	const [draft, setDraft] = useState<Draft>(emptyDraft);
+	const [code, setCode] = useState("");
+	const [notice, setNotice] = useState("");
+	const [sending, setSending] = useState(false);
+	const [now, setNow] = useState(() => Date.now());
 
 	useEffect(() => {
-		// sessionStorage no existe al renderizar en el servidor.
+		// sessionStorage does not exist during server render.
 		// oxlint-disable-next-line react/set-state-in-effect
-		setBorrador(leerBorrador(sessionStorage.getItem(CLAVE), Date.now()));
+		setDraft(readDraft(sessionStorage.getItem(KEY), Date.now()));
 	}, []);
 
 	useEffect(() => {
-		if (!borrador.esperaHasta || borrador.esperaHasta <= ahora) return;
-		const id = setInterval(() => setAhora(Date.now()), 1000);
+		if (!draft.waitUntil || draft.waitUntil <= now) return;
+		const id = setInterval(() => setNow(Date.now()), 1000);
 		return () => clearInterval(id);
-	}, [borrador.esperaHasta, ahora]);
+	}, [draft.waitUntil, now]);
 
-	function actualizar(siguiente: Borrador) {
-		setBorrador(siguiente);
-		guardarBorrador(siguiente);
+	function update(next: Draft) {
+		setDraft(next);
+		saveDraft(next);
 	}
 
-	const esperando = borrador.esperaHasta !== null && borrador.esperaHasta > ahora;
+	const waiting = draft.waitUntil !== null && draft.waitUntil > now;
 
-	async function pedirCodigo() {
-		if (enviando || esperando) return;
-		const correo = borrador.correo.trim().toLowerCase();
-		setEnviando(true);
-		setAviso("");
+	async function requestCode() {
+		if (sending || waiting) return;
+		const email = draft.email.trim().toLowerCase();
+		setSending(true);
+		setNotice("");
 		const { error } = await authClient.emailOtp.sendVerificationOtp({
-			email: correo,
+			email,
 			type: "sign-in",
-			fetchOptions: { headers: { "x-quipu-intencion": "crear" } },
+			fetchOptions: { headers: { "x-quipu-intent": "sign-up" } },
 		});
-		setEnviando(false);
+		setSending(false);
 		if (error) {
-			if (error.code === "ESPERA_REENVIO") {
-				const segundos = Number(error.message);
-				const hasta = Date.now() + (Number.isFinite(segundos) ? segundos * 1000 : 90_000);
-				actualizar({ ...borrador, correo, fase: "codigo", esperaHasta: hasta });
-				setAviso("");
+			if (error.code === "WAIT_TO_RESEND") {
+				const seconds = Number(error.message);
+				const until = Date.now() + (Number.isFinite(seconds) ? seconds * 1000 : 90_000);
+				update({ ...draft, email, phase: "code", waitUntil: until });
+				setNotice("");
 				return;
 			}
-			setAviso(textoDelError(error.code, error.message));
+			setNotice(errorText(error.code, error.message));
 			return;
 		}
-		actualizar({ ...borrador, correo, fase: "codigo", esperaHasta: Date.now() + 90_000 });
+		update({ ...draft, email, phase: "code", waitUntil: Date.now() + 90_000 });
 	}
 
-	async function verificar() {
-		if (enviando) return;
-		setEnviando(true);
-		setAviso("");
+	async function verify() {
+		if (sending) return;
+		setSending(true);
+		setNotice("");
 		const { data, error } = await authClient.signIn.emailOtp({
-			email: borrador.correo.trim().toLowerCase(),
-			otp: codigo,
-			name: borrador.nombre.trim(),
+			email: draft.email.trim().toLowerCase(),
+			otp: code,
+			name: draft.name.trim(),
 		});
-		setEnviando(false);
+		setSending(false);
 		if (error || !data?.user) {
-			setAviso(textoDelError(error?.code, error?.message));
+			setNotice(errorText(error?.code, error?.message));
 			return;
 		}
-		const sesion = await authClient.getSession();
-		if (cuentaYaExistia(data.user.createdAt, sesion.data?.session.createdAt)) {
-			actualizar({ ...borrador, fase: "ya-existia", esperaHasta: null });
+		const session = await authClient.getSession();
+		if (accountAlreadyExisted(data.user.createdAt, session.data?.session.createdAt)) {
+			update({ ...draft, phase: "already-existed", waitUntil: null });
 			return;
 		}
-		actualizar({ ...borrador, fase: "llave", esperaHasta: null });
+		update({ ...draft, phase: "passkey", waitUntil: null });
 	}
 
-	async function crearLlave() {
-		if (enviando) return;
-		setEnviando(true);
+	async function createPasskey() {
+		if (sending) return;
+		setSending(true);
 		const { error } = await authClient.passkey.addPasskey();
-		setEnviando(false);
+		setSending(false);
 		if (error) {
-			setAviso("No pudimos crear la llave.");
+			setNotice("No pudimos crear la llave.");
 			return;
 		}
-		sessionStorage.removeItem(CLAVE);
+		sessionStorage.removeItem(KEY);
 		await navigate({ to: "/hoy" });
 	}
 
-	async function seguir() {
-		sessionStorage.removeItem(CLAVE);
+	async function continueOn() {
+		sessionStorage.removeItem(KEY);
 		await navigate({ to: "/hoy" });
 	}
 
-	const textoEspera =
-		esperando && borrador.esperaHasta
-			? `Podrás pedir otro código en ${reloj(borrador.esperaHasta, ahora)}`
-			: "";
-	const textoAviso = textoEspera || aviso;
+	const waitText =
+		waiting && draft.waitUntil ? `Podrás pedir otro código en ${clock(draft.waitUntil, now)}` : "";
+	const alertText = waitText || notice;
 
-	if (borrador.fase === "ya-existia") {
+	if (draft.phase === "already-existed") {
 		return (
 			<main>
-				<p>{mensajesAuth.YA_TENIAS_CUENTA}</p>
-				<button type="button" onClick={() => void seguir()}>
+				<p>{authMessages.ALREADY_HAD_ACCOUNT}</p>
+				<button type="button" onClick={() => void continueOn()}>
 					Seguir
 				</button>
 			</main>
 		);
 	}
 
-	if (borrador.fase === "llave") {
+	if (draft.phase === "passkey") {
 		return (
 			<main>
 				<h1>¿Creas tu llave en este equipo?</h1>
-				{textoAviso ? (
+				{alertText ? (
 					<p className="aviso" role="alert">
-						{textoAviso}
+						{alertText}
 					</p>
 				) : null}
-				<button type="button" disabled={enviando} onClick={() => void crearLlave()}>
+				<button type="button" disabled={sending} onClick={() => void createPasskey()}>
 					Crear mi llave
 				</button>
-				<button type="button" className="clara" onClick={() => void seguir()}>
+				<button type="button" className="clara" onClick={() => void continueOn()}>
 					Ahora no
 				</button>
 			</main>
@@ -155,71 +153,71 @@ function CrearCuenta() {
 	return (
 		<main>
 			<h1>Crear cuenta</h1>
-			{borrador.fase === "datos" ? (
+			{draft.phase === "details" ? (
 				<form
-					onSubmit={(evento) => {
-						evento.preventDefault();
-						void pedirCodigo();
+					onSubmit={(event) => {
+						event.preventDefault();
+						void requestCode();
 					}}
 				>
 					<label>
 						Nombre
 						<input
-							value={borrador.nombre}
+							value={draft.name}
 							autoComplete="name"
-							onChange={(evento) => actualizar({ ...borrador, nombre: evento.target.value })}
+							onChange={(event) => update({ ...draft, name: event.target.value })}
 						/>
 					</label>
 					<label>
 						Correo
 						<input
 							type="email"
-							value={borrador.correo}
+							value={draft.email}
 							autoComplete="email"
-							onChange={(evento) => actualizar({ ...borrador, correo: evento.target.value })}
+							onChange={(event) => update({ ...draft, email: event.target.value })}
 						/>
 					</label>
-					{textoAviso ? (
+					{alertText ? (
 						<p className="aviso" role="alert">
-							{textoAviso}
+							{alertText}
 						</p>
 					) : null}
-					<button type="submit" disabled={enviando || esperando || borrador.nombre.trim() === ""}>
-						{esperando && borrador.esperaHasta
-							? `Reenviar en ${reloj(borrador.esperaHasta, ahora)}`
+					<button type="submit" disabled={sending || waiting || draft.name.trim() === ""}>
+						{waiting && draft.waitUntil
+							? `Reenviar en ${clock(draft.waitUntil, now)}`
 							: "Continuar"}
 					</button>
 				</form>
 			) : (
 				<form
-					onSubmit={(evento) => {
-						evento.preventDefault();
-						void verificar();
+					onSubmit={(event) => {
+						event.preventDefault();
+						void verify();
 					}}
 				>
 					<label>
 						Código
 						<input
-							value={codigo}
+							value={code}
 							inputMode="numeric"
 							autoComplete="one-time-code"
 							maxLength={6}
-							onChange={(evento) => setCodigo(evento.target.value.replace(/\D/g, "").slice(0, 6))}
+							onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
 						/>
 					</label>
-					{textoAviso ? (
+					{alertText ? (
 						<p className="aviso" role="alert">
-							{textoAviso}
+							{alertText}
 						</p>
 					) : null}
-					<p>{mensajesAuth.CODIGO_DURA}</p>
-					<button type="submit" disabled={enviando || codigo.length !== 6}>
+					<p>{authMessages.CODE_DURATION}</p>
+					<button type="submit" disabled={sending || code.length !== 6}>
 						Continuar
 					</button>
-					{esperando && borrador.esperaHasta ? (
-						<p>Reenviar en {reloj(borrador.esperaHasta, ahora)}</p>
+					{waiting && draft.waitUntil ? (
+						<p>Reenviar en {clock(draft.waitUntil, now)}</p>
 					) : (
-						<button type="button" className="enlace" onClick={() => void pedirCodigo()}>
+						<button type="button" className="enlace" onClick={() => void requestCode()}>
 							Reenviar
 						</button>
 					)}
