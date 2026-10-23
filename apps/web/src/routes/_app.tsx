@@ -9,22 +9,18 @@ export const Route = createFileRoute("/_app")({
 		const profile = await context.queryClient.ensureQueryData(
 			convexQuery(api.profiles.myProfile, {}),
 		);
-		if (
-			profile &&
-			profile.currentStep !== "done" &&
-			!location.pathname.startsWith("/primeros-pasos")
-		) {
+		if (profile && profile.currentStep !== "done" && !location.pathname.startsWith("/onboarding")) {
 			throw redirect({
-				to: "/primeros-pasos/$paso",
-				params: { paso: profile.currentStep },
+				to: "/onboarding/$step",
+				params: { step: profile.currentStep },
 			});
 		}
-		return { perfil: profile };
+		return { profile };
 	},
-	component: Marco,
+	component: AppLayout,
 });
 
-function Marco() {
+function AppLayout() {
 	return (
 		<>
 			<Outlet />

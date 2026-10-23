@@ -6,7 +6,7 @@ import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
 	const convexUrl = import.meta.env.VITE_CONVEX_URL;
-	if (!convexUrl) throw new Error("Falta VITE_CONVEX_URL en .env.local");
+	if (!convexUrl) throw new Error("Missing VITE_CONVEX_URL in .env.local");
 
 	const convexQueryClient = new ConvexQueryClient(convexUrl, { expectAuth: true });
 	const queryClient = new QueryClient({

@@ -13,7 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AppHoyRouteImport } from './routes/_app/hoy'
-import { Route as AppPrimerosPasosPasoRouteImport } from './routes/_app/primeros-pasos/$paso'
+import { Route as AppOnboardingStepRouteImport } from './routes/_app/onboarding/$step'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,9 +35,9 @@ const AppHoyRoute = AppHoyRouteImport.update({
   path: '/hoy',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPrimerosPasosPasoRoute = AppPrimerosPasosPasoRouteImport.update({
-  id: '/primeros-pasos/$paso',
-  path: '/primeros-pasos/$paso',
+const AppOnboardingStepRoute = AppOnboardingStepRouteImport.update({
+  id: '/onboarding/$step',
+  path: '/onboarding/$step',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -50,14 +50,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/hoy': typeof AppHoyRoute
-  '/primeros-pasos/$paso': typeof AppPrimerosPasosPasoRoute
+  '/onboarding/$step': typeof AppOnboardingStepRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/hoy': typeof AppHoyRoute
-  '/primeros-pasos/$paso': typeof AppPrimerosPasosPasoRoute
+  '/onboarding/$step': typeof AppOnboardingStepRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -66,21 +66,21 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/_app/hoy': typeof AppHoyRoute
-  '/_app/primeros-pasos/$paso': typeof AppPrimerosPasosPasoRoute
+  '/_app/onboarding/$step': typeof AppOnboardingStepRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/hoy' | '/primeros-pasos/$paso' | '/api/auth/$'
+  fullPaths: '/' | '/sign-in' | '/hoy' | '/onboarding/$step' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/hoy' | '/primeros-pasos/$paso' | '/api/auth/$'
+  to: '/' | '/sign-in' | '/hoy' | '/onboarding/$step' | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/sign-in'
     | '/_app/hoy'
-    | '/_app/primeros-pasos/$paso'
+    | '/_app/onboarding/$step'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -121,11 +121,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHoyRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/primeros-pasos/$paso': {
-      id: '/_app/primeros-pasos/$paso'
-      path: '/primeros-pasos/$paso'
-      fullPath: '/primeros-pasos/$paso'
-      preLoaderRoute: typeof AppPrimerosPasosPasoRouteImport
+    '/_app/onboarding/$step': {
+      id: '/_app/onboarding/$step'
+      path: '/onboarding/$step'
+      fullPath: '/onboarding/$step'
+      preLoaderRoute: typeof AppOnboardingStepRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -140,12 +140,12 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppHoyRoute: typeof AppHoyRoute
-  AppPrimerosPasosPasoRoute: typeof AppPrimerosPasosPasoRoute
+  AppOnboardingStepRoute: typeof AppOnboardingStepRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppHoyRoute: AppHoyRoute,
-  AppPrimerosPasosPasoRoute: AppPrimerosPasosPasoRoute,
+  AppOnboardingStepRoute: AppOnboardingStepRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
