@@ -1,5 +1,5 @@
 import { HOUR, RateLimiter, SECOND } from "@convex-dev/rate-limiter";
-import { type Infer, v } from "convex/values";
+import { v } from "convex/values";
 import { components } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 
@@ -8,25 +8,15 @@ const limiter = new RateLimiter(components.rateLimiter, {
 	codesPerHour: { kind: "fixed window", rate: 6, period: HOUR },
 });
 
-const resultValidator = v.object({
-	ok: v.boolean(),
-	waitMs: v.number(),
-	limit: v.union(v.literal("90s"), v.literal("hour"), v.null()),
-});
-
-function reject(waitMs: number, limit: "90s" | "hour"): Infer<typeof resultValidator> {
-	return { ok: false, waitMs, limit };
-}
-
 export const reserveCodeSend = internalMutation({
 	args: { email: v.string() },
-	returns: resultValidator,
-	handler: async (ctx, { email }): Promise<Infer<typeof resultValidator>> => {
+	returns: v.union(v.object({ waitMs: v.number() }), v.null()),
+	handler: async (ctx, { email }) => {
 		const hour = await limiter.check(ctx, "codesPerHour", { key: email });
-		if (!hour.ok) return reject(hour.retryAfter, "hour");
+		if (!hour.ok) return { waitMs: hour.retryAfter };
 		const short = await limiter.limit(ctx, "codeEvery90s", { key: email });
-		if (!short.ok) return reject(short.retryAfter, "90s");
+		if (!short.ok) return { waitMs: short.retryAfter };
 		await limiter.limit(ctx, "codesPerHour", { key: email });
-		return { ok: true, waitMs: 0, limit: null };
+		return null;
 	},
 });

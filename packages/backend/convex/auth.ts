@@ -12,7 +12,7 @@ import type { DataModel } from "./_generated/dataModel";
 import { env } from "./_generated/server";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
-import { assertEmailAllowed } from "./lib/domainPolicy";
+import { isEmailDomainBlocked } from "./lib/domainPolicy";
 import { sendCode } from "./lib/email";
 
 const siteUrl = env.SITE_URL ?? "http://localhost:3000";
@@ -51,16 +51,20 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		hooks: {
 			before: createAuthMiddleware(async (actx) => {
 				if (actx.path !== "/email-otp/send-verification-otp") return;
-				let address = "";
-				try {
-					address = email.parse(actx.body?.email);
-					assertEmailAllowed(address);
-				} catch {
+				const parsed = email.safeParse(actx.body?.email);
+				if (!parsed.success) {
+					throw new APIError("BAD_REQUEST", {
+						code: "INVALID_EMAIL",
+						message: "Invalid email.",
+					});
+				}
+				if (isEmailDomainBlocked(parsed.data)) {
 					throw new APIError("BAD_REQUEST", {
 						code: "EMAIL_NOT_ALLOWED",
 						message: "We cannot register accounts with that email domain.",
 					});
 				}
+				const address = parsed.data;
 				if (!isRunMutationCtx(ctx)) {
 					throw APIError.from("BAD_REQUEST", {
 						code: "NO_CONTEXT",
@@ -73,13 +77,13 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 						message: "That send type is not allowed.",
 					});
 				}
-				const reservation = await ctx.runMutation(internal.rateLimits.reserveCodeSend, {
+				const wait = await ctx.runMutation(internal.rateLimits.reserveCodeSend, {
 					email: address,
 				});
-				if (!reservation.ok) {
+				if (wait) {
 					throw APIError.from("TOO_MANY_REQUESTS", {
 						code: "WAIT_TO_RESEND",
-						message: String(Math.ceil(reservation.waitMs / 1000)),
+						message: String(Math.ceil(wait.waitMs / 1000)),
 					});
 				}
 				if (actx.headers?.get("x-quipu-intent") === "sign-in") {

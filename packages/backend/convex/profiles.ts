@@ -21,6 +21,7 @@ const profile = v.object({
 	createdAt: v.number(),
 });
 
+// Names match @convex-dev/require-access-control. getAuthUser does not.
 async function ensureUser(ctx: GenericCtx<DataModel>) {
 	return await authComponent.safeGetAuthUser(ctx);
 }
@@ -40,14 +41,8 @@ export const myProfile = query({
 			.withIndex("by_userId", (q) => q.eq("userId", user._id))
 			.unique();
 		if (!row) return null;
-		return {
-			userId: row.userId,
-			name: row.name,
-			currentStep: row.currentStep,
-			createdAt: row.createdAt,
-			...(row.draftSalaryCents !== undefined ? { draftSalaryCents: row.draftSalaryCents } : {}),
-			...(row.draftPayday !== undefined ? { draftPayday: row.draftPayday } : {}),
-		};
+		const { _id, _creationTime, ...fields } = row;
+		return fields;
 	},
 });
 

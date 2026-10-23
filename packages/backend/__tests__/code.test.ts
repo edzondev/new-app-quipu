@@ -6,7 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { components } from "../convex/_generated/api";
 import schema from "../convex/schema";
 import { sendCode } from "../convex/lib/email";
-import { assertEmailAllowed } from "../convex/lib/domainPolicy";
+import { isEmailDomainBlocked } from "../convex/lib/domainPolicy";
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
@@ -25,15 +25,15 @@ function testHarness() {
 	return t;
 }
 
-async function pedirCodigo(t: ReturnType<typeof testHarness>, email: string) {
+async function requestCode(t: ReturnType<typeof testHarness>, email: string) {
 	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
-	const lineas: string[] = [];
-	const escribir = console.log;
+	const lines: string[] = [];
+	const write = console.log;
 	console.log = (...args: unknown[]) => {
-		lineas.push(args.map(String).join(" "));
+		lines.push(args.map(String).join(" "));
 	};
 	try {
-		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -41,17 +41,17 @@ async function pedirCodigo(t: ReturnType<typeof testHarness>, email: string) {
 			},
 			body: JSON.stringify({ email, type: "sign-in" }),
 		});
-		expect(respuesta.ok, await respuesta.clone().text()).toBe(true);
+		expect(response.ok, await response.clone().text()).toBe(true);
 	} finally {
-		console.log = escribir;
+		console.log = write;
 	}
-	const linea = lineas.find((texto) => texto.startsWith("[dev] Code for "));
-	expect(linea).toBeDefined();
-	return linea?.slice("[dev] Code for ".length + email.length + 2);
+	const line = lines.find((text) => text.startsWith("[dev] Code for "));
+	expect(line).toBeDefined();
+	return line?.slice("[dev] Code for ".length + email.length + 2);
 }
 
-async function entrar(t: ReturnType<typeof testHarness>, email: string, otp: string) {
-	const respuesta = await t.fetch("/api/auth/sign-in/email-otp", {
+async function signIn(t: ReturnType<typeof testHarness>, email: string, otp: string) {
+	const response = await t.fetch("/api/auth/sign-in/email-otp", {
 		method: "POST",
 		headers: {
 			"content-type": "application/json",
@@ -59,28 +59,8 @@ async function entrar(t: ReturnType<typeof testHarness>, email: string, otp: str
 		},
 		body: JSON.stringify({ email, otp }),
 	});
-	return { status: respuesta.status, cuerpo: await respuesta.json() };
+	return { status: response.status, body: await response.json() };
 }
-
-test("a disposable domain does not receive a code", async () => {
-	delete process.env.RESEND_API_KEY;
-	const lineas: string[] = [];
-	const escribir = console.log;
-	console.log = (...args: unknown[]) => {
-		lineas.push(args.map(String).join(" "));
-	};
-	try {
-		const t = testHarness();
-		await t.run(async (ctx) => {
-			await expect(sendCode(ctx, { email: "ana@mailinator.com", otp: "123456" })).rejects.toThrow(
-				"We cannot register accounts with that email domain.",
-			);
-		});
-	} finally {
-		console.log = escribir;
-	}
-	expect(lineas.join("\n")).not.toContain("123456");
-});
 
 test("with a Resend key the code goes to email and not the log", async () => {
 	process.env.RESEND_API_KEY = "re_test";
@@ -113,14 +93,14 @@ test("a bad code is rejected and the fourth attempt is blocked", async () => {
 	delete process.env.RESEND_API_KEY;
 	const t = testHarness();
 	const email = "ana@correo.com";
-	const codigo = await pedirCodigo(t, email);
-	const malo = codigo === "000000" ? "111111" : "000000";
-	for (let intento = 0; intento < 3; intento++) {
-		const rechazo = await entrar(t, email, malo);
-		expect(rechazo.cuerpo.code).toBe("INVALID_OTP");
+	const otp = await requestCode(t, email);
+	const wrong = otp === "000000" ? "111111" : "000000";
+	for (let attempt = 0; attempt < 3; attempt++) {
+		const rejected = await signIn(t, email, wrong);
+		expect(rejected.body.code).toBe("INVALID_OTP");
 	}
-	const bloqueo = await entrar(t, email, malo);
-	expect(bloqueo.cuerpo.code).toBe("TOO_MANY_ATTEMPTS");
+	const blocked = await signIn(t, email, wrong);
+	expect(blocked.body.code).toBe("TOO_MANY_ATTEMPTS");
 });
 
 test("after 601 seconds the code expires", async () => {
@@ -129,10 +109,10 @@ test("after 601 seconds the code expires", async () => {
 	try {
 		const t = testHarness();
 		const email = "ana@correo.com";
-		const codigo = await pedirCodigo(t, email);
+		const otp = await requestCode(t, email);
 		vi.advanceTimersByTime(601_000);
-		const vencido = await entrar(t, email, codigo ?? "");
-		expect(vencido.cuerpo.code).toBe("OTP_EXPIRED");
+		const expired = await signIn(t, email, otp ?? "");
+		expect(expired.body.code).toBe("OTP_EXPIRED");
 	} finally {
 		vi.useRealTimers();
 	}
@@ -144,20 +124,20 @@ test("the code is stored hashed and a new one invalidates the previous", async (
 	try {
 		const t = testHarness();
 		const email = "ana@correo.com";
-		const primero = await pedirCodigo(t, email);
-		const guardado = await t.query(components.betterAuth.adapter.findOne, {
+		const first = await requestCode(t, email);
+		const stored = await t.query(components.betterAuth.adapter.findOne, {
 			model: "verification",
 			where: [{ field: "identifier", value: `sign-in-otp-${email}` }],
 		});
-		expect(guardado).toBeTruthy();
-		expect(JSON.stringify(guardado)).not.toContain(primero);
+		expect(stored).toBeTruthy();
+		expect(JSON.stringify(stored)).not.toContain(first);
 		vi.advanceTimersByTime(90_000);
-		const segundo = await pedirCodigo(t, email);
-		expect(segundo).not.toBe(primero);
-		const viejo = await entrar(t, email, primero ?? "");
-		expect(viejo.cuerpo.code).toBe("INVALID_OTP");
-		const nuevo = await entrar(t, email, segundo ?? "");
-		expect(nuevo.status).toBe(200);
+		const second = await requestCode(t, email);
+		expect(second).not.toBe(first);
+		const oldCode = await signIn(t, email, first ?? "");
+		expect(oldCode.body.code).toBe("INVALID_OTP");
+		const fresh = await signIn(t, email, second ?? "");
+		expect(fresh.status).toBe(200);
 	} finally {
 		vi.useRealTimers();
 	}
@@ -165,7 +145,7 @@ test("the code is stored hashed and a new one invalidates the previous", async (
 
 test("password sign-up fails", async () => {
 	const t = testHarness();
-	const respuesta = await t.fetch("/api/auth/sign-up/email", {
+	const response = await t.fetch("/api/auth/sign-up/email", {
 		method: "POST",
 		headers: {
 			"content-type": "application/json",
@@ -177,65 +157,65 @@ test("password sign-up fails", async () => {
 			name: "Ana",
 		}),
 	});
-	expect(respuesta.ok).toBe(false);
+	expect(response.ok).toBe(false);
 });
 
 test("the code is six digits", async () => {
 	delete process.env.RESEND_API_KEY;
 	const t = testHarness();
-	const codigo = await pedirCodigo(t, "ana@correo.com");
-	expect(codigo).toMatch(/^\d{6}$/);
+	const otp = await requestCode(t, "ana@correo.com");
+	expect(otp).toMatch(/^\d{6}$/);
 });
 
 test("email verify or password recovery does not write a code", async () => {
 	delete process.env.RESEND_API_KEY;
 	const t = testHarness();
 	const email = "ana@correo.com";
-	const codigo = await pedirCodigo(t, email);
-	expect((await entrar(t, email, codigo ?? "")).status).toBe(200);
+	const otp = await requestCode(t, email);
+	expect((await signIn(t, email, otp ?? "")).status).toBe(200);
 	for (const type of ["email-verification", "forget-password"]) {
-		const lineas: string[] = [];
-		const escribir = console.log;
+		const lines: string[] = [];
+		const write = console.log;
 		console.log = (...args: unknown[]) => {
-			lineas.push(args.map(String).join(" "));
+			lines.push(args.map(String).join(" "));
 		};
 		try {
-			const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+			const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
 				method: "POST",
 				headers: { "content-type": "application/json", origin: "http://localhost:3000" },
 				body: JSON.stringify({ email, type }),
 			});
-			expect(respuesta.status).toBe(400);
+			expect(response.status).toBe(400);
 		} finally {
-			console.log = escribir;
+			console.log = write;
 		}
-		expect(lineas.some((texto) => texto.startsWith("[dev] Code for "))).toBe(false);
+		expect(lines.some((text) => text.startsWith("[dev] Code for "))).toBe(false);
 	}
 });
 
 test("an invalid type does not consume the resend slot", async () => {
 	delete process.env.RESEND_API_KEY;
 	const t = testHarness();
-	const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+	const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
 		method: "POST",
 		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
 		body: JSON.stringify({ email: "ana@correo.com", type: "change-email" }),
 	});
-	expect(respuesta.status).toBe(400);
-	const codigo = await pedirCodigo(t, "ana@correo.com");
-	expect(codigo).toMatch(/^\d{6}$/);
+	expect(response.status).toBe(400);
+	const otp = await requestCode(t, "ana@correo.com");
+	expect(otp).toMatch(/^\d{6}$/);
 });
 
 test("a blocked domain returns 400 on send", async () => {
 	delete process.env.RESEND_API_KEY;
-	const lineas: string[] = [];
-	const escribir = console.log;
+	const lines: string[] = [];
+	const write = console.log;
 	console.log = (...args: unknown[]) => {
-		lineas.push(args.map(String).join(" "));
+		lines.push(args.map(String).join(" "));
 	};
 	try {
 		const t = testHarness();
-		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -243,14 +223,31 @@ test("a blocked domain returns 400 on send", async () => {
 			},
 			body: JSON.stringify({ email: "ana@mailinator.com", type: "sign-in" }),
 		});
-		expect(respuesta.status).toBe(400);
-		const cuerpo = await respuesta.json();
-		expect(cuerpo.code).toBe("EMAIL_NOT_ALLOWED");
-		expect(cuerpo.message).toBe("We cannot register accounts with that email domain.");
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.code).toBe("EMAIL_NOT_ALLOWED");
+		expect(body.message).toBe("We cannot register accounts with that email domain.");
 	} finally {
-		console.log = escribir;
+		console.log = write;
 	}
-	expect(lineas.join("\n")).not.toContain("[dev] Code for");
+	expect(lines.join("\n")).not.toContain("[dev] Code for");
+});
+
+test("a malformed email returns INVALID_EMAIL", async () => {
+	delete process.env.RESEND_API_KEY;
+	const t = testHarness();
+	const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			origin: "http://localhost:3000",
+		},
+		body: JSON.stringify({ email: "not-an-email", type: "sign-in" }),
+	});
+	expect(response.status).toBe(400);
+	expect((await response.json()).code).toBe("INVALID_EMAIL");
+	const otp = await requestCode(t, "ana@correo.com");
+	expect(otp).toMatch(/^\d{6}$/);
 });
 
 test("a second send before 90 s is rejected", async () => {
@@ -259,8 +256,8 @@ test("a second send before 90 s is rejected", async () => {
 	try {
 		const t = testHarness();
 		const email = "ana@correo.com";
-		await pedirCodigo(t, email);
-		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		await requestCode(t, email);
+		const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -268,8 +265,8 @@ test("a second send before 90 s is rejected", async () => {
 			},
 			body: JSON.stringify({ email, type: "sign-in" }),
 		});
-		expect(respuesta.status).toBe(429);
-		expect((await respuesta.json()).code).toBe("WAIT_TO_RESEND");
+		expect(response.status).toBe(429);
+		expect((await response.json()).code).toBe("WAIT_TO_RESEND");
 	} finally {
 		vi.useRealTimers();
 	}
@@ -278,10 +275,10 @@ test("a second send before 90 s is rejected", async () => {
 test("without a key outside local the code is not written", async () => {
 	delete process.env.RESEND_API_KEY;
 	process.env.CONVEX_CLOUD_URL = "https://quipu.convex.cloud";
-	const lineas: string[] = [];
-	const escribir = console.log;
+	const lines: string[] = [];
+	const write = console.log;
 	console.log = (...args: unknown[]) => {
-		lineas.push(args.map(String).join(" "));
+		lines.push(args.map(String).join(" "));
 	};
 	try {
 		const t = testHarness();
@@ -291,23 +288,23 @@ test("without a key outside local the code is not written", async () => {
 			);
 		});
 	} finally {
-		console.log = escribir;
+		console.log = write;
 	}
-	expect(lineas.join("\n")).not.toContain("123456");
+	expect(lines.join("\n")).not.toContain("123456");
 });
 
 test("sign-in with an email that has no account does not send a code", async () => {
 	delete process.env.RESEND_API_KEY;
 	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
-	const lineas: string[] = [];
-	const escribir = console.log;
+	const lines: string[] = [];
+	const write = console.log;
 	console.log = (...args: unknown[]) => {
-		lineas.push(args.map(String).join(" "));
+		lines.push(args.map(String).join(" "));
 	};
 	try {
 		const t = testHarness();
 		const email = "nadie@correo.com";
-		const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -316,16 +313,16 @@ test("sign-in with an email that has no account does not send a code", async () 
 			},
 			body: JSON.stringify({ email, type: "sign-in" }),
 		});
-		expect(respuesta.status).toBe(200);
-		const guardado = await t.query(components.betterAuth.adapter.findOne, {
+		expect(response.status).toBe(200);
+		const stored = await t.query(components.betterAuth.adapter.findOne, {
 			model: "verification",
 			where: [{ field: "identifier", value: `sign-in-otp-${email}` }],
 		});
-		expect(guardado).toBeFalsy();
+		expect(stored).toBeFalsy();
 	} finally {
-		console.log = escribir;
+		console.log = write;
 	}
-	expect(lineas.join("\n")).not.toContain("[dev] Code for");
+	expect(lines.join("\n")).not.toContain("[dev] Code for");
 });
 
 test("sign-in responds the same with or without an account", async () => {
@@ -334,41 +331,41 @@ test("sign-in responds the same with or without an account", async () => {
 	try {
 		const t = testHarness();
 		const email = "ana@correo.com";
-		const codigo = await pedirCodigo(t, email);
-		expect((await entrar(t, email, codigo ?? "")).status).toBe(200);
+		const otp = await requestCode(t, email);
+		expect((await signIn(t, email, otp ?? "")).status).toBe(200);
 		vi.advanceTimersByTime(90_000);
 
-		async function pedir(correo: string) {
-			const respuesta = await t.fetch("/api/auth/email-otp/send-verification-otp", {
+		async function request(address: string) {
+			const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
 				method: "POST",
 				headers: {
 					"content-type": "application/json",
 					origin: "http://localhost:3000",
 					"x-quipu-intent": "sign-in",
 				},
-				body: JSON.stringify({ email: correo, type: "sign-in" }),
+				body: JSON.stringify({ email: address, type: "sign-in" }),
 			});
-			return { status: respuesta.status, cuerpo: await respuesta.json() };
+			return { status: response.status, body: await response.json() };
 		}
 
-		const conCuenta = await pedir(email);
-		const sinCuenta = await pedir("nadie@correo.com");
-		expect(conCuenta).toEqual(sinCuenta);
-		expect(conCuenta.cuerpo).toEqual({ success: true });
+		const withAccount = await request(email);
+		const withoutAccount = await request("nadie@correo.com");
+		expect(withAccount).toEqual(withoutAccount);
+		expect(withAccount.body).toEqual({ success: true });
 	} finally {
 		vi.useRealTimers();
 	}
 });
 
-for (const ruta of [
+for (const route of [
 	"/api/auth/email-otp/request-password-reset",
 	"/api/auth/forget-password/email-otp",
 	"/api/auth/email-otp/reset-password",
 	"/api/auth/email-otp/request-email-change",
 ]) {
-	test(`${ruta} responde 404`, async () => {
+	test(`${route} returns 404`, async () => {
 		const t = testHarness();
-		const respuesta = await t.fetch(ruta, {
+		const response = await t.fetch(route, {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -376,13 +373,11 @@ for (const ruta of [
 			},
 			body: JSON.stringify({ email: "ana@correo.com", otp: "123456", newPassword: "una-clave" }),
 		});
-		expect(respuesta.status).toBe(404);
+		expect(response.status).toBe(404);
 	});
 }
 
 test("gmxmail.com is allowed and a gmail typo is not", () => {
-	expect(() => assertEmailAllowed("ana@gmxmail.com")).not.toThrow();
-	expect(() => assertEmailAllowed("ana@gmxxail.com")).toThrow(
-		"We cannot register accounts with that email domain.",
-	);
+	expect(isEmailDomainBlocked("ana@gmxmail.com")).toBe(false);
+	expect(isEmailDomainBlocked("ana@gmxxail.com")).toBe(true);
 });
