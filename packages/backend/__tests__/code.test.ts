@@ -96,7 +96,7 @@ test("with a Resend key the code goes to email and not the log", async () => {
 		});
 		expect(id).toBeTruthy();
 		const correo = await t.query(components.resend.lib.get, { emailId: id ?? "" });
-		expect(correo?.subject).toBe("Your Quipu code: 123456");
+		expect(correo?.subject).toBe("Tu código de Quipu: 123456");
 		expect(correo?.html).toContain("123456");
 		expect(correo?.html).not.toContain("href=");
 		expect(correo?.text).toContain("123456");
