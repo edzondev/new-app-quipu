@@ -293,68 +293,26 @@ test("without a key outside local the code is not written", async () => {
 	expect(lines.join("\n")).not.toContain("123456");
 });
 
-test("sign-in with an email that has no account does not send a code", async () => {
+test("a new email gets a code and signing in creates the account", async () => {
 	delete process.env.RESEND_API_KEY;
-	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
-	const lines: string[] = [];
-	const write = console.log;
-	console.log = (...args: unknown[]) => {
-		lines.push(args.map(String).join(" "));
-	};
-	try {
-		const t = testHarness();
-		const email = "nadie@correo.com";
-		const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				origin: "http://localhost:3000",
-				"x-quipu-intent": "sign-in",
-			},
-			body: JSON.stringify({ email, type: "sign-in" }),
-		});
-		expect(response.status).toBe(200);
-		const stored = await t.query(components.betterAuth.adapter.findOne, {
-			model: "verification",
-			where: [{ field: "identifier", value: `sign-in-otp-${email}` }],
-		});
-		expect(stored).toBeFalsy();
-	} finally {
-		console.log = write;
-	}
-	expect(lines.join("\n")).not.toContain("[dev] Code for");
-});
-
-test("sign-in responds the same with or without an account", async () => {
-	delete process.env.RESEND_API_KEY;
-	vi.useFakeTimers({ toFake: ["Date"] });
-	try {
-		const t = testHarness();
-		const email = "ana@correo.com";
-		const otp = await requestCode(t, email);
-		expect((await signIn(t, email, otp ?? "")).status).toBe(200);
-		vi.advanceTimersByTime(90_000);
-
-		async function request(address: string) {
-			const response = await t.fetch("/api/auth/email-otp/send-verification-otp", {
-				method: "POST",
-				headers: {
-					"content-type": "application/json",
-					origin: "http://localhost:3000",
-					"x-quipu-intent": "sign-in",
-				},
-				body: JSON.stringify({ email: address, type: "sign-in" }),
-			});
-			return { status: response.status, body: await response.json() };
-		}
-
-		const withAccount = await request(email);
-		const withoutAccount = await request("nadie@correo.com");
-		expect(withAccount).toEqual(withoutAccount);
-		expect(withAccount.body).toEqual({ success: true });
-	} finally {
-		vi.useRealTimers();
-	}
+	const t = testHarness();
+	const email = "nueva@correo.com";
+	const otp = await requestCode(t, email);
+	expect(otp).toMatch(/^\d{6}$/);
+	expect((await signIn(t, email, otp ?? "")).status).toBe(200);
+	const user = await t.query(components.betterAuth.adapter.findOne, {
+		model: "user",
+		where: [{ field: "email", value: email }],
+	});
+	expect(user?.name).toBe("");
+	const profile = await t.run(async (ctx) => {
+		return await ctx.db
+			.query("profiles")
+			.withIndex("by_userId", (q) => q.eq("userId", user._id))
+			.unique();
+	});
+	expect(profile?.name).toBe("");
+	expect(profile?.currentStep).toBe("step-1");
 });
 
 for (const route of [

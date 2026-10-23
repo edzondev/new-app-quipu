@@ -5,7 +5,7 @@ import { authClient } from "#/lib/auth-client";
 
 export const Route = createFileRoute("/_app")({
 	beforeLoad: async ({ context, location }) => {
-		if (!context.isAuthenticated) throw redirect({ to: "/entrar" });
+		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
 		const profile = await context.queryClient.ensureQueryData(
 			convexQuery(api.profiles.myProfile, {}),
 		);

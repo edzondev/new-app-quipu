@@ -11,8 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as CrearCuentaRouteImport } from './routes/crear-cuenta'
-import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AppHoyRouteImport } from './routes/_app/hoy'
 import { Route as AppPrimerosPasosPasoRouteImport } from './routes/_app/primeros-pasos/$paso'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -26,14 +25,9 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CrearCuentaRoute = CrearCuentaRouteImport.update({
-  id: '/crear-cuenta',
-  path: '/crear-cuenta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EntrarRoute = EntrarRouteImport.update({
-  id: '/entrar',
-  path: '/entrar',
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppHoyRoute = AppHoyRouteImport.update({
@@ -54,16 +48,14 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/crear-cuenta': typeof CrearCuentaRoute
-  '/entrar': typeof EntrarRoute
+  '/sign-in': typeof SignInRoute
   '/hoy': typeof AppHoyRoute
   '/primeros-pasos/$paso': typeof AppPrimerosPasosPasoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/crear-cuenta': typeof CrearCuentaRoute
-  '/entrar': typeof EntrarRoute
+  '/sign-in': typeof SignInRoute
   '/hoy': typeof AppHoyRoute
   '/primeros-pasos/$paso': typeof AppPrimerosPasosPasoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -72,35 +64,21 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
-  '/crear-cuenta': typeof CrearCuentaRoute
-  '/entrar': typeof EntrarRoute
+  '/sign-in': typeof SignInRoute
   '/_app/hoy': typeof AppHoyRoute
   '/_app/primeros-pasos/$paso': typeof AppPrimerosPasosPasoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/crear-cuenta'
-    | '/entrar'
-    | '/hoy'
-    | '/primeros-pasos/$paso'
-    | '/api/auth/$'
+  fullPaths: '/' | '/sign-in' | '/hoy' | '/primeros-pasos/$paso' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/crear-cuenta'
-    | '/entrar'
-    | '/hoy'
-    | '/primeros-pasos/$paso'
-    | '/api/auth/$'
+  to: '/' | '/sign-in' | '/hoy' | '/primeros-pasos/$paso' | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/_app'
-    | '/crear-cuenta'
-    | '/entrar'
+    | '/sign-in'
     | '/_app/hoy'
     | '/_app/primeros-pasos/$paso'
     | '/api/auth/$'
@@ -109,8 +87,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
-  CrearCuentaRoute: typeof CrearCuentaRoute
-  EntrarRoute: typeof EntrarRoute
+  SignInRoute: typeof SignInRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -130,18 +107,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/crear-cuenta': {
-      id: '/crear-cuenta'
-      path: '/crear-cuenta'
-      fullPath: '/crear-cuenta'
-      preLoaderRoute: typeof CrearCuentaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/entrar': {
-      id: '/entrar'
-      path: '/entrar'
-      fullPath: '/entrar'
-      preLoaderRoute: typeof EntrarRouteImport
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/hoy': {
@@ -183,8 +153,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
-  CrearCuentaRoute: CrearCuentaRoute,
-  EntrarRoute: EntrarRoute,
+  SignInRoute: SignInRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
