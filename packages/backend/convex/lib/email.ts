@@ -3,15 +3,14 @@ import { isRunMutationCtx } from "@convex-dev/better-auth/utils";
 import { Resend } from "@convex-dev/resend";
 import { components } from "../_generated/api";
 import type { DataModel } from "../_generated/dataModel";
-import { assertEmailAllowed } from "./domainPolicy";
+import { env } from "../_generated/server";
 import { codeEmail } from "./emailTemplate";
 
 export async function sendCode(
 	ctx: GenericCtx<DataModel>,
 	{ email, otp }: { email: string; otp: string },
 ) {
-	assertEmailAllowed(email);
-	const apiKey = process.env.RESEND_API_KEY;
+	const apiKey = env.RESEND_API_KEY;
 	if (!apiKey) {
 		if (!isLocalBackend()) throw new Error("Missing RESEND_API_KEY");
 		console.log(`[dev] Code for ${email}: ${otp}`);
@@ -21,7 +20,7 @@ export async function sendCode(
 	const resend = new Resend(components.resend, { testMode: false, apiKey });
 	const { subject, html, text } = codeEmail(otp);
 	return await resend.sendEmail(ctx, {
-		from: process.env.RESEND_FROM ?? "Quipu <hola@quipu-finance.app>",
+		from: env.RESEND_FROM ?? "Quipu <hola@quipu-finance.app>",
 		to: email,
 		subject,
 		html,
@@ -29,8 +28,9 @@ export async function sendCode(
 	});
 }
 
+// CONVEX_CLOUD_URL is set by the Convex runtime, not convex.config.ts.
 function isLocalBackend() {
-	const url = process.env.CONVEX_CLOUD_URL ?? "";
+	const url = env.CONVEX_CLOUD_URL ?? "";
 	try {
 		const host = new URL(url).hostname;
 		return host === "127.0.0.1" || host === "localhost";

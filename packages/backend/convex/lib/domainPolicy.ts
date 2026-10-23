@@ -1,6 +1,3 @@
-import { ConvexError } from "convex/values";
-import { email } from "../../shared/validation";
-
 /** Disposable / abusive domains observed, plus common Gmail typos. */
 const BLOCKED_EMAIL_DOMAINS = new Set([
 	"kierko.com",
@@ -25,30 +22,9 @@ const GMAIL_TYPO_PATTERNS = [
 	/^gnail\.com$/i,
 ];
 
-export function extractEmailDomain(emailAddress: string): string {
+export function isEmailDomainBlocked(emailAddress: string): boolean {
 	const at = emailAddress.lastIndexOf("@");
-	if (at < 1) return "";
-	return emailAddress.slice(at + 1);
-}
-
-export function isBlockedEmailDomain(domain: string): boolean {
+	const domain = at < 1 ? "" : emailAddress.slice(at + 1);
 	if (BLOCKED_EMAIL_DOMAINS.has(domain)) return true;
 	return GMAIL_TYPO_PATTERNS.some((pattern) => pattern.test(domain));
-}
-
-export function assertEmailAllowed(emailAddress: string): void {
-	const parsed = email.safeParse(emailAddress);
-	if (!parsed.success) {
-		throw new ConvexError({
-			code: "INVALID_EMAIL",
-			message: "Invalid email.",
-		});
-	}
-	const domain = extractEmailDomain(parsed.data);
-	if (isBlockedEmailDomain(domain)) {
-		throw new ConvexError({
-			code: "EMAIL_NOT_ALLOWED",
-			message: "We cannot register accounts with that email domain.",
-		});
-	}
 }

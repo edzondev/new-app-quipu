@@ -12,12 +12,11 @@ test("a second code before 90 s is rejected; after 90 s it is allowed", async ()
 		const t = convexTest(schema, modules);
 		rateLimiterTest.register(t);
 		const email = "ana@correo.com";
-		expect((await t.mutation(internal.rateLimits.reserveCodeSend, { email })).ok).toBe(true);
+		expect(await t.mutation(internal.rateLimits.reserveCodeSend, { email })).toBeNull();
 		const second = await t.mutation(internal.rateLimits.reserveCodeSend, { email });
-		expect(second.ok).toBe(false);
-		expect(second.limit).toBe("90s");
+		expect(second?.waitMs).toBeGreaterThan(0);
 		vi.advanceTimersByTime(90_000);
-		expect((await t.mutation(internal.rateLimits.reserveCodeSend, { email })).ok).toBe(true);
+		expect(await t.mutation(internal.rateLimits.reserveCodeSend, { email })).toBeNull();
 	} finally {
 		vi.useRealTimers();
 	}
@@ -32,8 +31,7 @@ test("the seventh code in an hour is rejected", async () => {
 		let hourWait = 0;
 		for (let send = 0; send < 13; send++) {
 			const reservation = await t.mutation(internal.rateLimits.reserveCodeSend, { email });
-			if (!reservation.ok) {
-				expect(reservation.limit).toBe("hour");
+			if (reservation) {
 				hourWait = reservation.waitMs;
 				break;
 			}
@@ -42,12 +40,11 @@ test("the seventh code in an hour is rejected", async () => {
 		expect(hourWait).toBeGreaterThan(0);
 		vi.advanceTimersByTime(hourWait + 1);
 		for (let send = 0; send < 6; send++) {
-			expect((await t.mutation(internal.rateLimits.reserveCodeSend, { email })).ok).toBe(true);
+			expect(await t.mutation(internal.rateLimits.reserveCodeSend, { email })).toBeNull();
 			vi.advanceTimersByTime(90_000);
 		}
 		const seventh = await t.mutation(internal.rateLimits.reserveCodeSend, { email });
-		expect(seventh.ok).toBe(false);
-		expect(seventh.limit).toBe("hour");
+		expect(seventh?.waitMs).toBeGreaterThan(0);
 	} finally {
 		vi.useRealTimers();
 	}
