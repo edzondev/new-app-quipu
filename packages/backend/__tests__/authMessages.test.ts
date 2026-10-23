@@ -15,21 +15,19 @@ test("sign-in notices are in Spanish", () => {
 
 test("each errorText code has its own phrase", () => {
 	const phrases = [
-		errorText("CODE_IF_ACCOUNT_EXISTS"),
 		errorText("GENERIC"),
 		errorText("INVALID_OTP"),
 		errorText("OTP_EXPIRED"),
 		errorText(undefined, "65", 429),
 	];
 	expect(phrases).toEqual([
-		"Si este correo tiene cuenta, te llegó un código.",
 		"No pudimos completar eso. Intenta de nuevo.",
 		"El código no coincide.",
 		"Este código venció. Pide otro.",
 		"Podrás pedir otro código en 1:05",
 	]);
 	expect(new Set(phrases).size).toBe(phrases.length);
-	expect(errorText("WAIT_TO_RESEND", "65")).toBe(phrases[4]);
+	expect(errorText("WAIT_TO_RESEND", "65")).toBe(phrases[3]);
 	expect(errorText("EMAIL_NOT_ALLOWED")).toBe(
 		"No podemos registrar cuentas con ese dominio de correo.",
 	);

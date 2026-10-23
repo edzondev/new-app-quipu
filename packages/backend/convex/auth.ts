@@ -86,10 +86,6 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 						message: String(Math.ceil(wait.waitMs / 1000)),
 					});
 				}
-				if (actx.headers?.get("x-quipu-intent") === "sign-in") {
-					const exists = await actx.context.internalAdapter.findUserByEmail(address);
-					if (!exists) return { success: true };
-				}
 			}),
 		},
 		plugins: [

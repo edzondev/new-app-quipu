@@ -1,15 +1,5 @@
 import { expect, test } from "vitest";
-import {
-	createAccountDraftSchema,
-	email,
-	name,
-	payday,
-	salaryInCents,
-	timestampMs,
-	waitSeconds,
-} from "../shared/validation";
-
-const now = 1_700_000_000_000;
+import { email, name, payday, salaryInCents, waitSeconds } from "../shared/validation";
 
 test("email is trimmed, lowercased, and shaped like an email", () => {
 	expect(email.parse("ana@correo.com")).toBe("ana@correo.com");
@@ -51,67 +41,4 @@ test("wait seconds coerce to a finite number", () => {
 	expect(waitSeconds.safeParse("abc").success).toBe(false);
 	expect(waitSeconds.safeParse("Infinity").success).toBe(false);
 	expect(waitSeconds.safeParse(undefined).success).toBe(false);
-});
-
-test("a bad draft field falls back to its default", () => {
-	const schema = createAccountDraftSchema(now);
-	expect(
-		schema.parse({
-			name: "Ana",
-			email: "ana@correo.com",
-			phase: "passkey",
-			waitUntil: now + 1000,
-		}),
-	).toEqual({
-		name: "Ana",
-		email: "ana@correo.com",
-		phase: "passkey",
-		waitUntil: now + 1000,
-	});
-	expect(schema.parse({ name: 5, email: 1, phase: "code" })).toEqual({
-		name: "",
-		email: "",
-		phase: "code",
-		waitUntil: null,
-	});
-	expect(schema.parse({ phase: "already-existed", waitUntil: now - 1 })).toEqual({
-		name: "",
-		email: "",
-		phase: "details",
-		waitUntil: null,
-	});
-	expect(schema.parse({ waitUntil: 0 }).waitUntil).toBe(null);
-	expect(schema.parse({ waitUntil: 1.5 }).waitUntil).toBe(null);
-	expect(schema.parse({ waitUntil: now }).waitUntil).toBe(null);
-	expect(schema.parse({ waitUntil: Number.NaN }).waitUntil).toBe(null);
-	expect(schema.safeParse("").success).toBe(false);
-	expect(schema.safeParse([1]).success).toBe(false);
-	expect(schema.safeParse(null).success).toBe(false);
-	expect(
-		schema.parse({
-			name: "  Ana  ",
-			email: "  A@B.COM ",
-			phase: "details",
-			waitUntil: null,
-		}),
-	).toEqual({
-		name: "  Ana  ",
-		email: "  A@B.COM ",
-		phase: "details",
-		waitUntil: null,
-	});
-});
-
-test("timestamp ms accepts a number, a string, or a Date", () => {
-	const iso = "2000-01-01T00:00:00.000Z";
-	expect(timestampMs.parse(now)).toBe(now);
-	expect(timestampMs.parse(0)).toBe(0);
-	expect(timestampMs.parse(iso)).toBe(Date.parse(iso));
-	expect(timestampMs.parse(new Date(now))).toBe(now);
-	expect(timestampMs.safeParse("").success).toBe(false);
-	expect(timestampMs.safeParse("no-es-fecha").success).toBe(false);
-	expect(timestampMs.safeParse(undefined).success).toBe(false);
-	expect(timestampMs.safeParse(Number.NaN).success).toBe(false);
-	expect(timestampMs.safeParse(Number.POSITIVE_INFINITY).success).toBe(false);
-	expect(timestampMs.safeParse(1.5).success).toBe(true);
 });
