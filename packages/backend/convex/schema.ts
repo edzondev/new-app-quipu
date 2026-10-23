@@ -11,8 +11,6 @@ export default defineSchema({
 			v.literal("step-3"),
 			v.literal("done"),
 		),
-		draftSalaryCents: v.optional(v.number()),
-		draftPayday: v.optional(v.number()),
 		createdAt: v.number(),
 	}).index("by_userId", ["userId"]),
 });
