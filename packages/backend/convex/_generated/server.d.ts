@@ -30,6 +30,7 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly OTP_DELIVERY: string | undefined;
   readonly PASSKEY_RP_ID: string | undefined;
   readonly PASSKEY_RP_NAME: string | undefined;
   readonly RESEND_API_KEY: string | undefined;

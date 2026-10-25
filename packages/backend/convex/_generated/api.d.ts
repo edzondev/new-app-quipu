@@ -10,10 +10,6 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
-import type * as lib_domainPolicy from "../lib/domainPolicy.js";
-import type * as lib_email from "../lib/email.js";
-import type * as lib_emailTemplate from "../lib/emailTemplate.js";
-import type * as profiles from "../profiles.js";
 import type * as rateLimits from "../rateLimits.js";
 
 import type {
@@ -25,10 +21,6 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
-  "lib/domainPolicy": typeof lib_domainPolicy;
-  "lib/email": typeof lib_email;
-  "lib/emailTemplate": typeof lib_emailTemplate;
-  profiles: typeof profiles;
   rateLimits: typeof rateLimits;
 }>;
 

@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({ component: Inicio });
 
@@ -11,7 +11,7 @@ function Inicio() {
 			<button type="button" onClick={() => navigate({ to: "/crear-cuenta" })}>
 				Crear cuenta
 			</button>
-			<Link to="/entrar">Ya tengo cuenta</Link>
+			<Link to="/">Ya tengo cuenta</Link>
 		</main>
 	);
 }

@@ -11,6 +11,7 @@ const app = defineApp({
 		PASSKEY_RP_NAME: v.optional(v.string()),
 		RESEND_API_KEY: v.optional(v.string()),
 		RESEND_FROM: v.optional(v.string()),
+		OTP_DELIVERY: v.optional(v.string()),
 	},
 });
 app.use(betterAuth);

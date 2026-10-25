@@ -2,18 +2,16 @@ import { passkey } from "@better-auth/passkey";
 import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
 import { createClient } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { isRunMutationCtx } from "@convex-dev/better-auth/utils";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { Resend } from "@convex-dev/resend";
 import { type BetterAuthOptions, betterAuth } from "better-auth/minimal";
 import { emailOTP } from "better-auth/plugins";
-import { email } from "../shared/validation";
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { env } from "./_generated/server";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
-import { assertEmailAllowed } from "./lib/domainPolicy";
-import { sendCode } from "./lib/email";
+
+export const resend = new Resend(components.resend, { testMode: false });
 
 const siteUrl = env.SITE_URL ?? "http://localhost:3000";
 const rpID = env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname;
@@ -25,12 +23,23 @@ export const authComponent = createClient<DataModel, typeof authSchema>(componen
 	triggers: {
 		user: {
 			onCreate: async (ctx, user) => {
+				const existing = await ctx.db
+					.query("profiles")
+					.withIndex("by_userId", (q) => q.eq("userId", user._id))
+					.unique();
+				if (existing) return;
 				await ctx.db.insert("profiles", {
 					userId: user._id,
 					name: user.name,
-					currentStep: "step-1",
 					createdAt: Date.now(),
 				});
+			},
+			onDelete: async (ctx, user) => {
+				const profile = await ctx.db
+					.query("profiles")
+					.withIndex("by_userId", (q) => q.eq("userId", user._id))
+					.unique();
+				if (profile) await ctx.db.delete("profiles", profile._id);
 			},
 		},
 	},
@@ -42,52 +51,6 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		trustedOrigins: [siteUrl],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: { enabled: false }, // no passwords
-		disabledPaths: [
-			"/email-otp/request-password-reset",
-			"/forget-password/email-otp",
-			"/email-otp/reset-password",
-			"/email-otp/request-email-change",
-		],
-		hooks: {
-			before: createAuthMiddleware(async (actx) => {
-				if (actx.path !== "/email-otp/send-verification-otp") return;
-				let address = "";
-				try {
-					address = email.parse(actx.body?.email);
-					assertEmailAllowed(address);
-				} catch {
-					throw new APIError("BAD_REQUEST", {
-						code: "EMAIL_NOT_ALLOWED",
-						message: "We cannot register accounts with that email domain.",
-					});
-				}
-				if (!isRunMutationCtx(ctx)) {
-					throw APIError.from("BAD_REQUEST", {
-						code: "NO_CONTEXT",
-						message: "Try again.",
-					});
-				}
-				if (actx.body?.type !== "sign-in") {
-					throw new APIError("BAD_REQUEST", {
-						code: "INVALID_TYPE",
-						message: "That send type is not allowed.",
-					});
-				}
-				const reservation = await ctx.runMutation(internal.rateLimits.reserveCodeSend, {
-					email: address,
-				});
-				if (!reservation.ok) {
-					throw APIError.from("TOO_MANY_REQUESTS", {
-						code: "WAIT_TO_RESEND",
-						message: String(Math.ceil(reservation.waitMs / 1000)),
-					});
-				}
-				if (actx.headers?.get("x-quipu-intent") === "sign-in") {
-					const exists = await actx.context.internalAdapter.findUserByEmail(address);
-					if (!exists) return { success: true };
-				}
-			}),
-		},
 		plugins: [
 			convex({ authConfig }),
 			passkey({
@@ -103,10 +66,21 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 				otpLength: 6,
 				expiresIn: 600, // 10 minutes
 				allowedAttempts: 3,
-				storeOTP: "hashed", // stored hashed
-				// resendStrategy stays "rotate" (default): a new code invalidates the previous one
-				sendVerificationOTP: async ({ email: address, otp }) => {
-					await sendCode(ctx, { email: address, otp });
+				storeOTP: "hashed",
+				sendVerificationOTP: async ({ email, otp }) => {
+					if (env.OTP_DELIVERY === "log") {
+						console.log(`OTP ${email}: ${otp}`);
+						return;
+					}
+					if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
+					if (!env.RESEND_FROM) throw new Error("Falta RESEND_FROM");
+
+					await resend.sendEmail(ctx, {
+						from: env.RESEND_FROM,
+						to: email,
+						subject: "Tu código de Quipu",
+						text: `Tu código es ${otp}. Vence en 10 minutos.`,
+					});
 				},
 			}),
 		],
