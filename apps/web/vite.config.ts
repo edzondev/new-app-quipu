@@ -7,11 +7,21 @@ import { defineConfig } from "vite";
 
 const config = defineConfig({
 	resolve: { tsconfigPaths: true },
-	ssr: {
-		noExternal: ["@convex-dev/better-auth"],
-		// base-ui deep imports break Cloudflare SSR dep optimizer (missing deps_ssr chunks)
-		optimizeDeps: {
-			exclude: ["@base-ui/react", "@base-ui/react/merge-props", "@base-ui/react/use-render"],
+	ssr: { noExternal: ["@convex-dev/better-auth"] },
+	// Cloudflare SSR can resolve two React copies; force one via deps_ssr.
+	// https://github.com/TanStack/router/issues/7119
+	environments: {
+		ssr: {
+			optimizeDeps: {
+				include: [
+					"react",
+					"react-dom",
+					"react-dom/server",
+					"react/jsx-runtime",
+					"react/jsx-dev-runtime",
+				],
+				exclude: ["@base-ui/react", "@base-ui/react/merge-props", "@base-ui/react/use-render"],
+			},
 		},
 	},
 	plugins: [
