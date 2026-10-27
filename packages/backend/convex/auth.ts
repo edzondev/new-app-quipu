@@ -64,7 +64,6 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 			}),
 			emailOTP({
 				otpLength: 6,
-				expiresIn: 600, // 10 minutes
 				allowedAttempts: 3,
 				storeOTP: "hashed",
 				sendVerificationOTP: async ({ email, otp }) => {
@@ -79,7 +78,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 						from: env.RESEND_FROM,
 						to: email,
 						subject: "Tu código de Quipu",
-						text: `Tu código es ${otp}. Vence en 10 minutos.`,
+						text: `Tu código es ${otp}. Vence en 5 minutos.`,
 					});
 				},
 			}),

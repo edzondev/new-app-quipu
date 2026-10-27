@@ -1,17 +1,22 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { Button } from "#/components/ui/button";
 
-export const Route = createFileRoute("/")({ component: Inicio });
+export const Route = createFileRoute("/")({
+	beforeLoad: ({ context }) => {
+		if (context.isAuthenticated) throw redirect({ to: "/home" });
+	},
+	component: Landing,
+});
 
-function Inicio() {
+function Landing() {
 	const navigate = useNavigate();
+
 	return (
 		<main>
 			<h1>Divide tu dinero antes de gastarlo.</h1>
 			<p>Hoy puedes gastar S/ 42.30</p>
-			<button type="button" onClick={() => navigate({ to: "/crear-cuenta" })}>
-				Crear cuenta
-			</button>
-			<Link to="/">Ya tengo cuenta</Link>
+			<Button onClick={() => navigate({ to: "/sign-up" })}>Crear cuenta</Button>
+			<Link to="/sign-in">Ya tengo cuenta</Link>
 		</main>
 	);
 }
