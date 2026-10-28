@@ -265,7 +265,7 @@ function SignUpPage() {
 							onClick={() => {
 								// Better Auth: authClient.passkey.addPasskey()
 								authClient.passkey.addPasskey();
-								void navigate({ to: "/home" });
+								void navigate({ to: "/onboarding" });
 							}}
 						>
 							<Fingerprint strokeWidth={1.5} />
@@ -276,7 +276,7 @@ function SignUpPage() {
 							variant="secondary"
 							className="h-12 flex-1 rounded-full px-4"
 							onClick={() => {
-								void navigate({ to: "/home" });
+								void navigate({ to: "/onboarding" });
 							}}
 						>
 							Ahora no
