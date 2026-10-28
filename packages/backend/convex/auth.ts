@@ -3,6 +3,7 @@ import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
 import { createClient } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { Resend } from "@convex-dev/resend";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { type BetterAuthOptions, betterAuth } from "better-auth/minimal";
 import { emailOTP } from "better-auth/plugins";
 import { components, internal } from "./_generated/api";
@@ -28,11 +29,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(componen
 					.withIndex("by_userId", (q) => q.eq("userId", user._id))
 					.unique();
 				if (existing) return;
-				await ctx.db.insert("profiles", {
-					userId: user._id,
-					name: user.name,
-					createdAt: Date.now(),
-				});
+				await ctx.db.insert("profiles", { userId: user._id });
 			},
 			onDelete: async (ctx, user) => {
 				const profile = await ctx.db
@@ -51,6 +48,34 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		trustedOrigins: [siteUrl],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: { enabled: false }, // no passwords
+		databaseHooks: {
+			user: {
+				create: {
+					// Runs after the OTP is verified. Only /sign-up sends a name,
+					// so a new email on /sign-in can't create an account.
+					before: async (user) => {
+						if (!user.name.trim()) {
+							throw new APIError("BAD_REQUEST", {
+								code: "USER_NOT_FOUND",
+								message: "User not found",
+							});
+						}
+					},
+				},
+			},
+		},
+		hooks: {
+			// Before Better Auth replaces the previous code with a new one.
+			before: createAuthMiddleware(async (authCtx) => {
+				if (authCtx.path !== "/email-otp/send-verification-otp") return;
+				if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
+				const email = String(authCtx.body?.email ?? "")
+					.trim()
+					.toLowerCase();
+				const { ok } = await ctx.runMutation(internal.rateLimits.reserveCodeSend, { email });
+				if (!ok) throw new APIError("TOO_MANY_REQUESTS");
+			}),
+		},
 		plugins: [
 			convex({ authConfig }),
 			passkey({

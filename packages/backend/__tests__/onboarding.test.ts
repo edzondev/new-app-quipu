@@ -17,39 +17,42 @@ function harness() {
 	return t;
 }
 
-async function signIn(t: ReturnType<typeof harness>, email: string, name: string) {
+function post(t: ReturnType<typeof harness>, path: string, body: object) {
+	return t.fetch(`/api/auth${path}`, {
+		method: "POST",
+		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+		body: JSON.stringify(body),
+	});
+}
+
+/** Sends a code and returns it (OTP_DELIVERY=log prints it instead of emailing it). */
+async function sendCode(t: ReturnType<typeof harness>, email: string) {
 	process.env.OTP_DELIVERY = "log";
 	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	const lines: string[] = [];
 	const log = console.log;
 	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
 	try {
-		const sent = await t.fetch("/api/auth/email-otp/send-verification-otp", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				origin: "http://localhost:3000",
-			},
-			body: JSON.stringify({ email, type: "sign-in" }),
-		});
+		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
 		expect(sent.ok, await sent.clone().text()).toBe(true);
 	} finally {
 		console.log = log;
 	}
-	const otp = lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
-	const res = await t.fetch("/api/auth/sign-in/email-otp", {
-		method: "POST",
-		headers: {
-			"content-type": "application/json",
-			origin: "http://localhost:3000",
-		},
-		body: JSON.stringify({ email, otp, name }),
-	});
-	expect(res.status, await res.clone().text()).toBe(200);
-	const user = await t.query(components.betterAuth.adapter.findOne, {
+	return lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
+}
+
+function findUser(t: ReturnType<typeof harness>, email: string) {
+	return t.query(components.betterAuth.adapter.findOne, {
 		model: "user",
 		where: [{ field: "email", value: email }],
 	});
+}
+
+async function signIn(t: ReturnType<typeof harness>, email: string, name: string) {
+	const otp = await sendCode(t, email);
+	const res = await post(t, "/sign-in/email-otp", { email, otp, name });
+	expect(res.status, await res.clone().text()).toBe(200);
+	const user = await findUser(t, email);
 	const session = await t.query(components.betterAuth.adapter.findOne, {
 		model: "session",
 		where: [{ field: "userId", value: user._id }],
@@ -130,4 +133,23 @@ test("rejects invalid values", async () => {
 		cadence: "weekly",
 		cycleStartDay: 0,
 	});
+});
+
+test("sign-in can't create an account: a new email without a name is refused", async () => {
+	const t = harness();
+	const otp = await sendCode(t, "eva@correo.com");
+	const res = await post(t, "/sign-in/email-otp", { email: "eva@correo.com", otp });
+	expect(res.status).toBe(400);
+	expect((await res.json()).code).toBe("USER_NOT_FOUND");
+	expect(await findUser(t, "eva@correo.com")).toBeNull();
+});
+
+test("a second code within 90 s is refused", async () => {
+	const t = harness();
+	await sendCode(t, "ana@correo.com");
+	const again = await post(t, "/email-otp/send-verification-otp", {
+		email: "ana@correo.com",
+		type: "sign-in",
+	});
+	expect(again.status).toBe(429);
 });

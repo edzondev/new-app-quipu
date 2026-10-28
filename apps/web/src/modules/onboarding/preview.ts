@@ -59,10 +59,11 @@ export function getCycle(cadence: Cadence, startDay: string, today: Date) {
 
 	if (cadence === "monthly") return { start: monthStart, end: monthEnd };
 
-	const start = addDays(monthStart, Math.floor(daysBetween(monthStart, today) / 15) * 15);
-	let end = addDays(start, 14);
-	if (end > monthEnd) end = monthEnd;
-	return { start, end };
+	// Two halves: 15 days, then the rest of the month (13–16 days).
+	const secondHalf = addDays(monthStart, 15);
+	return today >= secondHalf
+		? { start: secondHalf, end: monthEnd }
+		: { start: monthStart, end: addDays(monthStart, 14) };
 }
 
 export function getPreview({

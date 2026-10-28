@@ -4,7 +4,7 @@ const convexUrl = import.meta.env.VITE_CONVEX_URL;
 const convexSiteUrl = import.meta.env.VITE_CONVEX_SITE_URL;
 if (!convexUrl || !convexSiteUrl) throw new Error("Faltan VITE_CONVEX_URL y VITE_CONVEX_SITE_URL");
 
-export const { handler, getToken } = convexBetterAuthReactStart({
+export const { handler, getToken, fetchAuthQuery } = convexBetterAuthReactStart({
 	convexUrl,
 	convexSiteUrl,
 });

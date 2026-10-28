@@ -15,7 +15,9 @@ function Landing() {
 		<main>
 			<h1>Divide tu dinero antes de gastarlo.</h1>
 			<p>Hoy puedes gastar S/ 42.30</p>
-			<Button onClick={() => navigate({ to: "/sign-up" })}>Crear cuenta</Button>
+			<Button onClick={() => navigate({ to: "/sign-up", search: { email: "" } })}>
+				Crear cuenta
+			</Button>
 			<Link to="/sign-in">Ya tengo cuenta</Link>
 		</main>
 	);

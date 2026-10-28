@@ -15,8 +15,6 @@ export const plan = v.object({
 export default defineSchema({
 	profiles: defineTable({
 		userId: v.string(),
-		name: v.string(),
-		createdAt: v.number(),
 		plan: v.optional(plan),
 	}).index("by_userId", ["userId"]),
 });

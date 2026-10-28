@@ -12,7 +12,7 @@
 			"default": "./convex/_generated/api.js"
 		},
 		"./convex/*": "./convex/*",
-		"./shared/*": "./shared/*"
+		"./shared/*": "./shared/*.ts"
 	},
 	"scripts": {
 		"dev": "convex dev",

@@ -1,3 +1,4 @@
+import { isValidSplit } from "@quipu/backend/shared/plan";
 import * as z from "zod/mini";
 import { getCommitmentsCents, toCents } from "#/modules/onboarding/preview";
 
@@ -22,14 +23,7 @@ export const splitSchema = z
 		wants: z.number(),
 		savings: z.number(),
 	})
-	.check(
-		z.refine((split) => {
-			const values = [split.needs, split.wants, split.savings];
-			const isInRange = values.every((value) => value >= 0 && value <= 100);
-			const total = values.reduce((sum, value) => sum + value, 0);
-			return isInRange && Math.round(total * 100) === 10000;
-		}, "La distribución debe sumar 100%."),
-	);
+	.check(z.refine(isValidSplit, "La distribución debe sumar 100%."));
 
 export const splitStepSchema = z.object({
 	split: splitSchema,
@@ -42,11 +36,7 @@ export const commitmentSchema = z.object({
 	day: z.string(),
 });
 
-export const commitmentsSchema = z.array(commitmentSchema);
-
-export const fixedStepSchema = z.object({
-	commitments: commitmentsSchema,
-});
+const commitmentsSchema = z.array(commitmentSchema);
 
 export function createFixedStepSchema(incomeCents: number) {
 	return z.object({
@@ -59,14 +49,15 @@ export function createFixedStepSchema(incomeCents: number) {
 	});
 }
 
-export const onboardingFormSchema = z.object({
-	cycleStep: cycleStepSchema,
-	splitStep: splitStepSchema,
-	fixedStep: fixedStepSchema,
-});
-
 export type Cadence = z.infer<typeof cadenceSchema>;
 export type CommitmentKind = z.infer<typeof commitmentKindSchema>;
 export type Commitment = z.infer<typeof commitmentSchema>;
 export type Split = z.infer<typeof splitSchema>;
-export type OnboardingValues = z.infer<typeof onboardingFormSchema>;
+export type CycleStepValues = z.infer<typeof cycleStepSchema>;
+export type SplitStepValues = z.infer<typeof splitStepSchema>;
+export type FixedStepValues = z.infer<ReturnType<typeof createFixedStepSchema>>;
+export type OnboardingValues = {
+	cycleStep: CycleStepValues;
+	splitStep: SplitStepValues;
+	fixedStep: FixedStepValues;
+};
