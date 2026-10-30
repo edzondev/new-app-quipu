@@ -18,12 +18,25 @@ export const getBalances = query({
 		const { space, cycle, today } = await requireOpenCycle(ctx, kind);
 		const { needsCents, wantsCents, savingsCents } = cycle.envelopes;
 
-		const commitmentRows = await ctx.db
-			.query("commitments")
-			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
-			.take(100);
+		const [commitmentRows, cycleTx] = await Promise.all([
+			ctx.db
+				.query("commitments")
+				.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+				.take(100),
+			ctx.db
+				.query("transactions")
+				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+				.take(500),
+		]);
+		const paidIds = new Set(
+			cycleTx.flatMap((tx) =>
+				tx.kind === "expense" && tx.commitmentId !== undefined ? [tx.commitmentId] : [],
+			),
+		);
 		const commitments = commitmentRows.flatMap((row) =>
-			row.frequency === "monthly" ? [{ amountCents: row.amountCents, dueDay: row.dueDay }] : [],
+			row.frequency === "monthly" && !paidIds.has(row._id)
+				? [{ amountCents: row.amountCents, dueDay: row.dueDay }]
+				: [],
 		);
 
 		const daysLeft = Math.max(0, daysBetween(today, cycle.endDate) + 1);

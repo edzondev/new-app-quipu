@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as balances from "../balances.js";
+import type * as commitments from "../commitments.js";
 import type * as cycles from "../cycles.js";
 import type * as http from "../http.js";
 import type * as model_cycles from "../model/cycles.js";
@@ -27,6 +28,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   balances: typeof balances;
+  commitments: typeof commitments;
   cycles: typeof cycles;
   http: typeof http;
   "model/cycles": typeof model_cycles;
