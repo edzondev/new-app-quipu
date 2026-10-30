@@ -1,24 +1,12 @@
-import { ConvexError, type Infer, v } from "convex/values";
-import {
-	applyIncome,
-	isValidCents,
-	MAX_ONBOARDING_COMMITMENTS,
-	NOTE_MAX_LENGTH,
-	ZERO_AMOUNTS,
-} from "../shared/budget";
+import { ConvexError, v } from "convex/values";
+import { applyIncome, isValidCents, ZERO_AMOUNTS } from "../shared/budget";
 import { getLimaDate } from "../shared/dates";
-import { isValidMonthDay, isValidPlan, isValidSplit } from "../shared/plan";
+import { isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { createFirstCycle } from "./model/cycles";
 import { getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
-
-const onboardingCommitment = v.object({
-	name: v.string(),
-	amountCents: v.number(),
-	dueDay: v.number(),
-});
 
 function getProfile(ctx: QueryCtx, userId: string) {
 	return ctx.db
@@ -30,20 +18,6 @@ function getProfile(ctx: QueryCtx, userId: string) {
 // Named for @convex-dev/require-access-control on public queries.
 function checkAccess(ctx: QueryCtx) {
 	return authComponent.safeGetAuthUser(ctx);
-}
-
-// Expects an already trimmed name.
-function isValidOnboardingCommitment({
-	name,
-	amountCents,
-	dueDay,
-}: Infer<typeof onboardingCommitment>) {
-	return (
-		name.length > 0 &&
-		name.length <= NOTE_MAX_LENGTH &&
-		isValidCents(amountCents) &&
-		isValidMonthDay(dueDay)
-	);
 }
 
 export const myProfile = query({
@@ -63,24 +37,14 @@ export const completeOnboarding = mutation({
 		...plan.fields,
 		todayCents: v.number(),
 		split,
-		commitments: v.array(onboardingCommitment),
 	},
 	returns: v.null(),
-	handler: async (ctx, { commitments, split: splitValue, todayCents, ...planValue }) => {
+	handler: async (ctx, { split: splitValue, todayCents, ...planValue }) => {
 		const user = await requireUser(ctx);
 		const profile = await getProfile(ctx, user._id);
 		if (!profile) throw new ConvexError("No encontramos tu perfil.");
 
-		const cleaned = commitments.map((c) => ({ ...c, name: c.name.trim() }));
-		const commitmentsCents = cleaned.reduce((sum, { amountCents }) => sum + amountCents, 0);
-		if (
-			!isValidPlan(planValue) ||
-			!isValidCents(todayCents) ||
-			!isValidSplit(splitValue) ||
-			cleaned.length > MAX_ONBOARDING_COMMITMENTS ||
-			!cleaned.every(isValidOnboardingCommitment) ||
-			commitmentsCents > todayCents
-		) {
+		if (!isValidPlan(planValue) || !isValidCents(todayCents) || !isValidSplit(splitValue)) {
 			throw new ConvexError("Revisa los datos e inténtalo otra vez.");
 		}
 
@@ -103,14 +67,6 @@ export const completeOnboarding = mutation({
 			date: today,
 			allocation,
 		});
-		for (const commitment of cleaned) {
-			await ctx.db.insert("commitments", {
-				spaceId,
-				...commitment,
-				envelope: "needs",
-				frequency: "monthly",
-			});
-		}
 		return null;
 	},
 });

@@ -1,4 +1,3 @@
-import { toCents } from "@quipu/backend/shared/budget";
 import { getLimaDate } from "@quipu/backend/shared/dates";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { cn } from "cn";
@@ -6,7 +5,6 @@ import { useState } from "react";
 import { QuipuHeader } from "#/components/quipu-header";
 import { getMyProfile } from "#/lib/profile";
 import { CycleStep } from "#/modules/onboarding/components/cycle-step";
-import { FixedStep } from "#/modules/onboarding/components/fixed-step";
 import { SplitStep } from "#/modules/onboarding/components/split-step";
 import type { OnboardingValues } from "#/modules/onboarding/schemas";
 
@@ -21,20 +19,19 @@ export const Route = createFileRoute("/onboarding")({
 			{ title: "Quipu — Primeros pasos" },
 			{
 				name: "description",
-				content: "Tu ingreso, tus sobres y cuánto puedes gastar hoy, en tres pasos.",
+				content: "Tu ingreso y tus sobres, en dos pasos.",
 			},
 		],
 	}),
 	component: OnboardingPage,
 });
 
-const STEPS = ["cycle", "split", "fixed"] as const;
+const STEPS = ["cycle", "split"] as const;
 type Step = (typeof STEPS)[number];
 
 const defaultValues: OnboardingValues = {
 	cycleStep: { cadence: "monthly", startDay: "1", todayAmount: "", cycleIncome: "" },
 	splitStep: { split: { needs: 50, wants: 30, savings: 20 } },
-	fixedStep: { commitments: [] },
 };
 
 function OnboardingPage() {
@@ -87,16 +84,8 @@ function OnboardingPage() {
 				{step === "split" && (
 					<SplitStep
 						defaultValues={values.splitStep}
-						incomeCents={toCents(values.cycleStep.todayAmount)}
+						cycleStep={values.cycleStep}
 						onBack={(splitStep) => goTo("cycle", { splitStep })}
-						onNext={(splitStep) => goTo("fixed", { splitStep })}
-					/>
-				)}
-				{step === "fixed" && (
-					<FixedStep
-						values={values}
-						today={today}
-						onBack={(fixedStep) => goTo("split", { fixedStep })}
 					/>
 				)}
 			</main>

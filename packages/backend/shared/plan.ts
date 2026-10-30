@@ -8,7 +8,7 @@ export type Cadence = Plan["cadence"];
 export type CycleStartDay = Plan["cycleStartDay"];
 
 // Months without day 31 clamp in dayInMonth; "last" covers end of month.
-// Exported for onboarding day pickers (cycle-step, fixed-step).
+// Exported for the onboarding cycle day picker.
 export const MAX_MONTH_DAY = 31;
 
 export function parseStartDay(raw: string): CycleStartDay {

@@ -1,11 +1,21 @@
-import { AMOUNT_KEYS, formatCents, splitIncome } from "@quipu/backend/shared/budget";
-import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useConvexMutation } from "@convex-dev/react-query";
+import { api } from "@quipu/backend/convex/_generated/api";
+import { AMOUNT_KEYS, formatCents, splitIncome, toCents } from "@quipu/backend/shared/budget";
+import { parseStartDay } from "@quipu/backend/shared/plan";
+import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
+import { useNavigate } from "@tanstack/react-router";
 import { cn } from "cn";
+import { ConvexError } from "convex/values";
+import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { StepHeader } from "#/modules/onboarding/components/step-header";
-import { type SplitStepValues, splitStepSchema } from "#/modules/onboarding/schemas";
+import {
+	type CycleStepValues,
+	type SplitStepValues,
+	splitStepSchema,
+} from "#/modules/onboarding/schemas";
 
 const ENVELOPES = [
 	{ key: "needs", label: "Necesidades", dot: "bg-sky-800" },
@@ -15,19 +25,43 @@ const ENVELOPES = [
 
 type Props = {
 	defaultValues: SplitStepValues;
-	incomeCents: number;
+	cycleStep: CycleStepValues;
 	/** Back keeps what was typed, even if it doesn't add up to 100 yet. */
 	onBack: (value: SplitStepValues) => void;
-	onNext: (value: SplitStepValues) => void;
 };
 
-export function SplitStep({ defaultValues, incomeCents, onBack, onNext }: Props) {
+export function SplitStep({ defaultValues, cycleStep, onBack }: Props) {
+	const navigate = useNavigate();
+	const completeOnboarding = useConvexMutation(api.profiles.completeOnboarding);
+	const [saveError, setSaveError] = useState<string | null>(null);
+	const todayCents = toCents(cycleStep.todayAmount);
+	const cycleIncomeCents = toCents(cycleStep.cycleIncome);
+
 	const form = useForm({
 		defaultValues,
 		validationLogic: revalidateLogic(),
 		validators: { onDynamic: splitStepSchema },
-		onSubmit: ({ value }) => onNext(value),
+		onSubmit: async ({ value }) => {
+			setSaveError(null);
+			try {
+				await completeOnboarding({
+					cadence: cycleStep.cadence,
+					cycleStartDay: parseStartDay(cycleStep.startDay),
+					incomeCents: cycleIncomeCents,
+					todayCents,
+					split: value.split,
+				});
+				await navigate({ to: "/home", replace: true });
+			} catch (error) {
+				setSaveError(
+					error instanceof ConvexError
+						? String(error.data)
+						: "No pudimos guardar. Inténtalo otra vez.",
+				);
+			}
+		},
 	});
+	const isSubmitting = useSelector(form.store, (state) => state.isSubmitting);
 
 	return (
 		<>
@@ -44,7 +78,7 @@ export function SplitStep({ defaultValues, incomeCents, onBack, onNext }: Props)
 					{(splitField) => {
 						const isInvalid = !splitField.state.meta.isValid;
 						const errorMessage = splitField.state.meta.errors[0]?.message;
-						const shares = splitIncome(incomeCents, splitField.state.value);
+						const shares = splitIncome(todayCents, splitField.state.value);
 						return (
 							<>
 								<div className="border-t border-border">
@@ -111,8 +145,19 @@ export function SplitStep({ defaultValues, incomeCents, onBack, onNext }: Props)
 				<p className="mt-5 text-xs text-muted-foreground">
 					Puedes cambiarlo cuando quieras en tus sobres.
 				</p>
-				<Button type="submit" variant="default" size="xl" className="mt-10 rounded-full px-8">
-					Continuar
+				{saveError ? (
+					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+						{saveError}
+					</p>
+				) : null}
+				<Button
+					type="submit"
+					variant="default"
+					size="xl"
+					disabled={isSubmitting}
+					className="mt-10 rounded-full px-8"
+				>
+					{isSubmitting ? "Guardando…" : "Empezar"}
 				</Button>
 			</form>
 		</>

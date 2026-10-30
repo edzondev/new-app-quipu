@@ -1,6 +1,11 @@
 {
 	"version": 1,
 	"skills": {
+		"accessibility": {
+			"source": "addyosmani/web-quality-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "2174f783a038a7ca4869c4c18e14726ec13b9c6b705d59253f647d0ca37cb78d"
+		},
 		"architect": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
@@ -25,6 +30,11 @@
 			"skillPath": "skills/benchmark-checklist/SKILL.md",
 			"computedHash": "0413fcdbb5e8b5c93b1e626e1ecce5d0bf06fbc1d89555ddb44fd7450842b264"
 		},
+		"best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "db4a1edfec63f4eaf5f0b1278f4e4b004768d8765708f94960c3ca2334caced9"
+		},
 		"blast-radius": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
@@ -36,6 +46,21 @@
 			"sourceType": "github",
 			"skillPath": "skills/bro/SKILL.md",
 			"computedHash": "33f023f92c4e4ec96049908962310c48826afc871b346a2751f493213249a013"
+		},
+		"cloudflare": {
+			"source": "cloudflare/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "4d6a83421587be79602210c00c15475bb1f7e0fe9715935f15b473fea7351ec9"
+		},
+		"cloudflare-deploy": {
+			"source": "openai/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "a0e0265fb534369d95944a58ab25159b7838f62abdcd86afa2266d69b3309561"
+		},
+		"composition-patterns": {
+			"source": "vercel-labs/agent-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "c124390cc3441844903ada94cb5820b23d922f2d0ad34e01e029e410197c8a32"
 		},
 		"correct": {
 			"source": "backnotprop/pstack",
@@ -55,11 +80,21 @@
 			"skillPath": "skills/create-verification-skill/SKILL.md",
 			"computedHash": "a6822e7f226894238401e46028846655178df707c1f820d701c79aa9bddff255"
 		},
+		"emailAndPassword": {
+			"source": "better-auth/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "f19e76b069b8569a6906f9dc38c3b7dbdce83da7a5577f6b3c844a95db29d30d"
+		},
 		"figure-it-out": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
 			"skillPath": "skills/figure-it-out/SKILL.md",
 			"computedHash": "3320630b1f357fe33f18fccb1b6a09b6896b929aaf745a9153884849fd32ee2e"
+		},
+		"frontend-design": {
+			"source": "anthropics/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "a4e6516a601f72ffd8bcd0d64609e8ba724d2ce92569a059a6890a5caadf072b"
 		},
 		"how": {
 			"source": "backnotprop/pstack",
@@ -109,11 +144,21 @@
 			"skillPath": "skills/make-bot-ui/SKILL.md",
 			"computedHash": "61d41129544eaf4b6e49bbfa2854886aab05d103f396c320f10c393739222742"
 		},
+		"migrate-to-vinext": {
+			"source": "cloudflare/vinext",
+			"sourceType": "autoskills-registry",
+			"computedHash": "2392d495b5b5c579e90a1f04f8055bb5bf9d0233341772f766042ffbc018af28"
+		},
 		"no-comments": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
 			"skillPath": "skills/no-comments/SKILL.md",
 			"computedHash": "b004a6ee9a560091e7dd81eaf06705024a47faa3a281e1c69501eb1b1e673645"
+		},
+		"nodejs-best-practices": {
+			"source": "sickn33/antigravity-awesome-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "2c543ab51c9c4093c8a94aa615f39ca55d93835816aeeaa5bbd89261d85c584c"
 		},
 		"poteto-help": {
 			"source": "backnotprop/pstack",
@@ -271,6 +316,11 @@
 			"skillPath": "skills/principle-type-system-discipline/SKILL.md",
 			"computedHash": "6f6a325bcf1d45af7f233ca173af30b7f47f5d47a0e6d8c0eba0c1e5d77a9faa"
 		},
+		"react-best-practices": {
+			"source": "vercel-labs/agent-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "502eb06700e2c3cb1bd7f710860528f72281320bd5171a2087b05a090b573dc1"
+		},
 		"recall": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
@@ -283,11 +333,21 @@
 			"skillPath": "skills/reflect/SKILL.md",
 			"computedHash": "f676e010fff633e88ced35de31d62f19de67108787f76ca7fd78d191b97b42f6"
 		},
+		"seo": {
+			"source": "addyosmani/web-quality-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "7495da57766c99f787a729d4a21234ecb5d29d90f304a0d9a5996dcdc1eec048"
+		},
 		"setup-pstack": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
 			"skillPath": "skills/setup-pstack/SKILL.md",
 			"computedHash": "b0f25cc622764c45bd92832188235726a7f006c21f3b8edfefd0e886da88a4a8"
+		},
+		"shadcn": {
+			"source": "shadcn/ui",
+			"sourceType": "autoskills-registry",
+			"computedHash": "bb3ef47ffe878da022cf38d6045b1bc1a47993c28719f9fc8413939beaa95250"
 		},
 		"sharpen": {
 			"source": "backnotprop/pstack",
@@ -313,6 +373,21 @@
 			"skillPath": "skills/swarm/SKILL.md",
 			"computedHash": "c46fe72a537c73b4a136887fafc983520044481f664ef389c52624551ca5b32e"
 		},
+		"tailwind-css-patterns": {
+			"source": "giuseppe-trisciuoglio/developer-kit",
+			"sourceType": "autoskills-registry",
+			"computedHash": "8fd534b64b3f305ade80c207e2f9ba4338d5e409e355af9f724c36764b6709c1"
+		},
+		"tailwind-v4-shadcn": {
+			"source": "secondsky/claude-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "c4cbd4cecb0da6f7f9e3c8826da87f3d05feb586e3560e62d89b95ab22b8df35"
+		},
+		"tanstack-start": {
+			"source": "tanstack-skills/tanstack-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "f47de2d4c3d9b734ba09f5a092536d6fdec9f140f6495c9b094125f43a4e13a1"
+		},
 		"tdd": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
@@ -331,6 +406,11 @@
 			"skillPath": "skills/technical-writing/SKILL.md",
 			"computedHash": "f3b48e75d92520de30a636d074915e20e6348db5fb2a50e1d2013cd75b20c8e0"
 		},
+		"typescript-advanced-types": {
+			"source": "wshobson/agents",
+			"sourceType": "autoskills-registry",
+			"computedHash": "cb5d18bc19191b388cc49c15ff98dcbc714fa343373d078be00833e8a18ef291"
+		},
 		"typescript-best-practices": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
@@ -343,11 +423,47 @@
 			"skillPath": "skills/unslop/SKILL.md",
 			"computedHash": "4069ec6c10a0228152079f52706221dc469a9e30a3040398eefd1e9c18fe6cf2"
 		},
+		"vercel-react-best-practices": {
+			"source": "vercel-labs/agent-skills",
+			"sourceType": "github",
+			"skillPath": "skills/react-best-practices/SKILL.md",
+			"computedHash": "ca7b0c0c6e5f2750043f7f0cd72d16ac4e2abc48f9b5500d047a4b77a2506212"
+		},
+		"vite": {
+			"source": "antfu/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "9b57a2fff4dbb3c38e7f2e511f4125784f11cd67f54e89d3e7d9c57fe5834bd5"
+		},
+		"vitest": {
+			"source": "antfu/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "bbb3d22f611fb721b9b475f014b323882732dc3f724e0f3de229c38795d77e8f"
+		},
+		"web-perf": {
+			"source": "cloudflare/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "11a1e86ab32c0acedcb291f159a75fd22c15e251bbd85e7db1bc9ef86e6371e8"
+		},
 		"why": {
 			"source": "backnotprop/pstack",
 			"sourceType": "github",
 			"skillPath": "skills/why/SKILL.md",
 			"computedHash": "184bef6df5ada332f8d2ffae3bb6e7a993225ca6c39784059dde26ddb15c1a9c"
+		},
+		"workers-best-practices": {
+			"source": "cloudflare/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "6b7003971822236bb9e4ab8cb623276442c93de29f844acb519a94c8a6fac2ec"
+		},
+		"wrangler": {
+			"source": "cloudflare/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "0ed898a7205a09839dbf279d0759f4ab3f07d45189b216383a813e6e8179b09d"
+		},
+		"zod": {
+			"source": "pproenca/dot-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "2e6455bb2c68a46f88db0fef1151cdb4d0a50b57b6a0cdbe7fa3b68641adf45b"
 		}
 	}
 }
