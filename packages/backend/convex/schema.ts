@@ -72,6 +72,8 @@ export default defineSchema({
 		inviteCode: v.optional(v.string()),
 		inviteExpiresAt: v.optional(v.number()),
 		fundGoalCents: v.optional(v.number()),
+		// Emergency fund cash. Updated on fund saves/withdrawals (not goal saves).
+		fundCents: v.number(),
 	})
 		.index("by_ownerId_kind", ["ownerId", "kind"])
 		.index("by_inviteCode", ["inviteCode"]),

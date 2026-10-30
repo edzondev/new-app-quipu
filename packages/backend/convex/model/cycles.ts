@@ -119,6 +119,12 @@ export async function closeCycle(
 			amountCents: savingsCents,
 			date: cycle.endDate,
 		});
+		// Re-read: ensureOpen may close several cycles in one call with a stale space doc.
+		const fresh = await ctx.db.get("spaces", space._id);
+		if (!fresh) throw new ConvexError("No encontramos este dato.");
+		await ctx.db.patch("spaces", space._id, {
+			fundCents: fresh.fundCents + savingsCents,
+		});
 	}
 
 	await ctx.db.patch("cycles", next._id, {

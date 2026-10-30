@@ -59,7 +59,11 @@ export const completeOnboarding = mutation({
 
 		const today = getLimaDate();
 		await ctx.db.patch("profiles", profile._id, { plan: planValue });
-		const spaceId = await ctx.db.insert("spaces", { kind: "personal", ownerId: user._id });
+		const spaceId = await ctx.db.insert("spaces", {
+			kind: "personal",
+			ownerId: user._id,
+			fundCents: 0,
+		});
 		const cycleId = await createFirstCycle(ctx, spaceId, planValue, splitValue, today);
 		if (todayCents > 0) {
 			const { envelopes, allocation } = applyIncome(ZERO_AMOUNTS, todayCents, splitValue);
