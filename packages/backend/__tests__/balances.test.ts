@@ -138,3 +138,55 @@ test("anonymous getBalances is refused", async () => {
 	const t = harness();
 	await expect(t.query(api.balances.getBalances, { space: "personal" })).rejects.toThrow();
 });
+
+test("getHome with a later today shrinks daysLeft and raises dailyCents", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+
+	const day20 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	const day26 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-26" });
+	const share = splitIncome(50_000, SPLIT);
+	const free = share.needsCents + share.wantsCents;
+
+	expect(day20.daysLeft).toBe(12);
+	expect(day20.dailyCents).toBe(getDailyCents(free, 12));
+	expect(day26.daysLeft).toBe(6);
+	expect(day26.dailyCents).toBe(getDailyCents(free, 6));
+	expect(day26.dailyCents).toBeGreaterThan(day20.dailyCents);
+	expect(day20.empty).toBe(false);
+	expect(day20.planIncomeCents).toBe(150_000);
+});
+
+test("getHome dueSoon only lists commitments within 3 days", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+
+	await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		await ctx.db.insert("commitments", {
+			spaceId: space._id,
+			name: "Celular",
+			amountCents: 5_000,
+			envelope: "needs",
+			frequency: "monthly",
+			dueDay: 22,
+		});
+		await ctx.db.insert("commitments", {
+			spaceId: space._id,
+			name: "Alquiler",
+			amountCents: 90_000,
+			envelope: "needs",
+			frequency: "monthly",
+			dueDay: 1,
+		});
+	});
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(home.dueSoon).toEqual([
+		expect.objectContaining({ name: "Celular", dueDate: "2026-10-22", amountCents: 5_000 }),
+	]);
+});

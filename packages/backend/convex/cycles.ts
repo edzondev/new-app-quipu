@@ -5,7 +5,7 @@ import { ensureOpenCycle } from "./model/cycles";
 import { requireSpace, requireSpaceById } from "./model/spaces";
 import { spaceKind } from "./schema";
 
-/** Not wired from the app yet; Inicio will call this so a new cycle exists without the cron. */
+/** Inicio calls this on open so a new cycle exists without waiting for the cron. */
 export const ensureOpen = mutation({
 	args: { space: spaceKind },
 	returns: v.object({

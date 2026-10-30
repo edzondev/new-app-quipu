@@ -1,5 +1,6 @@
 import { ConvexError, type Infer, v } from "convex/values";
 import { AMOUNT_KEYS, isValidCents } from "../shared/budget";
+import { isIsoDate } from "../shared/dates";
 import { isValidMonthDay } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation } from "./_generated/server";
@@ -30,10 +31,6 @@ function cleanName(name: string) {
 	return trimmed;
 }
 
-function isValidDueDate(dueDate: string) {
-	return /^\d{4}-\d{2}-\d{2}$/.test(dueDate) && !Number.isNaN(Date.parse(`${dueDate}T00:00:00Z`));
-}
-
 async function requireOwnCommitment(ctx: MutationCtx, kind: SpaceKind, id: Id<"commitments">) {
 	const { userId, space } = await requireSpace(ctx, kind);
 	const row = await ctx.db.get("commitments", id);
@@ -59,7 +56,7 @@ function buildRow(
 			dueDay: when.dueDay,
 		};
 	}
-	if (!isValidDueDate(when.dueDate)) throw new ConvexError(BAD_INPUT);
+	if (!isIsoDate(when.dueDate)) throw new ConvexError(BAD_INPUT);
 	return {
 		spaceId,
 		name,

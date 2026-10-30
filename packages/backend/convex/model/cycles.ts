@@ -50,9 +50,8 @@ export async function requireCycleAt(ctx: Ctx, spaceId: Id<"spaces">, date: stri
 }
 
 /** Space you can access plus its open cycle for today. Shared by every read of the live budget. */
-export async function requireOpenCycle(ctx: Ctx, kind: SpaceKind) {
+export async function requireOpenCycle(ctx: Ctx, kind: SpaceKind, today = getLimaDate()) {
 	const { userId, space } = await requireSpace(ctx, kind);
-	const today = getLimaDate();
 	const cycle = await requireCycleAt(ctx, space._id, today);
 	if (cycle.endDate < today) {
 		throw new ConvexError("No encontramos tu ciclo abierto.");
