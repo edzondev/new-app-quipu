@@ -5,7 +5,7 @@ import { isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { createFirstCycle } from "./model/cycles";
-import { getPersonalSpace, requireUser } from "./model/spaces";
+import { getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
 
 function getProfile(ctx: QueryCtx, userId: string) {
@@ -22,13 +22,24 @@ function checkAccess(ctx: QueryCtx) {
 
 export const myProfile = query({
 	args: {},
-	returns: v.union(v.null(), v.object({ name: v.string(), plan: v.union(plan, v.null()) })),
+	returns: v.union(
+		v.null(),
+		v.object({
+			name: v.string(),
+			plan: v.union(plan, v.null()),
+			hasHousehold: v.boolean(),
+		}),
+	),
 	handler: async (ctx) => {
 		const user = await checkAccess(ctx);
 		if (!user) return null;
 		const profile = await getProfile(ctx, user._id);
 		if (!profile) return null;
-		return { name: user.name, plan: profile.plan ?? null };
+		return {
+			name: user.name,
+			plan: profile.plan ?? null,
+			hasHousehold: (await getHousehold(ctx, user._id)) !== null,
+		};
 	},
 });
 

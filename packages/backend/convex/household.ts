@@ -111,10 +111,10 @@ export const joinHousehold = mutation({
 			.query("spaces")
 			.withIndex("by_inviteCode", (q) => q.eq("inviteCode", normalized))
 			.unique();
-		if (!space || space.kind !== "household") {
+		if (space?.kind !== "household") {
 			return { ok: false as const, reason: "invalid" as const };
 		}
-		if (!((space?.inviteExpiresAt ?? 0) > Date.now())) {
+		if (!((space.inviteExpiresAt ?? 0) > Date.now())) {
 			return { ok: false as const, reason: "expired" as const };
 		}
 
@@ -124,7 +124,10 @@ export const joinHousehold = mutation({
 			.take(3);
 		if (members.length >= 2) return { ok: false as const, reason: "full" as const };
 
-		await ctx.db.insert("spaceMembers", { spaceId: space._id, userId: user._id });
+		await ctx.db.insert("spaceMembers", {
+			spaceId: space._id,
+			userId: user._id,
+		});
 		// Invalidate the code without clearing optional fields (patch can't unset).
 		await ctx.db.patch("spaces", space._id, { inviteExpiresAt: 0 });
 		return { ok: true as const };
