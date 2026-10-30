@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
+import { Button } from "#/components/ui/button";
 import { authClient } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
+import { useRegister } from "#/modules/register/register-dialog";
 
 const pill =
 	"flex h-[30px] items-center rounded-full px-3 text-[12.5px] font-semibold text-muted-foreground";
@@ -18,6 +20,7 @@ export function AppBar() {
 	const navigate = useNavigate();
 	const [signingOut, setSigningOut] = useState(false);
 	const [signOutError, setSignOutError] = useState<string | null>(null);
+	const openRegister = useRegister();
 	const initial = (profile.data?.name?.trim().charAt(0) || "?").toUpperCase();
 
 	async function signOut() {
@@ -55,6 +58,9 @@ export function AppBar() {
 				</Link>
 
 				<div className="flex items-center gap-3">
+					<Button type="button" onClick={() => openRegister()} className="rounded-full">
+						Registrar
+					</Button>
 					{profile.data?.hasHousehold ? (
 						<div
 							role="tablist"

@@ -1,24 +1,23 @@
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { formatCents, toCents } from "@quipu/backend/shared/budget";
+import { formatCents } from "@quipu/backend/shared/budget";
 import { addDays, formatDay } from "@quipu/backend/shared/dates";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import type { FunctionReturnType } from "convex/server";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "#/components/ui/button";
 import {
 	Dialog,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogPanel,
 	DialogPopup,
 	DialogTitle,
 	DialogTrigger,
 } from "#/components/ui/dialog";
-import { Input } from "#/components/ui/input";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { useRegister } from "#/modules/register/register-dialog";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
 type Space = "personal" | "household";
@@ -47,7 +46,7 @@ export function HomePage() {
 	}
 	if (!home.data) return <HomeSkeleton />;
 	return home.data.empty ? (
-		<EmptyCycle space={space} planIncomeCents={home.data.planIncomeCents} />
+		<EmptyCycle planIncomeCents={home.data.planIncomeCents} />
 	) : (
 		<Overview home={home.data} space={space} today={today} />
 	);
@@ -194,19 +193,9 @@ function Formula({ home }: { home: Home }) {
 	);
 }
 
-function EmptyCycle({ space, planIncomeCents }: { space: Space; planIncomeCents: number }) {
-	const addIncome = useMutation({ mutationFn: useConvexMutation(api.transactions.addIncome) });
-	const [otherOpen, setOtherOpen] = useState(false);
-	const [failed, setFailed] = useState(false);
-
-	async function save(amountCents: number) {
-		setFailed(false);
-		try {
-			await addIncome.mutateAsync({ space, amountCents });
-		} catch {
-			setFailed(true);
-		}
-	}
+function EmptyCycle({ planIncomeCents }: { planIncomeCents: number }) {
+	const openRegister = useRegister();
+	const preset = planIncomeCents > 0 ? (planIncomeCents / 100).toFixed(2) : "";
 
 	return (
 		<section className="mt-10 pb-16 sm:mt-14">
@@ -217,7 +206,7 @@ function EmptyCycle({ space, planIncomeCents }: { space: Space; planIncomeCents:
 				Registra un ingreso y Quipu reparte tu dinero en tus sobres.
 			</p>
 			<div className="mt-8 flex flex-col items-start gap-3">
-				{planIncomeCents > 0 ? (
+				{preset ? (
 					<>
 						<p className="text-sm text-muted-foreground">
 							¿Ya te pagaron{" "}
@@ -229,86 +218,28 @@ function EmptyCycle({ space, planIncomeCents }: { space: Space; planIncomeCents:
 						<Button
 							size="lg"
 							className="rounded-full px-7"
-							loading={addIncome.isPending}
-							onClick={() => save(planIncomeCents)}
+							onClick={() => openRegister({ kind: "income", amount: preset })}
 						>
 							Sí, ya me pagaron
 						</Button>
 						<button
 							type="button"
 							className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-							onClick={() => setOtherOpen(true)}
+							onClick={() => openRegister({ kind: "income" })}
 						>
 							Registrar otro monto
 						</button>
 					</>
 				) : (
-					<Button size="lg" className="rounded-full px-7" onClick={() => setOtherOpen(true)}>
+					<Button
+						size="lg"
+						className="rounded-full px-7"
+						onClick={() => openRegister({ kind: "income" })}
+					>
 						Registrar ingreso
 					</Button>
 				)}
-				{failed ? (
-					<p role="alert" className="text-xs text-warning-foreground">
-						No pudimos guardar el ingreso. Inténtalo otra vez.
-					</p>
-				) : null}
 			</div>
-			<IncomeDialog
-				open={otherOpen}
-				onOpenChange={setOtherOpen}
-				pending={addIncome.isPending}
-				onSave={save}
-			/>
 		</section>
-	);
-}
-
-function IncomeDialog({
-	open,
-	onOpenChange,
-	pending,
-	onSave,
-}: {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	pending: boolean;
-	onSave: (amountCents: number) => void;
-}) {
-	const [raw, setRaw] = useState("");
-	const amountCents = toCents(raw);
-
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogPopup>
-				<DialogHeader>
-					<DialogTitle>Registrar ingreso</DialogTitle>
-					<DialogDescription>Para este ciclo. Se reparte en tus sobres.</DialogDescription>
-				</DialogHeader>
-				<DialogPanel>
-					<div className="flex items-baseline gap-3 border-b border-neutral-400 pb-3 has-focus-visible:border-foreground">
-						<span className="text-2xl text-muted-foreground">S/</span>
-						<Input
-							inputMode="decimal"
-							autoComplete="off"
-							aria-label="Monto del ingreso"
-							placeholder="0.00"
-							value={raw}
-							onChange={(event) => setRaw(event.target.value)}
-							unstyled
-							className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-4xl [&_[data-slot=input]]:tabular-nums"
-						/>
-					</div>
-				</DialogPanel>
-				<DialogFooter>
-					<Button
-						loading={pending}
-						disabled={pending || amountCents === 0}
-						onClick={() => onSave(amountCents)}
-					>
-						Guardar ingreso
-					</Button>
-				</DialogFooter>
-			</DialogPopup>
-		</Dialog>
 	);
 }

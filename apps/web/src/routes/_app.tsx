@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect, retainSearchParams } from "@tanstack/react-router";
 import { AppBar } from "#/components/app-bar";
 import { getMyProfile } from "#/lib/profile";
+import { RegisterProvider } from "#/modules/register/register-dialog";
 
 export const Route = createFileRoute("/_app")({
 	// Only `household` lives in the URL; personal is the default (no param).
@@ -22,11 +23,13 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
 	return (
-		<div className="min-h-svh bg-background text-foreground">
-			<AppBar />
-			<main className="mx-auto w-full max-w-280 px-6 py-9">
-				<Outlet />
-			</main>
-		</div>
+		<RegisterProvider>
+			<div className="min-h-svh bg-background text-foreground">
+				<AppBar />
+				<main className="mx-auto w-full max-w-280 px-6 py-9">
+					<Outlet />
+				</main>
+			</div>
+		</RegisterProvider>
 	);
 }
