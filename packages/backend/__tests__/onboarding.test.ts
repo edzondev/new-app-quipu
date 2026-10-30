@@ -106,14 +106,20 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 		const spaces = await ctx.db.query("spaces").take(5);
 		const cycles = await ctx.db.query("cycles").take(5);
 		const commitments = await ctx.db.query("commitments").take(5);
+		const profile = await ctx.db
+			.query("profiles")
+			.withIndex("by_userId", (q) => q.eq("userId", spaces[0].ownerId))
+			.unique();
 		const incomes = await ctx.db
 			.query("transactions")
 			.withIndex("by_spaceId_kind", (q) => q.eq("spaceId", spaces[0]._id).eq("kind", "income"))
 			.take(5);
-		return { spaces, cycles, commitments, incomes };
+		return { spaces, cycles, commitments, incomes, trialEndsAt: profile?.trialEndsAt };
 	});
 	expect(first.spaces).toHaveLength(1);
 	expect(first.spaces[0]).toMatchObject({ kind: "personal" });
+	expect(first.trialEndsAt).toBeGreaterThan(Date.now());
+	expect(first.trialEndsAt).toBeLessThanOrEqual(Date.now() + 14 * 24 * 60 * 60 * 1000);
 	expect(first.cycles).toHaveLength(1);
 	expect(first.cycles[0]).toMatchObject({
 		spaceId: first.spaces[0]._id,

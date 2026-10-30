@@ -10,12 +10,17 @@
 
 import type * as auth from "../auth.js";
 import type * as balances from "../balances.js";
+import type * as commitments from "../commitments.js";
 import type * as cycles from "../cycles.js";
+import type * as goals from "../goals.js";
+import type * as household from "../household.js";
 import type * as http from "../http.js";
 import type * as model_cycles from "../model/cycles.js";
+import type * as model_plus from "../model/plus.js";
 import type * as model_spaces from "../model/spaces.js";
 import type * as profiles from "../profiles.js";
 import type * as rateLimits from "../rateLimits.js";
+import type * as settings from "../settings.js";
 import type * as transactions from "../transactions.js";
 
 import type {
@@ -27,12 +32,17 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   balances: typeof balances;
+  commitments: typeof commitments;
   cycles: typeof cycles;
+  goals: typeof goals;
+  household: typeof household;
   http: typeof http;
   "model/cycles": typeof model_cycles;
+  "model/plus": typeof model_plus;
   "model/spaces": typeof model_spaces;
   profiles: typeof profiles;
   rateLimits: typeof rateLimits;
+  settings: typeof settings;
   transactions: typeof transactions;
 }>;
 

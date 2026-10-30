@@ -1,11 +1,13 @@
-import { HOUR, RateLimiter, SECOND } from "@convex-dev/rate-limiter";
+import { HOUR, MINUTE, RateLimiter, SECOND } from "@convex-dev/rate-limiter";
 import { type Infer, v } from "convex/values";
 import { components } from "./_generated/api";
+import type { MutationCtx } from "./_generated/server";
 import { internalMutation } from "./_generated/server";
 
 const limiter = new RateLimiter(components.rateLimiter, {
 	codeEvery90s: { kind: "token bucket", rate: 1, period: 90 * SECOND, capacity: 1 },
 	codesPerHour: { kind: "fixed window", rate: 6, period: HOUR },
+	householdJoin: { kind: "token bucket", rate: 5, period: MINUTE, capacity: 5 },
 });
 
 const resultValidator = v.object({
@@ -30,3 +32,8 @@ export const reserveCodeSend = internalMutation({
 		return { ok: true, waitMs: 0, limit: null };
 	},
 });
+
+export async function limitHouseholdJoin(ctx: MutationCtx, userId: string) {
+	const result = await limiter.limit(ctx, "householdJoin", { key: userId });
+	return result.ok;
+}
