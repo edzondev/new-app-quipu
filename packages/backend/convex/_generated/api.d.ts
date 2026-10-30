@@ -16,6 +16,7 @@ import type * as model_cycles from "../model/cycles.js";
 import type * as model_spaces from "../model/spaces.js";
 import type * as profiles from "../profiles.js";
 import type * as rateLimits from "../rateLimits.js";
+import type * as transactions from "../transactions.js";
 
 import type {
   ApiFromModules,
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   "model/spaces": typeof model_spaces;
   profiles: typeof profiles;
   rateLimits: typeof rateLimits;
+  transactions: typeof transactions;
 }>;
 
 /**
