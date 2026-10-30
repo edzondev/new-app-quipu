@@ -58,7 +58,8 @@ export const completeOnboarding = mutation({
 		if (await getPersonalSpace(ctx, user._id)) return null;
 
 		const today = getLimaDate();
-		await ctx.db.patch("profiles", profile._id, { plan: planValue });
+		const trialEndsAt = Date.now() + 14 * 24 * 60 * 60 * 1000;
+		await ctx.db.patch("profiles", profile._id, { plan: planValue, trialEndsAt });
 		const spaceId = await ctx.db.insert("spaces", {
 			kind: "personal",
 			ownerId: user._id,
