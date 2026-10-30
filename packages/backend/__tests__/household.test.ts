@@ -78,7 +78,7 @@ test("Ana invites Luis; Luis spends; Ana cannot delete Luis's expense", async ()
 
 	const luis = await signIn(t, "luis@correo.com", "Luis");
 	await luis.as.mutation(api.profiles.completeOnboarding, onboard);
-	await luis.as.mutation(api.household.joinHousehold, { code });
+	expect(await luis.as.mutation(api.household.joinHousehold, { code })).toEqual({ ok: true });
 
 	await luis.as.mutation(api.transactions.addExpense, {
 		space: "household",
@@ -98,4 +98,24 @@ test("Ana invites Luis; Luis spends; Ana cannot delete Luis's expense", async ()
 	await expect(
 		ana.as.mutation(api.transactions.deleteExpense, { space: "household", id: expenseId }),
 	).rejects.toThrow("Solo quien lo registró puede cambiarlo.");
+});
+
+test("six bad invite codes in a row: the sixth is rate_limited", async () => {
+	const t = harness();
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	const luis = await signIn(t, "luis@correo.com", "Luis");
+	await luis.as.mutation(api.profiles.completeOnboarding, onboard);
+
+	const results = [];
+	for (let i = 0; i < 6; i++) {
+		results.push(await luis.as.mutation(api.household.joinHousehold, { code: "ZZZZZZ" }));
+	}
+	expect(results.slice(0, 5)).toEqual([
+		{ ok: false, reason: "invalid" },
+		{ ok: false, reason: "invalid" },
+		{ ok: false, reason: "invalid" },
+		{ ok: false, reason: "invalid" },
+		{ ok: false, reason: "invalid" },
+	]);
+	expect(results[5]).toEqual({ ok: false, reason: "rate_limited" });
 });

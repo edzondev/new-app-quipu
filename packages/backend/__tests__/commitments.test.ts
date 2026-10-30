@@ -122,7 +122,7 @@ test("once commitment paid in October cannot be marked paid again after ensureOp
 	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
 	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
 
-	await expect(
-		ana.mutation(api.commitments.markPaid, { space: "personal", id }),
-	).rejects.toThrow("Este compromiso ya está pagado en este ciclo.");
+	await expect(ana.mutation(api.commitments.markPaid, { space: "personal", id })).rejects.toThrow(
+		"Este compromiso ya está pagado en este ciclo.",
+	);
 });

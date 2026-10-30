@@ -80,7 +80,8 @@ test("getUnseenClosed returns the closed cycle until markClosedSeen", async () =
 
 	const unseen = await ana.query(api.cycles.getUnseenClosed, { space: "personal" });
 	expect(unseen).toMatchObject({ startDate: "2026-10-20", endDate: "2026-10-31" });
+	if (!unseen) throw new Error("sin aviso");
 
-	await ana.mutation(api.cycles.markClosedSeen, { cycleId: unseen!.cycleId });
+	await ana.mutation(api.cycles.markClosedSeen, { cycleId: unseen.cycleId });
 	expect(await ana.query(api.cycles.getUnseenClosed, { space: "personal" })).toBeNull();
 });

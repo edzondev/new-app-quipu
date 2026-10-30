@@ -12,15 +12,25 @@ import {
 } from "./model/spaces";
 import { limitHouseholdJoin } from "./rateLimits";
 
-const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
 const NOT_FOUND = "No encontramos este dato.";
 const NEED_HOUSEHOLD = "Aún no tienes un hogar.";
 const ALREADY_IN = "Ya formas parte de un hogar.";
-const FULL = "Este hogar ya tiene dos personas.";
-const EXPIRED = "Este código ya no sirve. Pide uno nuevo.";
-const RATE_LIMITED = "Demasiados intentos. Espera un momento.";
+const OWNER_LEAVE = "Eres quien creó el hogar, no puedes salir.";
 const INVITE_MS = 48 * 60 * 60 * 1000;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+const joinResult = v.union(
+	v.object({ ok: v.literal(true) }),
+	v.object({
+		ok: v.literal(false),
+		reason: v.union(
+			v.literal("invalid"),
+			v.literal("expired"),
+			v.literal("full"),
+			v.literal("rate_limited"),
+		),
+	}),
+);
 
 function randomCode() {
 	const bytes = new Uint8Array(6);
@@ -85,34 +95,39 @@ export const createInvite = mutation({
 
 export const joinHousehold = mutation({
 	args: { code: v.string() },
-	returns: v.null(),
+	returns: joinResult,
 	handler: async (ctx, { code }) => {
 		const user = await requireUser(ctx);
-		const normalized = code.trim().toUpperCase();
-		if (normalized.length !== 6) throw new ConvexError(BAD_INPUT);
+		// Consume the attempt first so a soft failure still counts toward the limit.
+		if (!(await limitHouseholdJoin(ctx, user._id))) {
+			return { ok: false as const, reason: "rate_limited" as const };
+		}
 
-		if (!(await limitHouseholdJoin(ctx, user._id))) throw new ConvexError(RATE_LIMITED);
+		const normalized = code.trim().toUpperCase();
+		if (normalized.length !== 6) return { ok: false as const, reason: "invalid" as const };
 		if (await getHousehold(ctx, user._id)) throw new ConvexError(ALREADY_IN);
 
 		const space = await ctx.db
 			.query("spaces")
 			.withIndex("by_inviteCode", (q) => q.eq("inviteCode", normalized))
 			.unique();
-		if (!space || space.kind !== "household") throw new ConvexError(EXPIRED);
-		if (space.inviteExpiresAt === undefined || space.inviteExpiresAt <= Date.now()) {
-			throw new ConvexError(EXPIRED);
+		if (!space || space.kind !== "household") {
+			return { ok: false as const, reason: "invalid" as const };
+		}
+		if (!((space?.inviteExpiresAt ?? 0) > Date.now())) {
+			return { ok: false as const, reason: "expired" as const };
 		}
 
 		const members = await ctx.db
 			.query("spaceMembers")
 			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
 			.take(3);
-		if (members.length >= 2) throw new ConvexError(FULL);
+		if (members.length >= 2) return { ok: false as const, reason: "full" as const };
 
 		await ctx.db.insert("spaceMembers", { spaceId: space._id, userId: user._id });
 		// Invalidate the code without clearing optional fields (patch can't unset).
 		await ctx.db.patch("spaces", space._id, { inviteExpiresAt: 0 });
-		return null;
+		return { ok: true as const };
 	},
 });
 
@@ -126,6 +141,9 @@ export const leaveHousehold = mutation({
 			.withIndex("by_userId", (q) => q.eq("userId", user._id))
 			.first();
 		if (!membership) throw new ConvexError(NEED_HOUSEHOLD);
+		const space = await ctx.db.get("spaces", membership.spaceId);
+		if (!space) throw new ConvexError(NEED_HOUSEHOLD);
+		if (space.ownerId === user._id) throw new ConvexError(OWNER_LEAVE);
 		await ctx.db.delete("spaceMembers", membership._id);
 		return null;
 	},
