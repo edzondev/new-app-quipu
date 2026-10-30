@@ -85,12 +85,7 @@ export async function getOrCreateNextCycle(
 	return next;
 }
 
-/**
- * Closes `cycle` and returns the next one. Idempotent if `closedAt` is already set.
- *
- * TODO: when expenses exist, carryIn / savings must use freeAmounts(envelopes, spent,
- * reserved) — the free pool — not the full envelopes.
- */
+/** Closes `cycle` and returns the next one. Idempotent if `closedAt` is already set. */
 export async function closeCycle(
 	ctx: MutationCtx,
 	space: Doc<"spaces">,

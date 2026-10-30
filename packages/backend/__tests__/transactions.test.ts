@@ -57,10 +57,7 @@ async function signIn(t: ReturnType<typeof harness>, email: string, name: string
 		model: "session",
 		where: [{ field: "userId", value: user._id }],
 	});
-	return {
-		as: t.withIdentity({ subject: user._id, sessionId: session._id }),
-		userId: user._id as string,
-	};
+	return { as: t.withIdentity({ subject: user._id, sessionId: session._id }) };
 }
 
 const SPLIT = { needs: 50, wants: 30, savings: 20 };
@@ -255,4 +252,50 @@ test("saving S/ 100 empties Ahorro; S/ 101 fails; withdraw over fund fails", asy
 	const afterWithdraw = await ana.as.query(api.balances.getBalances, { space: "personal" });
 	expect(afterWithdraw.needsCents).toBe(35_000);
 	expect(afterWithdraw.savingsCents).toBe(0);
+});
+
+test("updateIncome S/ 100 → S/ 200 updates envelopes to the new split", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 10_000,
+	});
+	const id = await incomeId(t, 10_000);
+	await ana.as.mutation(api.transactions.updateIncome, {
+		space: "personal",
+		id,
+		amountCents: 20_000,
+	});
+	const share = splitIncome(20_000, SPLIT);
+	const balances = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(balances).toMatchObject({
+		needsCents: 25_000 + share.needsCents,
+		wantsCents: 15_000 + share.wantsCents,
+		savingsCents: 10_000 + share.savingsCents,
+	});
+});
+
+test("deleteIncome fails if that income's Ahorro was already moved to the fund", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 10_000,
+	});
+	const id = await incomeId(t, 10_000);
+	await ana.as.mutation(api.transactions.addSaving, {
+		space: "personal",
+		amountCents: 12_000,
+	});
+
+	await expect(
+		ana.as.mutation(api.transactions.deleteIncome, { space: "personal", id }),
+	).rejects.toThrow("Ya usaste parte de este ingreso en tu ahorro. Retíralo primero.");
+
+	const fundCents = await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		return space.fundCents;
+	});
+	expect(fundCents).toBe(12_000);
 });

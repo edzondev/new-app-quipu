@@ -137,6 +137,19 @@ test("ensureOpen creates the next cycle when the previous one already ended", as
 	});
 });
 
+test("closeCycle moves remaining Ahorro into spaces.fundCents", async () => {
+	const t = harness();
+	const ana = await onboardOct20(t);
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const fundCents = await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		return space.fundCents;
+	});
+	expect(fundCents).toBe(10_000);
+});
+
 test("last day of the cycle stays open", async () => {
 	const t = harness();
 	const ana = await onboardOct20(t);

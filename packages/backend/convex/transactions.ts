@@ -18,6 +18,7 @@ type TxKind = Doc<"transactions">["kind"];
 const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
 const NOT_FOUND = "No encontramos este dato.";
 const NOT_AUTHOR = "Solo quien lo registró puede cambiarlo.";
+const INCOME_ALREADY_SAVED = "Ya usaste parte de este ingreso en tu ahorro. Retíralo primero.";
 
 function cleanNote(note: string | undefined) {
 	if (note === undefined) return undefined;
@@ -26,11 +27,11 @@ function cleanNote(note: string | undefined) {
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 
-async function requireOwnOpenRow<K extends TxKind>(
+async function requireOwnOpenRow(
 	ctx: MutationCtx,
 	kind: SpaceKind,
 	id: Id<"transactions">,
-	expected: K,
+	expected: TxKind,
 ) {
 	const open = await requireOpenCycle(ctx, kind);
 	const row = await ctx.db.get("transactions", id);
@@ -43,7 +44,7 @@ async function requireOwnOpenRow<K extends TxKind>(
 		throw new ConvexError(NOT_FOUND);
 	}
 	if (row.userId !== open.userId) throw new ConvexError(NOT_AUTHOR);
-	return { ...open, row: row as Extract<Doc<"transactions">, { kind: K }> };
+	return { ...open, row };
 }
 
 function patchEnvelope(
@@ -52,6 +53,15 @@ function patchEnvelope(
 	delta: number,
 ): EnvelopeAmounts {
 	return { ...envelopes, [key]: envelopes[key] + delta };
+}
+
+function envelopesWithoutIncome(
+	envelopes: EnvelopeAmounts,
+	allocation: EnvelopeAmounts,
+): EnvelopeAmounts {
+	const without = subtractAmounts(envelopes, allocation);
+	if (without.savingsCents < 0) throw new ConvexError(INCOME_ALREADY_SAVED);
+	return without;
 }
 
 export const addExpense = mutation({
@@ -94,6 +104,7 @@ export const updateExpense = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, amountCents, envelope, note }) => {
 		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "expense");
+		if (row.kind !== "expense") throw new ConvexError(NOT_FOUND);
 		if (!isValidCents(amountCents)) throw new ConvexError(BAD_INPUT);
 		const oldKey = AMOUNT_KEYS[row.envelope];
 		const newKey = AMOUNT_KEYS[envelope];
@@ -114,6 +125,7 @@ export const deleteExpense = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id }) => {
 		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "expense");
+		if (row.kind !== "expense") throw new ConvexError(NOT_FOUND);
 		const key = AMOUNT_KEYS[row.envelope];
 		await ctx.db.patch("cycles", cycle._id, {
 			envelopes: patchEnvelope(cycle.envelopes, key, row.amountCents),
@@ -159,8 +171,9 @@ export const updateIncome = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, amountCents, note }) => {
 		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
+		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
 		if (!isValidCents(amountCents)) throw new ConvexError(BAD_INPUT);
-		const withoutOld = subtractAmounts(cycle.envelopes, row.allocation);
+		const withoutOld = envelopesWithoutIncome(cycle.envelopes, row.allocation);
 		const { envelopes, allocation } = applyIncome(withoutOld, amountCents, cycle.split);
 		await ctx.db.patch("transactions", id, {
 			amountCents,
@@ -177,8 +190,9 @@ export const deleteIncome = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id }) => {
 		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
+		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
 		await ctx.db.patch("cycles", cycle._id, {
-			envelopes: subtractAmounts(cycle.envelopes, row.allocation),
+			envelopes: envelopesWithoutIncome(cycle.envelopes, row.allocation),
 		});
 		await ctx.db.delete("transactions", id);
 		return null;
