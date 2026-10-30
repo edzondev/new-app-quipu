@@ -13,6 +13,7 @@ import type * as balances from "../balances.js";
 import type * as commitments from "../commitments.js";
 import type * as cycles from "../cycles.js";
 import type * as goals from "../goals.js";
+import type * as household from "../household.js";
 import type * as http from "../http.js";
 import type * as model_cycles from "../model/cycles.js";
 import type * as model_plus from "../model/plus.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   commitments: typeof commitments;
   cycles: typeof cycles;
   goals: typeof goals;
+  household: typeof household;
   http: typeof http;
   "model/cycles": typeof model_cycles;
   "model/plus": typeof model_plus;
