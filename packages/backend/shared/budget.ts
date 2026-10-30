@@ -25,7 +25,12 @@ const moneyFormat = new Intl.NumberFormat("en-US", {
 });
 
 export function toCents(raw: string): number {
-	const value = Number(raw.replace(/,/g, ""));
+	// A trailing comma with 1–2 digits is the decimal mark ("12,50"). Any other comma groups thousands.
+	const decimalComma = !raw.includes(".") && /,\d{1,2}$/.test(raw);
+	const normalized = decimalComma
+		? raw.replace(/,(\d{1,2})$/, ".$1").replace(/,/g, "")
+		: raw.replace(/,/g, "");
+	const value = Number(normalized);
 	return Number.isFinite(value) && value > 0 ? Math.round(value * 100) : 0;
 }
 

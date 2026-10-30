@@ -6,11 +6,26 @@ import {
 	reallocateFree,
 	splitIncome,
 	subtractAmounts,
+	toCents,
 	ZERO_AMOUNTS,
 } from "../shared/budget";
 
 const SPLIT_50_30_20 = { needs: 50, wants: 30, savings: 20 };
 const SPLIT_40_40_20 = { needs: 40, wants: 40, savings: 20 };
+
+describe("toCents", () => {
+	test("a comma with one or two trailing digits is the decimal mark", () => {
+		expect(toCents("12,50")).toBe(1250);
+		expect(toCents("12,5")).toBe(1250);
+		expect(toCents("12.50")).toBe(1250);
+		expect(toCents("12.5")).toBe(1250);
+		expect(toCents("19.99")).toBe(1999);
+	});
+
+	test("any other comma groups thousands", () => {
+		expect(toCents("1,500")).toBe(150_000);
+	});
+});
 
 describe("splitIncome", () => {
 	test("S/ 10.01 at 50/30/20 gives 5.01, 3.00 and 2.00", () => {

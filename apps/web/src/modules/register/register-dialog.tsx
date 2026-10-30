@@ -178,7 +178,9 @@ function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => void }) {
 						<span className="text-muted-foreground">Meta</span>
 						<select
 							value={selectedGoal}
-							onChange={(event) => setGoalId(event.target.value as GoalId)}
+							onChange={(event) =>
+								setGoalId(goalOptions.find((goal) => goal.id === event.target.value)?.id)
+							}
 							className="h-9 rounded-lg border border-input bg-background px-3"
 						>
 							{goalOptions.map((goal) => (
