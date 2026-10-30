@@ -1,10 +1,10 @@
 import { ConvexError } from "convex/values";
 import { ZERO_AMOUNTS } from "../../shared/budget";
-import { addDays, getCycleRange, getFirstCycleRange } from "../../shared/dates";
+import { addDays, getCycleRange, getFirstCycleRange, getLimaDate } from "../../shared/dates";
 import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { requirePlan } from "./spaces";
+import { requirePlan, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -47,6 +47,17 @@ export async function requireCycleAt(ctx: Ctx, spaceId: Id<"spaces">, date: stri
 	const cycle = await getCycleAt(ctx, spaceId, date);
 	if (!cycle) throw new ConvexError("No encontramos tu ciclo.");
 	return cycle;
+}
+
+/** Space you can access plus its open cycle for today. Shared by every read of the live budget. */
+export async function requireOpenCycle(ctx: Ctx, kind: SpaceKind) {
+	const { userId, space } = await requireSpace(ctx, kind);
+	const today = getLimaDate();
+	const cycle = await requireCycleAt(ctx, space._id, today);
+	if (cycle.endDate < today) {
+		throw new ConvexError("No encontramos tu ciclo abierto.");
+	}
+	return { userId, space, cycle, today };
 }
 
 /** Next cycle uses the plan as it is now: cadence or start-day changes apply here. */
