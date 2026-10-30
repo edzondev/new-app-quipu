@@ -91,6 +91,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	expect(await ana.query(api.profiles.myProfile, {})).toEqual({
 		name: "Ana",
 		plan: null,
+		hasHousehold: false,
 	});
 
 	const today = getLimaDate();
@@ -100,6 +101,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	expect(await ana.query(api.profiles.myProfile, {})).toEqual({
 		name: "Ana",
 		plan: planOnly,
+		hasHousehold: false,
 	});
 
 	const first = await t.run(async (ctx) => {
@@ -164,6 +166,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	expect(await luis.query(api.profiles.myProfile, {})).toEqual({
 		name: "Luis",
 		plan: null,
+		hasHousehold: false,
 	});
 });
 

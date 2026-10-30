@@ -1,0 +1,78 @@
+import { convexQuery } from "@convex-dev/react-query";
+import { api } from "@quipu/backend/convex/_generated/api";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useSearch } from "@tanstack/react-router";
+import { cn } from "cn";
+
+const pill =
+	"flex h-[30px] items-center rounded-full px-3 text-[12.5px] font-semibold text-muted-foreground";
+const pillOn = "bg-background text-foreground shadow-[0_1px_3px_rgba(29,22,16,0.12)]";
+
+export function AppBar() {
+	const { space } = useSearch({ from: "/_app" });
+	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
+	const initial = (profile.data?.name?.trim().charAt(0) || "?").toUpperCase();
+
+	return (
+		<header className="border-b border-border/80 bg-background">
+			<nav
+				aria-label="Principal"
+				className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between gap-4 px-6"
+			>
+				<Link
+					to="/home"
+					className="font-heading text-[21px] font-medium tracking-tight text-foreground"
+				>
+					Quipu
+				</Link>
+
+				<Link
+					to="/home"
+					activeProps={{ className: "bg-muted text-foreground" }}
+					inactiveProps={{ className: "text-muted-foreground" }}
+					className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
+				>
+					Inicio
+				</Link>
+
+				<div className="flex items-center gap-3">
+					{profile.data?.hasHousehold ? (
+						<div
+							role="tablist"
+							aria-label="Espacio"
+							className="flex gap-0.5 rounded-full bg-muted p-[3px]"
+						>
+							<Link
+								to="."
+								role="tab"
+								aria-selected={!space}
+								search={(prev) => ({ ...prev, space: undefined })}
+								className={cn(pill, !space && pillOn)}
+							>
+								Personal
+							</Link>
+							<Link
+								to="."
+								role="tab"
+								aria-selected={space === "household"}
+								search={(prev) => ({ ...prev, space: "household" })}
+								className={cn(pill, space === "household" && pillOn)}
+							>
+								Nuestro espacio
+							</Link>
+						</div>
+					) : (
+						<span className="text-[12.5px] font-semibold text-muted-foreground">Personal</span>
+					)}
+
+					<span
+						aria-hidden
+						className="flex size-9 items-center justify-center rounded-full bg-teal-700/15 text-sm font-semibold text-teal-800"
+					>
+						{initial}
+					</span>
+				</div>
+			</nav>
+		</header>
+	);
+}
