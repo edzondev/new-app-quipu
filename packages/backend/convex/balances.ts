@@ -53,11 +53,13 @@ export const getHome = query({
 		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
 		const { space, cycle } = await requireOpenCycle(ctx, kind, today);
 		const plan = await requirePlan(ctx, space);
-		const budget = await getDayBudget(ctx, space._id, cycle, today);
+		const { hasIncome, ...budget } = await getDayBudget(ctx, space._id, cycle, today);
+		const { needsCents, wantsCents } = cycle.carryIn;
 		return {
 			...budget,
 			planIncomeCents: plan.incomeCents,
-			empty: budget.needsCents + budget.wantsCents + budget.savingsCents === 0,
+			// Envelopes at 0 can still mean money moved (spent, saved); empty is no income and no carry.
+			empty: !hasIncome && needsCents + wantsCents === 0,
 		};
 	},
 });

@@ -159,6 +159,63 @@ test("getHome with a later today shrinks daysLeft and raises dailyCents", async 
 	expect(day20.planIncomeCents).toBe(150_000);
 });
 
+test("getHome is not empty when income exists but every envelope is at 0", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+
+	const share = splitIncome(50_000, SPLIT);
+	const goalId = await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		return ctx.db.insert("goals", { spaceId: space._id, name: "Viaje", targetCents: 100_000 });
+	});
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: share.needsCents,
+		envelope: "needs",
+	});
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: share.wantsCents,
+		envelope: "wants",
+	});
+	await ana.mutation(api.transactions.addSaving, {
+		space: "personal",
+		amountCents: share.savingsCents,
+		goalId,
+	});
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect([home.needsCents, home.wantsCents, home.savingsCents]).toEqual([0, 0, 0]);
+	expect(home.empty).toBe(false);
+});
+
+test("getHome is not empty on a new cycle with carry but no income", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
+	// Needs 250 + Gustos 150 carried in from October, nothing earned in November.
+	expect(home.needsCents + home.wantsCents).toBe(40_000);
+	expect(home.empty).toBe(false);
+});
+
+test("getHome is empty with no income and nothing carried", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, todayCents: 0 });
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(home.empty).toBe(true);
+});
+
 test("getHome dueSoon only lists commitments within 3 days", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");

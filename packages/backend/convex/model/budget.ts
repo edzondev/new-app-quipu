@@ -25,6 +25,7 @@ export async function getDayBudget(
 			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
 			.take(500),
 	]);
+	const hasIncome = cycleTx.some((tx) => tx.kind === "income");
 	const paidIds = new Set(
 		cycleTx.flatMap((tx) =>
 			tx.kind === "expense" && tx.commitmentId !== undefined ? [tx.commitmentId] : [],
@@ -53,6 +54,7 @@ export async function getDayBudget(
 		dailyCents: getDailyCents(needsCents + wantsCents - pendingCents, daysLeft),
 		daysLeft,
 		pendingCents,
+		hasIncome,
 		dueSoon,
 	};
 }
