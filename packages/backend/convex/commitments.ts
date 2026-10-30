@@ -131,11 +131,13 @@ export const markPaid = mutation({
 		const row = await ctx.db.get("commitments", id);
 		if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 
-		const prior = await ctx.db
+		const lastPay = await ctx.db
 			.query("transactions")
 			.withIndex("by_commitmentId", (q) => q.eq("commitmentId", id))
-			.take(20);
-		if (prior.some((tx) => tx.kind === "expense" && tx.cycleId === cycle._id)) {
+			.order("desc")
+			.first();
+		if (row.frequency === "once" && lastPay) throw new ConvexError(ALREADY_PAID);
+		if (row.frequency === "monthly" && lastPay?.cycleId === cycle._id) {
 			throw new ConvexError(ALREADY_PAID);
 		}
 

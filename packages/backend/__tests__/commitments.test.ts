@@ -99,3 +99,30 @@ test("Luz S/ 50 day 25 lowers daily; markPaid cuts Needs and stops the discount"
 	expect(after.dailyCents).toBe(getDailyCents(20_000 + 15_000, 12));
 	expect(after.dailyCents).toBe(2916);
 });
+
+test("once commitment paid in October cannot be marked paid again after ensureOpen in November", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboard);
+
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "SOAT",
+		amountCents: 5_000,
+		envelope: "needs",
+		schedule: { frequency: "once", dueDate: "2026-10-25" },
+	});
+	const id = await t.run(async (ctx) => {
+		const row = (await ctx.db.query("commitments").take(1))[0];
+		return row._id;
+	});
+	await ana.mutation(api.commitments.markPaid, { space: "personal", id });
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	await expect(
+		ana.mutation(api.commitments.markPaid, { space: "personal", id }),
+	).rejects.toThrow("Este compromiso ya está pagado en este ciclo.");
+});
