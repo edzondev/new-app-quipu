@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { applyIncome, isValidCents, ZERO_AMOUNTS } from "../shared/budget";
+import { applyIncome, ZERO_AMOUNTS } from "../shared/budget";
 import { getLimaDate } from "../shared/dates";
 import { isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation, type QueryCtx, query } from "./_generated/server";
@@ -44,7 +44,12 @@ export const completeOnboarding = mutation({
 		const profile = await getProfile(ctx, user._id);
 		if (!profile) throw new ConvexError("No encontramos tu perfil.");
 
-		if (!isValidPlan(planValue) || !isValidCents(todayCents) || !isValidSplit(splitValue)) {
+		if (
+			!isValidPlan(planValue) ||
+			!Number.isSafeInteger(todayCents) ||
+			todayCents < 0 ||
+			!isValidSplit(splitValue)
+		) {
 			throw new ConvexError("Revisa los datos e inténtalo otra vez.");
 		}
 
@@ -56,17 +61,19 @@ export const completeOnboarding = mutation({
 		await ctx.db.patch("profiles", profile._id, { plan: planValue });
 		const spaceId = await ctx.db.insert("spaces", { kind: "personal", ownerId: user._id });
 		const cycleId = await createFirstCycle(ctx, spaceId, planValue, splitValue, today);
-		const { envelopes, allocation } = applyIncome(ZERO_AMOUNTS, todayCents, splitValue);
-		await ctx.db.patch("cycles", cycleId, { envelopes });
-		await ctx.db.insert("transactions", {
-			kind: "income",
-			spaceId,
-			cycleId,
-			userId: user._id,
-			amountCents: todayCents,
-			date: today,
-			allocation,
-		});
+		if (todayCents > 0) {
+			const { envelopes, allocation } = applyIncome(ZERO_AMOUNTS, todayCents, splitValue);
+			await ctx.db.patch("cycles", cycleId, { envelopes });
+			await ctx.db.insert("transactions", {
+				kind: "income",
+				spaceId,
+				cycleId,
+				userId: user._id,
+				amountCents: todayCents,
+				date: today,
+				allocation,
+			});
+		}
 		return null;
 	},
 });

@@ -201,6 +201,27 @@ test("Oct 20 with payday day 1 → cycle 20–31 with S/ 500 and plan.incomeCent
 	});
 });
 
+test("S/ 0 today creates the cycle with no income movement", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	await ana.mutation(api.profiles.completeOnboarding, {
+		...good,
+		todayCents: 0,
+	});
+
+	const snap = await t.run(async (ctx) => {
+		const cycle = (await ctx.db.query("cycles").take(1))[0];
+		const txs = await ctx.db
+			.query("transactions")
+			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+			.take(5);
+		return { envelopes: cycle.envelopes, txs };
+	});
+
+	expect(snap.envelopes).toEqual({ needsCents: 0, wantsCents: 0, savingsCents: 0 });
+	expect(snap.txs).toHaveLength(0);
+});
+
 test("rejects invalid values", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
@@ -209,7 +230,6 @@ test("rejects invalid values", async () => {
 		{ ...good, incomeCents: -5 },
 		{ ...good, incomeCents: 12.5 },
 		{ ...good, incomeCents: Number.NaN },
-		{ ...good, todayCents: 0 },
 		{ ...good, todayCents: -5 },
 		{ ...good, todayCents: 12.5 },
 		{ ...good, cadence: "weekly" as const, cycleStartDay: "last" as const },

@@ -7,10 +7,19 @@ export const cadenceSchema = z.enum(["monthly", "biweekly", "weekly"]);
 const positiveMoney = (message: string) =>
 	z.string().check(z.refine((v) => toCents(v) > 0, message));
 
+// Empty or invalid strings become 0 via toCents; require a typed non-negative amount.
+const nonNegativeMoney = (message: string) =>
+	z.string().check(
+		z.refine((v) => {
+			const n = Number(v.replace(/,/g, ""));
+			return v.trim() !== "" && Number.isFinite(n) && n >= 0;
+		}, message),
+	);
+
 export const cycleStepSchema = z.object({
 	cadence: cadenceSchema,
 	startDay: z.string(),
-	todayAmount: positiveMoney("Escribe cuánto tienes hoy."),
+	todayAmount: nonNegativeMoney("Escribe cuánto tienes hoy (puede ser 0)."),
 	cycleIncome: positiveMoney("Escribe cuánto ganas por ciclo."),
 });
 

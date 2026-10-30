@@ -70,4 +70,55 @@ describe("getFirstCycleRange", () => {
 			endDate: "2026-10-31",
 		});
 	});
+
+	// Payday == today uses `>` (not `>=`) on dates.ts startMonth so the cycle starts today.
+	test("payday today → full cycle from today", () => {
+		expect(getFirstCycleRange("monthly", 1, "2026-10-01")).toEqual({
+			startDate: "2026-10-01",
+			endDate: "2026-10-31",
+		});
+	});
+
+	test("payday tomorrow → one-day cycle", () => {
+		expect(getFirstCycleRange("monthly", 21, "2026-10-20")).toEqual({
+			startDate: "2026-10-20",
+			endDate: "2026-10-20",
+		});
+	});
+
+	test("monthly day 31 clamps in February", () => {
+		expect(getFirstCycleRange("monthly", 31, "2026-02-10")).toEqual({
+			startDate: "2026-02-10",
+			endDate: "2026-02-27",
+		});
+	});
+
+	test("biweekly payday today → full first half", () => {
+		expect(getFirstCycleRange("biweekly", 1, "2026-10-01")).toEqual({
+			startDate: "2026-10-01",
+			endDate: "2026-10-15",
+		});
+	});
+
+	test("biweekly second half short first cycle", () => {
+		expect(getFirstCycleRange("biweekly", 1, "2026-10-20")).toEqual({
+			startDate: "2026-10-20",
+			endDate: "2026-10-31",
+		});
+	});
+
+	test("weekly payday today → full week", () => {
+		// 2026-10-25 is Sunday.
+		expect(getFirstCycleRange("weekly", 0, "2026-10-25")).toEqual({
+			startDate: "2026-10-25",
+			endDate: "2026-10-31",
+		});
+	});
+
+	test("weekly mid-week → short first cycle", () => {
+		expect(getFirstCycleRange("weekly", 0, "2026-10-28")).toEqual({
+			startDate: "2026-10-28",
+			endDate: "2026-10-31",
+		});
+	});
 });
