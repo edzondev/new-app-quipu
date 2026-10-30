@@ -1,5 +1,7 @@
 import { v } from "convex/values";
-import { getPreview } from "../shared/preview";
+import { getDailyCents } from "../shared/budget";
+import { getPendingCents } from "../shared/commitments";
+import { daysBetween } from "../shared/dates";
 import { query } from "./_generated/server";
 import { requireOpenCycle } from "./model/cycles";
 import { spaceKind } from "./schema";
@@ -14,31 +16,23 @@ export const getBalances = query({
 	}),
 	handler: async (ctx, { space: kind }) => {
 		const { space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { needsCents, wantsCents, savingsCents } = cycle.envelopes;
 
-		const [transactions, commitmentRows] = await Promise.all([
-			ctx.db
-				.query("transactions")
-				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-				.take(200),
-			ctx.db
-				.query("commitments")
-				.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
-				.take(100),
-		]);
-
-		const incomeCents = transactions
-			.filter((row) => row.kind === "income")
-			.reduce((sum, row) => sum + row.amountCents, 0);
+		const commitmentRows = await ctx.db
+			.query("commitments")
+			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+			.take(100);
 		const commitments = commitmentRows.flatMap((row) =>
 			row.frequency === "monthly" ? [{ amountCents: row.amountCents, dueDay: row.dueDay }] : [],
 		);
 
-		return getPreview({
-			incomeCents,
-			commitments,
-			split: cycle.split,
-			cycleEnd: cycle.endDate,
-			today,
-		});
+		const daysLeft = Math.max(0, daysBetween(today, cycle.endDate) + 1);
+		const pendingCents = getPendingCents(commitments, today, cycle.endDate);
+		return {
+			needsCents,
+			wantsCents,
+			savingsCents,
+			dailyCents: getDailyCents(needsCents + wantsCents - pendingCents, daysLeft),
+		};
 	},
 });

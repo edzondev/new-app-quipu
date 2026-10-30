@@ -6,7 +6,6 @@ import { api, components } from "../convex/_generated/api";
 import authSchema from "../convex/betterAuth/schema";
 import schema from "../convex/schema";
 import { getDailyCents, splitIncome } from "../shared/budget";
-import { getPreview } from "../shared/preview";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -63,18 +62,20 @@ async function signIn(t: ReturnType<typeof harness>, email: string, name: string
 
 const SPLIT = { needs: 50, wants: 30, savings: 20 };
 
+const onboardOct20 = {
+	cadence: "monthly" as const,
+	cycleStartDay: 1,
+	todayCents: 50_000,
+	incomeCents: 150_000,
+	split: SPLIT,
+};
+
 test("S/ 500 at 50/30/20 with 12 days left → sobres and daily number", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	// 20–31 Oct = 12 days. S/ 500 → Needs 250, Gustos 150, Ahorro 100; diario floor(400/12).
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, {
-		cadence: "monthly",
-		cycleStartDay: 1,
-		todayCents: 50_000,
-		incomeCents: 150_000,
-		split: SPLIT,
-	});
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
 
 	const balances = await ana.query(api.balances.getBalances, { space: "personal" });
 	const share = splitIncome(50_000, SPLIT);
@@ -85,15 +86,6 @@ test("S/ 500 at 50/30/20 with 12 days left → sobres and daily number", async (
 		savingsCents: share.savingsCents, // S/ 100.00
 		dailyCents: getDailyCents(share.needsCents + share.wantsCents, 12), // S/ 33.33
 	});
-	expect(balances).toEqual(
-		getPreview({
-			incomeCents: 50_000,
-			commitments: [],
-			split: SPLIT,
-			cycleEnd: "2026-10-31",
-			today: "2026-10-20",
-		}),
-	);
 	expect(balances.dailyCents).toBe(3333);
 });
 
@@ -101,13 +93,7 @@ test("a pending commitment lowers only the daily number", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, {
-		cadence: "monthly",
-		cycleStartDay: 1,
-		todayCents: 50_000,
-		incomeCents: 150_000,
-		split: SPLIT,
-	});
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
 
 	await t.run(async (ctx) => {
 		const space = (await ctx.db.query("spaces").take(1))[0];
@@ -122,19 +108,30 @@ test("a pending commitment lowers only the daily number", async () => {
 	});
 
 	const balances = await ana.query(api.balances.getBalances, { space: "personal" });
-	expect(balances).toEqual(
-		getPreview({
-			incomeCents: 50_000,
-			commitments: [{ amountCents: 5_000, dueDay: 25 }],
-			split: SPLIT,
-			cycleEnd: "2026-10-31",
-			today: "2026-10-20",
-		}),
-	);
 	// (250 + 150 − 50) / 12 = 29.166… → S/ 29.16
 	expect(balances.dailyCents).toBe(2916);
 	expect(balances.needsCents).toBe(25_000);
 	expect(balances.savingsCents).toBe(10_000);
+});
+
+test("after close, balances come from carryIn envelopes even with no new income", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const balances = await ana.query(api.balances.getBalances, { space: "personal" });
+	// Ahorro went to the fund; Needs/Wants carried in. Nov has 30 days.
+	expect(balances).toEqual({
+		needsCents: 25_000,
+		wantsCents: 15_000,
+		savingsCents: 0,
+		dailyCents: getDailyCents(25_000 + 15_000, 30),
+	});
+	expect(balances.dailyCents).toBe(1333);
 });
 
 test("anonymous getBalances is refused", async () => {
