@@ -76,7 +76,9 @@ export async function getOrCreateNextCycle(
 
 /**
  * Closes `cycle` and returns the next one. Idempotent if `closedAt` is already set.
- * Free pool is the cycle envelopes (spent/reserved plug in later via freeAmounts).
+ *
+ * TODO: when expenses exist, carryIn / savings must use freeAmounts(envelopes, spent,
+ * reserved) — the free pool — not the full envelopes.
  */
 export async function closeCycle(
 	ctx: MutationCtx,
@@ -122,6 +124,8 @@ export async function closeCycle(
 	return closedNext;
 }
 
+const MAX_ENSURE_OPENS = 120;
+
 /** Create the next cycle(s) if the previous one already ended. Safe to call on every app open. */
 export async function ensureOpenCycle(
 	ctx: MutationCtx,
@@ -130,7 +134,10 @@ export async function ensureOpenCycle(
 	userId: string,
 ) {
 	let cycle = await requireCycleAt(ctx, space._id, today);
-	while (cycle.endDate < today) {
+	for (let i = 0; cycle.endDate < today; i++) {
+		if (i >= MAX_ENSURE_OPENS) {
+			throw new ConvexError("No pudimos poner al día tus ciclos. Inténtalo otra vez.");
+		}
 		cycle = await closeCycle(ctx, space, cycle, userId);
 	}
 	return cycle;
