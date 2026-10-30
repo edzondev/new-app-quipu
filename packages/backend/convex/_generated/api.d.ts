@@ -10,6 +10,8 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as model_cycles from "../model/cycles.js";
+import type * as model_spaces from "../model/spaces.js";
 import type * as profiles from "../profiles.js";
 import type * as rateLimits from "../rateLimits.js";
 
@@ -22,6 +24,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  "model/cycles": typeof model_cycles;
+  "model/spaces": typeof model_spaces;
   profiles: typeof profiles;
   rateLimits: typeof rateLimits;
 }>;

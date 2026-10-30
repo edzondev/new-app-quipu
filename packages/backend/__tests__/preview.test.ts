@@ -36,7 +36,12 @@ describe("getPreview matches Inicio", () => {
 			today: "2026-10-01",
 		});
 
-		expect(result).toEqual({ needs: 50_000, wants: 30_000, savings: 20_000, dailyCents: 1935 });
+		expect(result).toEqual({
+			needsCents: 50_000,
+			wantsCents: 30_000,
+			savingsCents: 20_000,
+			dailyCents: 1935,
+		});
 	});
 
 	test("a commitment whose due day already passed this cycle does not count", () => {
@@ -85,6 +90,6 @@ describe("getPreview matches Inicio", () => {
 		});
 
 		expect(result.dailyCents).toBe(0);
-		expect(result.savings).toBe(2000);
+		expect(result.savingsCents).toBe(2000);
 	});
 });

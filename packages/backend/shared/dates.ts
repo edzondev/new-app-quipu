@@ -38,10 +38,10 @@ export function getCycleRange(cadence: Cadence, startDay: CycleStartDay, date: s
 	}
 
 	const [year, month] = date.split("-").map(Number);
-	const thisMonth = dayInMonth(year, month - 1, startDay);
-	const monthStart = thisMonth > date ? dayInMonth(year, month - 2, startDay) : thisMonth;
-	const [startYear, startMonth] = monthStart.split("-").map(Number);
-	const monthEnd = addDays(dayInMonth(startYear, startMonth, startDay), -1);
+	// 0-based month where the cycle starts: this one, or the previous if its start day hasn't come yet.
+	const startMonth = dayInMonth(year, month - 1, startDay) > date ? month - 2 : month - 1;
+	const monthStart = dayInMonth(year, startMonth, startDay);
+	const monthEnd = addDays(dayInMonth(year, startMonth + 1, startDay), -1);
 
 	if (cadence === "monthly") return { startDate: monthStart, endDate: monthEnd };
 

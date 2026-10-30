@@ -1,22 +1,28 @@
 import type { Infer } from "convex/values";
-import type { plan } from "../convex/schema";
+import type { plan, split } from "../convex/schema";
+import { isValidCents } from "./budget";
 
 export type Plan = Infer<typeof plan>;
+export type Split = Infer<typeof split>;
 export type Cadence = Plan["cadence"];
 export type CycleStartDay = Plan["cycleStartDay"];
-export type Split = Plan["split"];
 
 // Months without day 31 clamp in dayInMonth; "last" covers end of month.
+// Exported for onboarding day pickers (cycle-step, fixed-step).
 export const MAX_MONTH_DAY = 31;
 
 export function parseStartDay(raw: string): CycleStartDay {
 	return raw === "last" ? "last" : Number(raw);
 }
 
+export function isValidMonthDay(day: number): boolean {
+	return Number.isInteger(day) && day >= 1 && day <= MAX_MONTH_DAY;
+}
+
 export function isValidStartDay(cadence: Cadence, day: CycleStartDay): boolean {
 	if (day === "last") return cadence !== "weekly";
-	const [min, max] = cadence === "weekly" ? [0, 6] : [1, MAX_MONTH_DAY];
-	return Number.isInteger(day) && day >= min && day <= max;
+	if (cadence === "weekly") return Number.isInteger(day) && day >= 0 && day <= 6;
+	return isValidMonthDay(day);
 }
 
 export function isValidSplit({ needs, wants, savings }: Split): boolean {
@@ -26,11 +32,6 @@ export function isValidSplit({ needs, wants, savings }: Split): boolean {
 	);
 }
 
-export function isValidPlan({ cadence, cycleStartDay, incomeCents, split }: Plan): boolean {
-	return (
-		Number.isSafeInteger(incomeCents) &&
-		incomeCents > 0 &&
-		isValidStartDay(cadence, cycleStartDay) &&
-		isValidSplit(split)
-	);
+export function isValidPlan({ cadence, cycleStartDay, incomeCents }: Plan): boolean {
+	return isValidCents(incomeCents) && isValidStartDay(cadence, cycleStartDay);
 }

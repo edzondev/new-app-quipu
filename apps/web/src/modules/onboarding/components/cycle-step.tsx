@@ -5,6 +5,7 @@ import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
+import { StepHeader } from "#/modules/onboarding/components/step-header";
 import { type Cadence, type CycleStepValues, cycleStepSchema } from "#/modules/onboarding/schemas";
 
 const CADENCE_OPTIONS: { value: Cadence; label: string }[] = [
@@ -36,9 +37,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 
 	return (
 		<>
-			<h1 className="mt-9 text-4xl font-normal leading-tight tracking-tight sm:text-5xl">
-				¿Cada cuánto quieres planear?
-			</h1>
+			<StepHeader title="¿Cada cuánto quieres planear?" />
 			<form
 				noValidate
 				className="mt-8"

@@ -2,23 +2,25 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, toCents } from "@quipu/backend/shared/budget";
 import { getCycleRange } from "@quipu/backend/shared/dates";
-import { parseStartDay } from "@quipu/backend/shared/plan";
+import { MAX_MONTH_DAY, parseStartDay } from "@quipu/backend/shared/plan";
 import { getPreview } from "@quipu/backend/shared/preview";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { ConvexError } from "convex/values";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "#/components/ui/collapsible";
 import { Field, FieldError } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
+import { StepHeader } from "#/modules/onboarding/components/step-header";
 import {
 	type CommitmentKind,
 	createFixedStepSchema,
 	type FixedStepValues,
 	getCommitmentsCents,
 	type OnboardingValues,
+	toCommitmentInputs,
 } from "#/modules/onboarding/schemas";
 
 const COMMITMENT_OPTIONS: { kind: CommitmentKind; label: string }[] = [
@@ -29,7 +31,7 @@ const COMMITMENT_OPTIONS: { kind: CommitmentKind; label: string }[] = [
 	{ kind: "other", label: "Otro" },
 ];
 
-const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, index) => index + 1);
+const DAYS_OF_MONTH = Array.from({ length: MAX_MONTH_DAY }, (_, index) => index + 1);
 
 type Props = {
 	values: OnboardingValues;
@@ -44,20 +46,21 @@ export function FixedStep({ values, today, onBack }: Props) {
 	const [commitmentsOpen, setCommitmentsOpen] = useState(false);
 	const { cycleStep, splitStep } = values;
 	const incomeCents = toCents(cycleStep.amount);
+	const startDay = parseStartDay(cycleStep.startDay);
 
 	const form = useForm({
 		defaultValues: values.fixedStep,
 		validationLogic: revalidateLogic(),
 		validators: { onDynamic: createFixedStepSchema(incomeCents) },
-		// Commitments only shape the preview; they aren't saved yet.
-		onSubmit: async () => {
+		onSubmit: async ({ value }) => {
 			setSaveError(null);
 			try {
 				await completeOnboarding({
 					cadence: cycleStep.cadence,
-					cycleStartDay: cycleStep.startDay === "last" ? "last" : Number(cycleStep.startDay),
+					cycleStartDay: startDay,
 					incomeCents,
 					split: splitStep.split,
+					commitments: toCommitmentInputs(value.commitments),
 				});
 				await navigate({ to: "/home", replace: true });
 			} catch (error) {
@@ -71,14 +74,12 @@ export function FixedStep({ values, today, onBack }: Props) {
 	});
 	const isSubmitting = useSelector(form.store, (state) => state.isSubmitting);
 	const commitments = useSelector(form.store, (state) => state.values.commitments);
-	const commitmentsCents = getCommitmentsCents(commitments);
-	const cycle = getCycleRange(cycleStep.cadence, parseStartDay(cycleStep.startDay), today);
+	const commitmentInputs = toCommitmentInputs(commitments);
+	const commitmentsCents = getCommitmentsCents(commitmentInputs);
+	const cycle = getCycleRange(cycleStep.cadence, startDay, today);
 	const preview = getPreview({
 		incomeCents,
-		commitments: commitments.map(({ amount, day }) => ({
-			amountCents: toCents(amount),
-			dueDay: Number(day),
-		})),
+		commitments: commitmentInputs,
 		split: splitStep.split,
 		cycleEnd: cycle.endDate,
 		today,
@@ -86,24 +87,12 @@ export function FixedStep({ values, today, onBack }: Props) {
 
 	async function startCycle() {
 		await form.handleSubmit();
-		const meta = form.getFieldMeta("commitments");
-		if (meta?.errors.length) setCommitmentsOpen(true);
+		if (!form.state.isValid) setCommitmentsOpen(true);
 	}
 
 	return (
 		<>
-			<Button
-				type="button"
-				variant="ghost"
-				className="mt-6 h-8 gap-2 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-				onClick={() => onBack(form.state.values)}
-			>
-				<ArrowLeft strokeWidth={1.5} />
-				Volver
-			</Button>
-			<h1 className="mt-9 text-4xl font-normal leading-tight tracking-tight sm:text-5xl">
-				Tu número
-			</h1>
+			<StepHeader title="Tu número" onBack={() => onBack(form.state.values)} />
 			<form
 				noValidate
 				className="mt-8"
@@ -125,18 +114,17 @@ export function FixedStep({ values, today, onBack }: Props) {
 						{commitmentsCents > 0 ? ` · Compromisos S/ ${formatCents(commitmentsCents)}` : null}
 					</p>
 					<p>
-						Necesidades S/ {formatCents(preview.needs)} · Gustos S/ {formatCents(preview.wants)} ·
-						Ahorro S/ {formatCents(preview.savings)}
+						Necesidades S/ {formatCents(preview.needsCents)} · Gustos S/{" "}
+						{formatCents(preview.wantsCents)} · Ahorro S/ {formatCents(preview.savingsCents)}
 					</p>
 				</div>
 				<Button
-					type="button"
+					type="submit"
 					variant="default"
 					size="xl"
 					className="mt-8 h-12 rounded-full px-8"
 					disabled={isSubmitting}
 					loading={isSubmitting}
-					onClick={() => void startCycle()}
 				>
 					Empezar mi ciclo
 				</Button>

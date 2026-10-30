@@ -5,9 +5,13 @@ import { expect, test } from "vitest";
 import { api, components } from "../convex/_generated/api";
 import authSchema from "../convex/betterAuth/schema";
 import schema from "../convex/schema";
+import { getCycleRange, getLimaDate } from "../shared/dates";
+import { NOTE_MAX_LENGTH } from "../shared/budget";
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
+
+type CommitmentInput = { name: string; amountCents: number; dueDay: number };
 
 function harness() {
 	const t = convexTest(schema, modules);
@@ -65,36 +69,94 @@ const good = {
 	cycleStartDay: "last" as const,
 	incomeCents: 250000,
 	split: { needs: 50, wants: 30, savings: 20 },
+	commitments: [] as CommitmentInput[],
 };
 
-test("anonymous gets null; new profile has no plan; complete sets plan", async () => {
+const planOnly = {
+	cadence: good.cadence,
+	cycleStartDay: good.cycleStartDay,
+	incomeCents: good.incomeCents,
+};
+
+test("anonymous gets null; new profile has no plan; complete sets plan, space, cycle and commitments", async () => {
 	const t = harness();
 	expect(await t.query(api.profiles.myProfile, {})).toBeNull();
 	await expect(t.mutation(api.profiles.completeOnboarding, good)).rejects.toThrow(
 		"Unauthenticated",
 	);
+
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	expect(await ana.query(api.profiles.myProfile, {})).toEqual({
 		name: "Ana",
 		plan: null,
 	});
-	await ana.mutation(api.profiles.completeOnboarding, good);
+
+	const today = getLimaDate();
+	const expectedCycle = getCycleRange("monthly", "last", today);
+	await ana.mutation(api.profiles.completeOnboarding, {
+		...good,
+		commitments: [{ name: "Alquiler", amountCents: 80_000, dueDay: 5 }],
+	});
 	expect(await ana.query(api.profiles.myProfile, {})).toEqual({
 		name: "Ana",
-		plan: good,
+		plan: planOnly,
 	});
+
+	const first = await t.run(async (ctx) => {
+		const spaces = await ctx.db.query("spaces").take(5);
+		const cycles = await ctx.db.query("cycles").take(5);
+		const commitments = await ctx.db.query("commitments").take(5);
+		return { spaces, cycles, commitments };
+	});
+	expect(first.spaces).toHaveLength(1);
+	expect(first.spaces[0]).toMatchObject({ kind: "personal" });
+	expect(first.cycles).toHaveLength(1);
+	expect(first.cycles[0]).toMatchObject({
+		spaceId: first.spaces[0]._id,
+		startDate: expectedCycle.startDate,
+		endDate: expectedCycle.endDate,
+		split: good.split,
+		envelopes: { needsCents: 0, wantsCents: 0, savingsCents: 0 },
+		carryIn: { needsCents: 0, wantsCents: 0 },
+	});
+	expect(first.cycles[0].closedAt).toBeUndefined();
+	expect(first.commitments).toHaveLength(1);
+	expect(first.commitments[0]).toMatchObject({
+		spaceId: first.spaces[0]._id,
+		name: "Alquiler",
+		amountCents: 80_000,
+		dueDay: 5,
+		frequency: "monthly",
+		envelope: "needs",
+	});
+
+	// A second call does not rewrite the plan or create another space or cycle.
+	await ana.mutation(api.profiles.completeOnboarding, {
+		...good,
+		cadence: "weekly",
+		cycleStartDay: 1,
+		split: { needs: 40, wants: 40, savings: 20 },
+		commitments: [],
+	});
+	expect((await ana.query(api.profiles.myProfile, {}))?.plan).toEqual(planOnly);
+	const second = await t.run(async (ctx) => {
+		const spaces = await ctx.db.query("spaces").take(5);
+		const cycles = await ctx.db.query("cycles").take(5);
+		const commitments = await ctx.db.query("commitments").take(5);
+		return {
+			spaces: spaces.length,
+			cycles: cycles.length,
+			commitments: commitments.length,
+			split: cycles[0]?.split,
+		};
+	});
+	expect(second).toEqual({ spaces: 1, cycles: 1, commitments: 1, split: good.split });
+
 	const luis = await signIn(t, "luis@correo.com", "Luis");
 	expect(await luis.query(api.profiles.myProfile, {})).toEqual({
 		name: "Luis",
 		plan: null,
 	});
-	// idempotent: second call just overwrites
-	await ana.mutation(api.profiles.completeOnboarding, {
-		...good,
-		cadence: "weekly",
-		cycleStartDay: 1,
-	});
-	expect((await ana.query(api.profiles.myProfile, {}))?.plan?.cadence).toBe("weekly");
 });
 
 test("rejects invalid values", async () => {
@@ -112,6 +174,10 @@ test("rejects invalid values", async () => {
 		{ ...good, cadence: "biweekly" as const, cycleStartDay: 1.5 },
 		{ ...good, split: { needs: 50, wants: 30, savings: 30 } },
 		{ ...good, split: { needs: 120, wants: -20, savings: 0 } },
+		{
+			...good,
+			commitments: [{ name: "x".repeat(NOTE_MAX_LENGTH + 1), amountCents: 1000, dueDay: 5 }],
+		},
 	];
 	for (const args of bad) {
 		await expect(

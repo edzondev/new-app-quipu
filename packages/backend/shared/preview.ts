@@ -18,13 +18,13 @@ export function getPreview({
 	cycleEnd: string;
 	today: string;
 }) {
-	const { needs, wants, savings } = splitIncome(incomeCents, split);
+	const { needsCents, wantsCents, savingsCents } = splitIncome(incomeCents, split);
 	const daysLeft = Math.max(0, daysBetween(today, cycleEnd) + 1);
 	const pendingCents = getPendingCents(commitments, today, cycleEnd);
 	return {
-		needs,
-		wants,
-		savings,
-		dailyCents: getDailyCents(needs + wants - pendingCents, daysLeft),
+		needsCents,
+		wantsCents,
+		savingsCents,
+		dailyCents: getDailyCents(needsCents + wantsCents - pendingCents, daysLeft),
 	};
 }

@@ -1,10 +1,10 @@
-import { formatCents, splitIncome } from "@quipu/backend/shared/budget";
+import { AMOUNT_KEYS, formatCents, splitIncome } from "@quipu/backend/shared/budget";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { cn } from "cn";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
+import { StepHeader } from "#/modules/onboarding/components/step-header";
 import { type SplitStepValues, splitStepSchema } from "#/modules/onboarding/schemas";
 
 const ENVELOPES = [
@@ -31,18 +31,7 @@ export function SplitStep({ defaultValues, incomeCents, onBack, onNext }: Props)
 
 	return (
 		<>
-			<Button
-				type="button"
-				variant="ghost"
-				className="mt-6 h-8 gap-2 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-				onClick={() => onBack(form.state.values)}
-			>
-				<ArrowLeft strokeWidth={1.5} />
-				Volver
-			</Button>
-			<h1 className="mt-9 text-4xl font-normal leading-tight tracking-tight sm:text-5xl">
-				Así se reparte
-			</h1>
+			<StepHeader title="Así se reparte" onBack={() => onBack(form.state.values)} />
 			<form
 				noValidate
 				className="mt-8"
@@ -92,7 +81,7 @@ export function SplitStep({ defaultValues, incomeCents, onBack, onNext }: Props)
 														/>
 														<span className="text-sm text-muted-foreground">%</span>
 														<span className="w-28 text-right text-sm tabular-nums text-muted-foreground">
-															S/ {formatCents(shares[envelope.key])}
+															S/ {formatCents(shares[AMOUNT_KEYS[envelope.key]])}
 														</span>
 													</div>
 													<div className="mt-4 h-1 w-full rounded-full bg-muted">
