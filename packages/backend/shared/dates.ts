@@ -52,6 +52,11 @@ export function getCycleRange(cadence: Cadence, startDay: CycleStartDay, date: s
 		: { startDate: monthStart, endDate: addDays(monthStart, 14) };
 }
 
+/** First cycle after onboarding: from today to the day before the next payday. */
+export function getFirstCycleRange(cadence: Cadence, startDay: CycleStartDay, today: string) {
+	return { startDate: today, endDate: getCycleRange(cadence, startDay, today).endDate };
+}
+
 export function formatDay(date: string): string {
 	const [, month, day] = date.split("-").map(Number);
 	return `${day} ${MONTHS[month - 1]}`;

@@ -32,7 +32,7 @@ const STEPS = ["cycle", "split", "fixed"] as const;
 type Step = (typeof STEPS)[number];
 
 const defaultValues: OnboardingValues = {
-	cycleStep: { cadence: "monthly", startDay: "1", amount: "" },
+	cycleStep: { cadence: "monthly", startDay: "1", todayAmount: "", cycleIncome: "" },
 	splitStep: { split: { needs: 50, wants: 30, savings: 20 } },
 	fixedStep: { commitments: [] },
 };
@@ -87,7 +87,7 @@ function OnboardingPage() {
 				{step === "split" && (
 					<SplitStep
 						defaultValues={values.splitStep}
-						incomeCents={toCents(values.cycleStep.amount)}
+						incomeCents={toCents(values.cycleStep.todayAmount)}
 						onBack={(splitStep) => goTo("cycle", { splitStep })}
 						onNext={(splitStep) => goTo("fixed", { splitStep })}
 					/>

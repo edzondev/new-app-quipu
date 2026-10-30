@@ -19,6 +19,9 @@ export const AMOUNT_KEYS = {
 
 export const NOTE_MAX_LENGTH = 40;
 
+// Same cap as the onboarding form (one row per commitment kind).
+export const MAX_ONBOARDING_COMMITMENTS = 5;
+
 const moneyFormat = new Intl.NumberFormat("en-US", {
 	minimumFractionDigits: 2,
 	maximumFractionDigits: 2,

@@ -1,4 +1,4 @@
-import { formatRange, getCycleRange } from "@quipu/backend/shared/dates";
+import { formatRange, getFirstCycleRange } from "@quipu/backend/shared/dates";
 import { MAX_MONTH_DAY, parseStartDay } from "@quipu/backend/shared/plan";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { Button } from "#/components/ui/button";
@@ -33,7 +33,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 	});
 	const cadence = useSelector(form.store, (state) => state.values.cadence);
 	const startDay = useSelector(form.store, (state) => state.values.startDay);
-	const cycle = getCycleRange(cadence, parseStartDay(startDay), today);
+	const cycle = getFirstCycleRange(cadence, parseStartDay(startDay), today);
 
 	return (
 		<>
@@ -109,14 +109,14 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 					Tu ciclo: {formatRange(cycle.startDate, cycle.endDate)}
 				</p>
 
-				<form.Field name="amount">
+				<form.Field name="todayAmount">
 					{(field) => {
 						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 						const errorMessage = field.state.meta.errors[0]?.message;
 						return (
 							<Field name={field.name} invalid={isInvalid} className="mt-12">
 								<FieldLabel className="text-sm font-normal text-muted-foreground">
-									¿Con cuánto cuentas para este ciclo?
+									¿Cuánto tienes hoy?
 								</FieldLabel>
 								<div className="mt-3 flex w-full items-baseline gap-3 border-b border-neutral-400 pb-3 has-focus-visible:border-foreground has-aria-invalid:border-amber-500">
 									<span className="text-2xl text-muted-foreground">S/</span>
@@ -124,13 +124,47 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 										name={field.name}
 										inputMode="decimal"
 										autoComplete="off"
-										aria-label="Con cuánto cuentas para este ciclo"
+										aria-label="Cuánto tienes hoy"
 										placeholder="0.00"
 										value={field.state.value}
 										onBlur={field.handleBlur}
 										onChange={(e) => field.handleChange(e.target.value)}
 										unstyled
 										className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-5xl [&_[data-slot=input]]:leading-tight [&_[data-slot=input]]:tabular-nums sm:[&_[data-slot=input]]:text-6xl"
+									/>
+								</div>
+								{isInvalid && errorMessage ? (
+									<FieldError match className="mt-3 text-xs text-warning-foreground">
+										{errorMessage}
+									</FieldError>
+								) : null}
+							</Field>
+						);
+					}}
+				</form.Field>
+
+				<form.Field name="cycleIncome">
+					{(field) => {
+						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+						const errorMessage = field.state.meta.errors[0]?.message;
+						return (
+							<Field name={field.name} invalid={isInvalid} className="mt-10">
+								<FieldLabel className="text-sm font-normal text-muted-foreground">
+									¿Cuánto ganas por ciclo?
+								</FieldLabel>
+								<div className="mt-3 flex w-full items-baseline gap-3 border-b border-neutral-400 pb-3 has-focus-visible:border-foreground has-aria-invalid:border-amber-500">
+									<span className="text-xl text-muted-foreground">S/</span>
+									<Input
+										name={field.name}
+										inputMode="decimal"
+										autoComplete="off"
+										aria-label="Cuánto ganas por ciclo"
+										placeholder="0.00"
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+										unstyled
+										className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-3xl [&_[data-slot=input]]:leading-tight [&_[data-slot=input]]:tabular-nums sm:[&_[data-slot=input]]:text-4xl"
 									/>
 								</div>
 								{isInvalid && errorMessage ? (

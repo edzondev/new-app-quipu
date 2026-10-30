@@ -1,7 +1,7 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, toCents } from "@quipu/backend/shared/budget";
-import { getCycleRange } from "@quipu/backend/shared/dates";
+import { getFirstCycleRange } from "@quipu/backend/shared/dates";
 import { MAX_MONTH_DAY, parseStartDay } from "@quipu/backend/shared/plan";
 import { getPreview } from "@quipu/backend/shared/preview";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
@@ -45,20 +45,22 @@ export function FixedStep({ values, today, onBack }: Props) {
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [commitmentsOpen, setCommitmentsOpen] = useState(false);
 	const { cycleStep, splitStep } = values;
-	const incomeCents = toCents(cycleStep.amount);
+	const todayCents = toCents(cycleStep.todayAmount);
+	const cycleIncomeCents = toCents(cycleStep.cycleIncome);
 	const startDay = parseStartDay(cycleStep.startDay);
 
 	const form = useForm({
 		defaultValues: values.fixedStep,
 		validationLogic: revalidateLogic(),
-		validators: { onDynamic: createFixedStepSchema(incomeCents) },
+		validators: { onDynamic: createFixedStepSchema(todayCents) },
 		onSubmit: async ({ value }) => {
 			setSaveError(null);
 			try {
 				await completeOnboarding({
 					cadence: cycleStep.cadence,
 					cycleStartDay: startDay,
-					incomeCents,
+					incomeCents: cycleIncomeCents,
+					todayCents,
 					split: splitStep.split,
 					commitments: toCommitmentInputs(value.commitments),
 				});
@@ -76,9 +78,9 @@ export function FixedStep({ values, today, onBack }: Props) {
 	const commitments = useSelector(form.store, (state) => state.values.commitments);
 	const commitmentInputs = toCommitmentInputs(commitments);
 	const commitmentsCents = getCommitmentsCents(commitmentInputs);
-	const cycle = getCycleRange(cycleStep.cadence, startDay, today);
+	const cycle = getFirstCycleRange(cycleStep.cadence, startDay, today);
 	const preview = getPreview({
-		incomeCents,
+		incomeCents: todayCents,
 		commitments: commitmentInputs,
 		split: splitStep.split,
 		cycleEnd: cycle.endDate,
@@ -110,7 +112,7 @@ export function FixedStep({ values, today, onBack }: Props) {
 				</p>
 				<div className="mt-6 flex flex-col gap-1 text-xs tabular-nums text-muted-foreground">
 					<p>
-						Ingreso S/ {formatCents(incomeCents)}
+						Hoy S/ {formatCents(todayCents)}
 						{commitmentsCents > 0 ? ` · Compromisos S/ ${formatCents(commitmentsCents)}` : null}
 					</p>
 					<p>

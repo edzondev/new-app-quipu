@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { dayInMonth, getCycleRange } from "../shared/dates";
+import { dayInMonth, getCycleRange, getFirstCycleRange, getLimaDate } from "../shared/dates";
 
 describe("getCycleRange", () => {
 	test("monthly from day 1", () => {
@@ -52,5 +52,22 @@ describe("dayInMonth", () => {
 
 	test("day 31 clamps in April", () => {
 		expect(dayInMonth(2026, 3, 31)).toBe("2026-04-30");
+	});
+});
+
+describe("getLimaDate", () => {
+	test("23:59 and 00:01 in Lima are different calendar days", () => {
+		// Lima is UTC−5. These instants are the same UTC calendar day.
+		expect(getLimaDate(new Date("2026-03-16T04:59:00.000Z"))).toBe("2026-03-15");
+		expect(getLimaDate(new Date("2026-03-16T05:01:00.000Z"))).toBe("2026-03-16");
+	});
+});
+
+describe("getFirstCycleRange", () => {
+	test("from Oct 20 with payday day 1 ends Oct 31 (short first cycle)", () => {
+		expect(getFirstCycleRange("monthly", 1, "2026-10-20")).toEqual({
+			startDate: "2026-10-20",
+			endDate: "2026-10-31",
+		});
 	});
 });

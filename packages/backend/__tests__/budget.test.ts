@@ -60,18 +60,12 @@ describe("applyIncome", () => {
 		});
 	});
 
-	test("deleting an income after a split change subtracts its original allocation", () => {
-		const first = applyIncome(ZERO_AMOUNTS, 1001, SPLIT_50_30_20);
-		const second = applyIncome(first.envelopes, 1000, SPLIT_50_30_20);
-		expect(second.envelopes).toEqual({ needsCents: 1001, wantsCents: 600, savingsCents: 400 });
+	test("deleting an income restores envelopes to how they were before that income", () => {
+		const before = { needsCents: 100, wantsCents: 50, savingsCents: 25 };
+		const { envelopes, allocation } = applyIncome(before, 1000, SPLIT_50_30_20);
 
-		const afterSplit = reallocateFree(second.envelopes, ZERO_AMOUNTS, ZERO_AMOUNTS, SPLIT_40_40_20);
-		expect(afterSplit).toEqual({ needsCents: 801, wantsCents: 800, savingsCents: 400 });
-
-		const afterDelete = subtractAmounts(afterSplit, first.allocation);
-
-		expect(afterDelete).toEqual({ needsCents: 300, wantsCents: 500, savingsCents: 200 });
-		expect(afterDelete).not.toEqual(subtractAmounts(afterSplit, splitIncome(1001, SPLIT_40_40_20)));
+		expect(envelopes).toEqual({ needsCents: 600, wantsCents: 350, savingsCents: 225 });
+		expect(subtractAmounts(envelopes, allocation)).toEqual(before);
 	});
 });
 

@@ -1,5 +1,5 @@
 import { ZERO_AMOUNTS } from "../../shared/budget";
-import { getCycleRange } from "../../shared/dates";
+import { getFirstCycleRange } from "../../shared/dates";
 import type { Plan, Split } from "../../shared/plan";
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
@@ -13,7 +13,7 @@ export function createFirstCycle(
 	split: Split,
 	today: string,
 ) {
-	const range = getCycleRange(plan.cadence, plan.cycleStartDay, today);
+	const range = getFirstCycleRange(plan.cadence, plan.cycleStartDay, today);
 	return ctx.db.insert("cycles", {
 		spaceId,
 		...range,

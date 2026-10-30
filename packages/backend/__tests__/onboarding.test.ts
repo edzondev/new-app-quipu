@@ -1,12 +1,16 @@
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { api, components } from "../convex/_generated/api";
 import authSchema from "../convex/betterAuth/schema";
 import schema from "../convex/schema";
-import { getCycleRange, getLimaDate } from "../shared/dates";
-import { NOTE_MAX_LENGTH } from "../shared/budget";
+import { MAX_ONBOARDING_COMMITMENTS, NOTE_MAX_LENGTH, splitIncome } from "../shared/budget";
+import { getFirstCycleRange, getLimaDate } from "../shared/dates";
+
+afterEach(() => {
+	vi.useRealTimers();
+});
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
@@ -68,6 +72,7 @@ const good = {
 	cadence: "monthly" as const,
 	cycleStartDay: "last" as const,
 	incomeCents: 250000,
+	todayCents: 250000,
 	split: { needs: 50, wants: 30, savings: 20 },
 	commitments: [] as CommitmentInput[],
 };
@@ -92,7 +97,8 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space, c
 	});
 
 	const today = getLimaDate();
-	const expectedCycle = getCycleRange("monthly", "last", today);
+	const expectedCycle = getFirstCycleRange("monthly", "last", today);
+	const allocation = splitIncome(good.todayCents, good.split);
 	await ana.mutation(api.profiles.completeOnboarding, {
 		...good,
 		commitments: [{ name: "Alquiler", amountCents: 80_000, dueDay: 5 }],
@@ -106,7 +112,11 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space, c
 		const spaces = await ctx.db.query("spaces").take(5);
 		const cycles = await ctx.db.query("cycles").take(5);
 		const commitments = await ctx.db.query("commitments").take(5);
-		return { spaces, cycles, commitments };
+		const incomes = await ctx.db
+			.query("transactions")
+			.withIndex("by_spaceId_kind", (q) => q.eq("spaceId", spaces[0]._id).eq("kind", "income"))
+			.take(5);
+		return { spaces, cycles, commitments, incomes };
 	});
 	expect(first.spaces).toHaveLength(1);
 	expect(first.spaces[0]).toMatchObject({ kind: "personal" });
@@ -116,10 +126,17 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space, c
 		startDate: expectedCycle.startDate,
 		endDate: expectedCycle.endDate,
 		split: good.split,
-		envelopes: { needsCents: 0, wantsCents: 0, savingsCents: 0 },
+		envelopes: allocation,
 		carryIn: { needsCents: 0, wantsCents: 0 },
 	});
 	expect(first.cycles[0].closedAt).toBeUndefined();
+	expect(first.incomes).toHaveLength(1);
+	expect(first.incomes[0]).toMatchObject({
+		kind: "income",
+		amountCents: good.todayCents,
+		allocation,
+		date: today,
+	});
 	expect(first.commitments).toHaveLength(1);
 	expect(first.commitments[0]).toMatchObject({
 		spaceId: first.spaces[0]._id,
@@ -159,14 +176,63 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space, c
 	});
 });
 
+test("Oct 20 with payday day 1 → cycle 20–31 with S/ 500 and plan.incomeCents 150000", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	// Lima is UTC−5; this instant is 20 Oct noon in Lima.
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	const allocation = splitIncome(50_000, { needs: 50, wants: 30, savings: 20 });
+	await ana.mutation(api.profiles.completeOnboarding, {
+		cadence: "monthly",
+		cycleStartDay: 1,
+		todayCents: 50_000,
+		incomeCents: 150_000,
+		split: { needs: 50, wants: 30, savings: 20 },
+		commitments: [],
+	});
+
+	const snap = await t.run(async (ctx) => {
+		const profile = (await ctx.db.query("profiles").take(1))[0];
+		const cycle = (await ctx.db.query("cycles").take(1))[0];
+		const income = (
+			await ctx.db
+				.query("transactions")
+				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+				.take(5)
+		).find((row) => row.kind === "income");
+		return { plan: profile.plan, cycle, income };
+	});
+
+	expect(snap.plan?.incomeCents).toBe(150_000);
+	expect(snap.cycle).toMatchObject({
+		startDate: "2026-10-20",
+		endDate: "2026-10-31",
+		envelopes: allocation,
+	});
+	expect(snap.income).toMatchObject({
+		kind: "income",
+		amountCents: 50_000,
+		allocation,
+		date: "2026-10-20",
+	});
+});
+
 test("rejects invalid values", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
+	const tooMany = Array.from({ length: MAX_ONBOARDING_COMMITMENTS + 1 }, (_, i) => ({
+		name: `Pago ${i}`,
+		amountCents: 1000,
+		dueDay: 5,
+	}));
 	const bad = [
 		{ ...good, incomeCents: 0 },
 		{ ...good, incomeCents: -5 },
 		{ ...good, incomeCents: 12.5 },
 		{ ...good, incomeCents: Number.NaN },
+		{ ...good, todayCents: 0 },
+		{ ...good, todayCents: -5 },
+		{ ...good, todayCents: 12.5 },
 		{ ...good, cadence: "weekly" as const, cycleStartDay: "last" as const },
 		{ ...good, cadence: "weekly" as const, cycleStartDay: 7 },
 		{ ...good, cycleStartDay: 0 },
@@ -177,6 +243,12 @@ test("rejects invalid values", async () => {
 		{
 			...good,
 			commitments: [{ name: "x".repeat(NOTE_MAX_LENGTH + 1), amountCents: 1000, dueDay: 5 }],
+		},
+		{ ...good, commitments: tooMany },
+		{
+			...good,
+			todayCents: 10_000,
+			commitments: [{ name: "Alquiler", amountCents: 20_000, dueDay: 5 }],
 		},
 	];
 	for (const args of bad) {

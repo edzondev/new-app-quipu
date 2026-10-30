@@ -1,4 +1,4 @@
-import { NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
+import { MAX_ONBOARDING_COMMITMENTS, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
 import { isValidSplit } from "@quipu/backend/shared/plan";
 import * as z from "zod/mini";
 
@@ -21,12 +21,11 @@ export const commitmentKindSchema = z.enum(["rent", "phone", "internet", "utilit
 const positiveMoney = (message: string) =>
 	z.string().check(z.refine((v) => toCents(v) > 0, message));
 
-export const amountSchema = positiveMoney("Escribe con cuánto cuentas.");
-
 export const cycleStepSchema = z.object({
 	cadence: cadenceSchema,
 	startDay: z.string(),
-	amount: amountSchema,
+	todayAmount: positiveMoney("Escribe cuánto tienes hoy."),
+	cycleIncome: positiveMoney("Escribe cuánto ganas por ciclo."),
 });
 
 export const splitSchema = z
@@ -54,14 +53,21 @@ export const commitmentSchema = z.object({
 	day: z.string(),
 });
 
-const commitmentsSchema = z.array(commitmentSchema);
+const commitmentsSchema = z
+	.array(commitmentSchema)
+	.check(
+		z.refine(
+			(commitments) => commitments.length <= MAX_ONBOARDING_COMMITMENTS,
+			`Puedes agregar hasta ${MAX_ONBOARDING_COMMITMENTS} compromisos.`,
+		),
+	);
 
-export function createFixedStepSchema(incomeCents: number) {
+export function createFixedStepSchema(todayCents: number) {
 	return z.object({
 		commitments: commitmentsSchema.check(
 			z.refine(
-				(commitments) => getCommitmentsCents(toCommitmentInputs(commitments)) <= incomeCents,
-				"Los compromisos superan tu ingreso.",
+				(commitments) => getCommitmentsCents(toCommitmentInputs(commitments)) <= todayCents,
+				"Los compromisos superan lo que tienes hoy.",
 			),
 		),
 	});
