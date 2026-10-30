@@ -299,3 +299,73 @@ test("deleteIncome fails if that income's Ahorro was already moved to the fund",
 	});
 	expect(fundCents).toBe(12_000);
 });
+
+test("updateIncome S/ 100 → S/ 200 after saving S/ 120 still covers the old Ahorro share", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 10_000,
+	});
+	const id = await incomeId(t, 10_000);
+	await ana.as.mutation(api.transactions.addSaving, {
+		space: "personal",
+		amountCents: 12_000,
+	});
+	await ana.as.mutation(api.transactions.updateIncome, {
+		space: "personal",
+		id,
+		amountCents: 20_000,
+	});
+	const share = splitIncome(20_000, SPLIT);
+	const balances = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(balances).toMatchObject({
+		needsCents: 25_000 + share.needsCents,
+		wantsCents: 15_000 + share.wantsCents,
+		savingsCents: 10_000 + share.savingsCents - 12_000,
+	});
+});
+
+test("updateIncome S/ 100 → S/ 50 fails after saving S/ 120 from that income's Ahorro", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 10_000,
+	});
+	const id = await incomeId(t, 10_000);
+	await ana.as.mutation(api.transactions.addSaving, {
+		space: "personal",
+		amountCents: 12_000,
+	});
+	await expect(
+		ana.as.mutation(api.transactions.updateIncome, {
+			space: "personal",
+			id,
+			amountCents: 5_000,
+		}),
+	).rejects.toThrow("Ya usaste parte de este ingreso en tu ahorro. Retíralo primero.");
+});
+
+test("updateIncome S/ 100 → S/ 200 then deleteIncome restores envelopes from before the income", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 10_000,
+	});
+	const id = await incomeId(t, 10_000);
+	await ana.as.mutation(api.transactions.updateIncome, {
+		space: "personal",
+		id,
+		amountCents: 20_000,
+	});
+	await ana.as.mutation(api.transactions.deleteIncome, { space: "personal", id });
+	const after = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(after).toMatchObject({
+		needsCents: before.needsCents,
+		wantsCents: before.wantsCents,
+		savingsCents: before.savingsCents,
+	});
+});

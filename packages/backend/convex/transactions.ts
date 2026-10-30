@@ -173,8 +173,12 @@ export const updateIncome = mutation({
 		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
 		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
 		if (!isValidCents(amountCents)) throw new ConvexError(BAD_INPUT);
-		const withoutOld = envelopesWithoutIncome(cycle.envelopes, row.allocation);
-		const { envelopes, allocation } = applyIncome(withoutOld, amountCents, cycle.split);
+		const { envelopes, allocation } = applyIncome(
+			subtractAmounts(cycle.envelopes, row.allocation),
+			amountCents,
+			cycle.split,
+		);
+		if (envelopes.savingsCents < 0) throw new ConvexError(INCOME_ALREADY_SAVED);
 		await ctx.db.patch("transactions", id, {
 			amountCents,
 			allocation,
