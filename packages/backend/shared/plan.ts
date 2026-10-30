@@ -6,8 +6,12 @@ export type Cadence = Plan["cadence"];
 export type CycleStartDay = Plan["cycleStartDay"];
 export type Split = Plan["split"];
 
-// Months without day 31 clamp in preview.ts dayInMonth; "last" covers end of month.
+// Months without day 31 clamp in dayInMonth; "last" covers end of month.
 export const MAX_MONTH_DAY = 31;
+
+export function parseStartDay(raw: string): CycleStartDay {
+	return raw === "last" ? "last" : Number(raw);
+}
 
 export function isValidStartDay(cadence: Cadence, day: CycleStartDay): boolean {
 	if (day === "last") return cadence !== "weekly";

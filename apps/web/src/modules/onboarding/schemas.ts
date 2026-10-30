@@ -1,6 +1,10 @@
+import { toCents } from "@quipu/backend/shared/budget";
 import { isValidSplit } from "@quipu/backend/shared/plan";
 import * as z from "zod/mini";
-import { getCommitmentsCents, toCents } from "#/modules/onboarding/preview";
+
+export function getCommitmentsCents(commitments: { amount: string }[]): number {
+	return commitments.reduce((sum, { amount }) => sum + toCents(amount), 0);
+}
 
 export const cadenceSchema = z.enum(["monthly", "biweekly", "weekly"]);
 

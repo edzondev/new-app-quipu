@@ -1,3 +1,5 @@
+import { toCents } from "@quipu/backend/shared/budget";
+import { getLimaDate } from "@quipu/backend/shared/dates";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
@@ -6,7 +8,6 @@ import { getMyProfile } from "#/lib/profile";
 import { CycleStep } from "#/modules/onboarding/components/cycle-step";
 import { FixedStep } from "#/modules/onboarding/components/fixed-step";
 import { SplitStep } from "#/modules/onboarding/components/split-step";
-import { getLimaToday, toCents } from "#/modules/onboarding/preview";
 import type { OnboardingValues } from "#/modules/onboarding/schemas";
 
 export const Route = createFileRoute("/onboarding")({
@@ -39,7 +40,7 @@ const defaultValues: OnboardingValues = {
 function OnboardingPage() {
 	const [step, setStep] = useState<Step>("cycle");
 	const [values, setValues] = useState(defaultValues);
-	const [today] = useState(() => getLimaToday());
+	const [today] = useState(() => getLimaDate());
 	const stepNumber = STEPS.indexOf(step) + 1;
 
 	function goTo(next: Step, patch: Partial<OnboardingValues>) {

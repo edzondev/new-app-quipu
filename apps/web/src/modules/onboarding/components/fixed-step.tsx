@@ -1,5 +1,9 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
+import { formatCents, toCents } from "@quipu/backend/shared/budget";
+import { getCycleRange } from "@quipu/backend/shared/dates";
+import { parseStartDay } from "@quipu/backend/shared/plan";
+import { getPreview } from "@quipu/backend/shared/preview";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { ConvexError } from "convex/values";
@@ -10,16 +14,10 @@ import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "#/components/
 import { Field, FieldError } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import {
-	formatCents,
-	getCommitmentsCents,
-	getCycle,
-	getPreview,
-	toCents,
-} from "#/modules/onboarding/preview";
-import {
 	type CommitmentKind,
 	createFixedStepSchema,
 	type FixedStepValues,
+	getCommitmentsCents,
 	type OnboardingValues,
 } from "#/modules/onboarding/schemas";
 
@@ -35,7 +33,7 @@ const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, index) => index + 1);
 
 type Props = {
 	values: OnboardingValues;
-	today: Date;
+	today: string;
 	onBack: (value: FixedStepValues) => void;
 };
 
@@ -74,11 +72,15 @@ export function FixedStep({ values, today, onBack }: Props) {
 	const isSubmitting = useSelector(form.store, (state) => state.isSubmitting);
 	const commitments = useSelector(form.store, (state) => state.values.commitments);
 	const commitmentsCents = getCommitmentsCents(commitments);
+	const cycle = getCycleRange(cycleStep.cadence, parseStartDay(cycleStep.startDay), today);
 	const preview = getPreview({
 		incomeCents,
-		commitmentsCents,
+		commitments: commitments.map(({ amount, day }) => ({
+			amountCents: toCents(amount),
+			dueDay: Number(day),
+		})),
 		split: splitStep.split,
-		cycleEnd: getCycle(cycleStep.cadence, cycleStep.startDay, today).end,
+		cycleEnd: cycle.endDate,
 		today,
 	});
 

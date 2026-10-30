@@ -1,10 +1,10 @@
+import { formatCents, splitIncome } from "@quipu/backend/shared/budget";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { cn } from "cn";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
-import { formatCents } from "#/modules/onboarding/preview";
 import { type SplitStepValues, splitStepSchema } from "#/modules/onboarding/schemas";
 
 const ENVELOPES = [
@@ -55,6 +55,7 @@ export function SplitStep({ defaultValues, incomeCents, onBack, onNext }: Props)
 					{(splitField) => {
 						const isInvalid = !splitField.state.meta.isValid;
 						const errorMessage = splitField.state.meta.errors[0]?.message;
+						const shares = splitIncome(incomeCents, splitField.state.value);
 						return (
 							<>
 								<div className="border-t border-border">
@@ -91,7 +92,7 @@ export function SplitStep({ defaultValues, incomeCents, onBack, onNext }: Props)
 														/>
 														<span className="text-sm text-muted-foreground">%</span>
 														<span className="w-28 text-right text-sm tabular-nums text-muted-foreground">
-															S/ {formatCents(Math.round((incomeCents * field.state.value) / 100))}
+															S/ {formatCents(shares[envelope.key])}
 														</span>
 													</div>
 													<div className="mt-4 h-1 w-full rounded-full bg-muted">

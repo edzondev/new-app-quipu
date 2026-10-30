@@ -1,10 +1,10 @@
-import { MAX_MONTH_DAY } from "@quipu/backend/shared/plan";
+import { formatRange, getCycleRange } from "@quipu/backend/shared/dates";
+import { MAX_MONTH_DAY, parseStartDay } from "@quipu/backend/shared/plan";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
-import { formatShortDate, getCycle } from "#/modules/onboarding/preview";
 import { type Cadence, type CycleStepValues, cycleStepSchema } from "#/modules/onboarding/schemas";
 
 const CADENCE_OPTIONS: { value: Cadence; label: string }[] = [
@@ -19,7 +19,7 @@ const CYCLE_DAYS = Array.from({ length: MAX_MONTH_DAY }, (_, index) => index + 1
 
 type Props = {
 	defaultValues: CycleStepValues;
-	today: Date;
+	today: string;
 	onNext: (value: CycleStepValues) => void;
 };
 
@@ -32,7 +32,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 	});
 	const cadence = useSelector(form.store, (state) => state.values.cadence);
 	const startDay = useSelector(form.store, (state) => state.values.startDay);
-	const cycle = getCycle(cadence, startDay, today);
+	const cycle = getCycleRange(cadence, parseStartDay(startDay), today);
 
 	return (
 		<>
@@ -107,7 +107,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 					)}
 				</form.Field>
 				<p className="mt-3 text-xs text-muted-foreground">
-					Tu ciclo: {formatShortDate(cycle.start)} – {formatShortDate(cycle.end)}
+					Tu ciclo: {formatRange(cycle.startDate, cycle.endDate)}
 				</p>
 
 				<form.Field name="amount">
