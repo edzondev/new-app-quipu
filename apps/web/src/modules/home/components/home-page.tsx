@@ -1,11 +1,11 @@
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
 import { addDays, formatDay } from "@quipu/backend/shared/dates";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
+import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
-import { useEffect } from "react";
 import { Button } from "#/components/ui/button";
 import {
 	Dialog,
@@ -16,7 +16,10 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "#/components/ui/dialog";
+import { Skeleton } from "#/components/ui/skeleton";
+import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { useRegister } from "#/modules/register/register-dialog";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
@@ -24,14 +27,13 @@ type Space = "personal" | "household";
 
 export function HomePage() {
 	const today = useLimaDate();
-	const { space = "personal" } = useSearch({ from: "/_app" });
-	const ensureOpen = useMutation({ mutationFn: useConvexMutation(api.cycles.ensureOpen) });
-	const { mutate } = ensureOpen;
+	// Remount when the Lima day flips so ensureOpen runs again for the new cycle.
+	return <Home key={today} today={today} />;
+}
 
-	// Close a cycle that ended while the app was closed before reading the number.
-	useEffect(() => {
-		mutate({ space });
-	}, [mutate, space, today]);
+function Home({ today }: { today: string }) {
+	const { space = "personal" } = useSearch({ from: "/_app" });
+	const ensureOpen = useEnsureOpenCycle(space);
 
 	const home = useQuery(
 		convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space, today } : "skip"),
@@ -54,14 +56,14 @@ export function HomePage() {
 
 function HomeSkeleton() {
 	return (
-		<div className="animate-pulse space-y-6 pt-6" aria-busy="true" aria-label="Cargando">
-			<div className="h-3 w-28 rounded bg-muted" />
-			<div className="h-20 w-56 rounded bg-muted" />
-			<div className="h-3 w-64 rounded bg-muted" />
+		<div role="status" className="space-y-6 pt-6" aria-busy="true" aria-label="Cargando">
+			<Skeleton className="h-3 w-28" />
+			<Skeleton className="h-20 w-56" />
+			<Skeleton className="h-3 w-64" />
 			<div className="mt-10 space-y-4">
-				<div className="h-14 rounded bg-muted" />
-				<div className="h-14 rounded bg-muted" />
-				<div className="h-14 rounded bg-muted" />
+				<Skeleton className="h-14" />
+				<Skeleton className="h-14" />
+				<Skeleton className="h-14" />
 			</div>
 		</div>
 	);
@@ -75,9 +77,9 @@ function dueLabel(dueDate: string, today: string) {
 
 function Overview({ home, space, today }: { home: Home; space: Space; today: string }) {
 	const envelopes = [
-		{ label: "Necesidades", cents: home.needsCents, dot: "bg-teal-700", spendable: true },
-		{ label: "Gustos", cents: home.wantsCents, dot: "bg-amber-700", spendable: true },
-		{ label: "Ahorro", cents: home.savingsCents, dot: "bg-stone-500", spendable: false },
+		{ label: "Necesidades", cents: home.needsCents, dot: ENVELOPE_DOT.needs, spendable: true },
+		{ label: "Gustos", cents: home.wantsCents, dot: ENVELOPE_DOT.wants, spendable: true },
+		{ label: "Ahorro", cents: home.savingsCents, dot: ENVELOPE_DOT.savings, spendable: false },
 	];
 	const [whole, decimals] = formatCents(home.dailyCents).split(".");
 
@@ -117,7 +119,7 @@ function Overview({ home, space, today }: { home: Home; space: Space; today: str
 							className="flex items-center justify-between gap-3 border-b border-border/80 py-3.5 last:border-0"
 						>
 							<span className="flex items-center gap-2.5">
-								<span aria-hidden className={`size-2.5 rounded-full ${envelope.dot}`} />
+								<span aria-hidden className={cn("size-2.5 rounded-full", envelope.dot)} />
 								<span className="text-[15px] font-semibold">{envelope.label}</span>
 								{envelope.spendable && envelope.cents === 0 ? (
 									<span className="text-xs font-semibold text-warning-foreground">Agotado</span>
