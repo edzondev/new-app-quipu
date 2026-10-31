@@ -37,6 +37,14 @@ export const withdrawalReason = v.union(
 	v.literal("other"),
 );
 
+export const movementKind = v.union(
+	v.literal("expense"),
+	v.literal("income"),
+	v.literal("contribution"),
+	v.literal("saving"),
+	v.literal("withdrawal"),
+);
+
 const movement = {
 	spaceId: v.id("spaces"),
 	cycleId: v.id("cycles"),

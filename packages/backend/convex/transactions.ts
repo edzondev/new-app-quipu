@@ -7,10 +7,12 @@ import {
 	NOTE_MAX_LENGTH,
 	subtractAmounts,
 } from "../shared/budget";
+import { isIsoDate } from "../shared/dates";
 import type { Doc, Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation } from "./_generated/server";
+import { type MutationCtx, mutation, query } from "./_generated/server";
+import { authComponent } from "./auth";
 import { requireOpenCycle } from "./model/cycles";
-import { spaceKind, spendable } from "./schema";
+import { movementKind, spaceKind, spendable } from "./schema";
 
 type SpaceKind = Doc<"spaces">["kind"];
 type TxKind = Doc<"transactions">["kind"];
@@ -273,5 +275,67 @@ export const withdrawSaving = mutation({
 			fundCents: space.fundCents - amountCents,
 		});
 		return null;
+	},
+});
+
+function listedEnvelope(row: Doc<"transactions">) {
+	if (row.kind === "expense" || row.kind === "contribution") return row.envelope;
+	if (row.kind === "saving" || row.kind === "withdrawal") return "savings" as const;
+	return null;
+}
+
+/** Open cycle movements, newest first. `who` is the author name in household, else null. */
+export const list = query({
+	args: { space: spaceKind, today: v.string() },
+	returns: v.object({
+		startDate: v.string(),
+		endDate: v.string(),
+		rows: v.array(
+			v.object({
+				id: v.id("transactions"),
+				kind: movementKind,
+				amountCents: v.number(),
+				date: v.string(),
+				note: v.union(v.string(), v.null()),
+				envelope: v.union(v.literal("needs"), v.literal("wants"), v.literal("savings"), v.null()),
+				mine: v.boolean(),
+				who: v.union(v.string(), v.null()),
+			}),
+		),
+	}),
+	handler: async (ctx, { space: kind, today }) => {
+		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
+		const { userId, space, cycle } = await requireOpenCycle(ctx, kind, today);
+		const rows = await ctx.db
+			.query("transactions")
+			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+			.order("desc")
+			.take(500);
+
+		const whoByUser = new Map<string, string | null>();
+		if (space.kind === "household") {
+			const authorIds = [...new Set(rows.map((row) => row.userId))];
+			await Promise.all(
+				authorIds.map(async (authorId) => {
+					const user = await authComponent.getAnyUserById(ctx, authorId);
+					whoByUser.set(authorId, user?.name ?? null);
+				}),
+			);
+		}
+
+		return {
+			startDate: cycle.startDate,
+			endDate: cycle.endDate,
+			rows: rows.map((row) => ({
+				id: row._id,
+				kind: row.kind,
+				amountCents: row.amountCents,
+				date: row.date,
+				note: row.note ?? null,
+				envelope: listedEnvelope(row),
+				mine: row.userId === userId,
+				who: space.kind === "household" ? (whoByUser.get(row.userId) ?? null) : null,
+			})),
+		};
 	},
 });

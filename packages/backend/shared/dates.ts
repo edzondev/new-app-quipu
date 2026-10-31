@@ -2,6 +2,7 @@ import type { Cadence, CycleStartDay } from "./plan";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTHS = "ene feb mar abr may jun jul ago set oct nov dic".split(" ");
+const WEEKDAYS = "dom lun mar mié jue vie sáb".split(" ");
 const limaDateFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" });
 
 export function getLimaDate(now = new Date()): string {
@@ -64,6 +65,13 @@ export function getFirstCycleRange(cadence: Cadence, startDay: CycleStartDay, to
 export function formatDay(date: string): string {
 	const [, month, day] = date.split("-").map(Number);
 	return `${day} ${MONTHS[month - 1]}`;
+}
+
+export function formatDayHeading(date: string, today: string): string {
+	const weekday = WEEKDAYS[new Date(toUtc(date)).getUTCDay()] ?? "";
+	if (date === today) return `Hoy · ${weekday} ${formatDay(date)}`;
+	if (date === addDays(today, -1)) return `Ayer · ${weekday} ${formatDay(date)}`;
+	return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${formatDay(date)}`;
 }
 
 export function formatRange(startDate: string, endDate: string): string {

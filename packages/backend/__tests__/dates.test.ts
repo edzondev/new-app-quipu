@@ -1,5 +1,23 @@
 import { describe, expect, test } from "vitest";
-import { dayInMonth, getCycleRange, getFirstCycleRange, getLimaDate } from "../shared/dates";
+import {
+	dayInMonth,
+	formatDayHeading,
+	getCycleRange,
+	getFirstCycleRange,
+	getLimaDate,
+} from "../shared/dates";
+
+describe("formatDayHeading", () => {
+	test("today and yesterday are named, other days start with the weekday", () => {
+		expect(formatDayHeading("2026-10-30", "2026-10-30")).toBe("Hoy · vie 30 oct");
+		expect(formatDayHeading("2026-10-29", "2026-10-30")).toBe("Ayer · jue 29 oct");
+		expect(formatDayHeading("2026-10-27", "2026-10-30")).toBe("Mar 27 oct");
+	});
+
+	test("yesterday crosses a month boundary", () => {
+		expect(formatDayHeading("2026-10-31", "2026-11-01")).toBe("Ayer · sáb 31 oct");
+	});
+});
 
 describe("getCycleRange", () => {
 	test("monthly from day 1", () => {
