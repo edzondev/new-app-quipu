@@ -118,7 +118,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 								<FieldLabel className="text-sm font-normal text-muted-foreground">
 									¿Cuánto tienes hoy?
 								</FieldLabel>
-								<div className="mt-3 flex w-full items-baseline gap-3 border-b border-neutral-400 pb-3 has-focus-visible:border-foreground has-aria-invalid:border-amber-500">
+								<div className="mt-3 flex w-full items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground has-aria-invalid:border-warning">
 									<span className="text-2xl text-muted-foreground">S/</span>
 									<Input
 										name={field.name}
@@ -152,7 +152,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 								<FieldLabel className="text-sm font-normal text-muted-foreground">
 									¿Cuánto ganas por ciclo?
 								</FieldLabel>
-								<div className="mt-3 flex w-full items-baseline gap-3 border-b border-neutral-400 pb-3 has-focus-visible:border-foreground has-aria-invalid:border-amber-500">
+								<div className="mt-3 flex w-full items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground has-aria-invalid:border-warning">
 									<span className="text-xl text-muted-foreground">S/</span>
 									<Input
 										name={field.name}
