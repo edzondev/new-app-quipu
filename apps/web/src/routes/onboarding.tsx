@@ -1,9 +1,10 @@
+import { convexQuery } from "@convex-dev/react-query";
+import { api } from "@quipu/backend/convex/_generated/api";
 import { getLimaDate } from "@quipu/backend/shared/dates";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
 import { QuipuHeader } from "#/components/quipu-header";
-import { getMyProfile } from "#/lib/profile";
 import { CycleStep } from "#/modules/onboarding/components/cycle-step";
 import { SplitStep } from "#/modules/onboarding/components/split-step";
 import type { OnboardingValues } from "#/modules/onboarding/schemas";
@@ -11,7 +12,9 @@ import type { OnboardingValues } from "#/modules/onboarding/schemas";
 export const Route = createFileRoute("/onboarding")({
 	beforeLoad: async ({ context }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
-		const profile = await getMyProfile();
+		const profile = await context.queryClient.ensureQueryData(
+			convexQuery(api.profiles.myProfile, {}),
+		);
 		if (profile?.plan) throw redirect({ to: "/home" });
 	},
 	head: () => ({
