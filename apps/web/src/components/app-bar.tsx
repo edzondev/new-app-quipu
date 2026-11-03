@@ -1,13 +1,14 @@
-import { convexQuery } from "@convex-dev/react-query";
 import { Menu } from "@base-ui/react/menu";
+import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { authClient } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
+import { AUTH_TOKEN_QUERY_KEY } from "#/lib/auth-token";
 import { useRegister } from "#/modules/register/register-dialog";
 
 const pill =
@@ -17,6 +18,7 @@ const pillOn = "bg-background text-foreground shadow-[0_1px_3px_rgba(29,22,16,0.
 export function AppBar() {
 	const { space } = useSearch({ from: "/_app" });
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
+	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const [signingOut, setSigningOut] = useState(false);
 	const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -32,6 +34,7 @@ export function AppBar() {
 			setSignOutError(getAuthErrorMessage(error));
 			return;
 		}
+		queryClient.removeQueries({ queryKey: AUTH_TOKEN_QUERY_KEY });
 		await navigate({ to: "/sign-in" });
 	}
 

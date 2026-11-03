@@ -14,27 +14,29 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
 import { authClient } from "#/lib/auth-client";
 import { getToken } from "#/lib/auth-server";
+import { AUTH_TOKEN_QUERY_KEY, AUTH_TOKEN_STALE_TIME_MS } from "#/lib/auth-token";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
 	convexQueryClient: ConvexQueryClient;
-	/** Filled by root beforeLoad on SSR; reused on client navigations. */
-	isAuthenticated?: boolean;
-	token?: string | null;
 }
 
 const getAuth = createServerFn({ method: "GET" }).handler(async () => await getToken());
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-	beforeLoad: async (ctx) => {
-		// Client navigations already carry the token from the initial SSR load.
-		if (!import.meta.env.SSR && typeof ctx.context.isAuthenticated === "boolean") {
-			return { isAuthenticated: ctx.context.isAuthenticated, token: ctx.context.token };
+	beforeLoad: async ({ context }) => {
+		const token = await context.queryClient.ensureQueryData({
+			queryKey: AUTH_TOKEN_QUERY_KEY,
+			// React Query rejects undefined; treat a missing session as null.
+			queryFn: async () => (await getAuth()) ?? null,
+			staleTime: AUTH_TOKEN_STALE_TIME_MS,
+		});
+		// serverHttpClient is only used during SSR; the browser uses the Convex websocket client.
+		if (import.meta.env.SSR && token) {
+			context.convexQueryClient.serverHttpClient?.setAuth(token);
 		}
-		const token = await getAuth();
-		if (token) ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
 		return { isAuthenticated: !!token, token };
 	},
 	head: () => ({
