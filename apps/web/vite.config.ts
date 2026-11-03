@@ -7,7 +7,7 @@ import { defineConfig } from "vite";
 
 const config = defineConfig({
 	resolve: { tsconfigPaths: true },
-	ssr: { noExternal: ["@convex-dev/better-auth", "cn"] },
+	ssr: { noExternal: ["@convex-dev/better-auth"] },
 	// Cloudflare SSR can resolve two React copies; force one via deps_ssr.
 	// https://github.com/TanStack/router/issues/7119
 	environments: {
@@ -19,7 +19,6 @@ const config = defineConfig({
 					"react-dom/server",
 					"react/jsx-runtime",
 					"react/jsx-dev-runtime",
-					"cn",
 				],
 				exclude: ["@base-ui/react", "@base-ui/react/merge-props", "@base-ui/react/use-render"],
 			},
