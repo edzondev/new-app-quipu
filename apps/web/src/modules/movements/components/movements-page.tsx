@@ -36,6 +36,11 @@ function groupByDay(rows: Movement[]) {
 
 export function MovementsPage() {
 	const today = useLimaDate();
+	// Remount when the Lima day flips so ensureOpen runs again for the new cycle.
+	return <Movements key={today} today={today} />;
+}
+
+function Movements({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	const [filterId, setFilterId] = useState<(typeof FILTERS)[number]["id"]>("all");
 	const filter = FILTERS.find((item) => item.id === filterId) ?? FILTERS[0];
@@ -77,6 +82,10 @@ export function MovementsPage() {
 
 	const rows = list.data.rows.filter(filter.match);
 	const count = list.data.rows.length;
+	const countLabel =
+		count === 500
+			? "500+ movimientos en este ciclo"
+			: `${count} ${count === 1 ? "movimiento" : "movimientos"} en este ciclo`;
 
 	return (
 		<>
@@ -128,8 +137,7 @@ export function MovementsPage() {
 			)}
 
 			<p className="mt-12 border-t pt-5 text-sm text-muted-foreground">
-				{count} {count === 1 ? "movimiento" : "movimientos"} en este ciclo · Disponible hoy S/{" "}
-				{formatCents(home.data.dailyCents)}
+				{countLabel} · Disponible hoy S/ {formatCents(home.data.dailyCents)}
 			</p>
 		</>
 	);
