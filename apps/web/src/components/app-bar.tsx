@@ -36,7 +36,7 @@ export function AppBar() {
 	}
 
 	return (
-		<header className="border-b border-border/80 bg-background">
+		<header className="border-b border-input bg-background">
 			<nav
 				aria-label="Principal"
 				className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between gap-4 px-6"
@@ -48,14 +48,24 @@ export function AppBar() {
 					Quipu
 				</Link>
 
-				<Link
-					to="/home"
-					activeProps={{ className: "bg-muted text-foreground" }}
-					inactiveProps={{ className: "text-muted-foreground" }}
-					className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
-				>
-					Inicio
-				</Link>
+				<div className="flex items-center gap-1">
+					<Link
+						to="/home"
+						activeProps={{ className: "bg-muted text-foreground" }}
+						inactiveProps={{ className: "text-muted-foreground" }}
+						className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
+					>
+						Inicio
+					</Link>
+					<Link
+						to="/movements"
+						activeProps={{ className: "bg-muted text-foreground" }}
+						inactiveProps={{ className: "text-muted-foreground" }}
+						className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
+					>
+						Movimientos
+					</Link>
+				</div>
 
 				<div className="flex items-center gap-3">
 					<Button type="button" onClick={() => openRegister()} className="rounded-full">
@@ -93,7 +103,7 @@ export function AppBar() {
 					<Menu.Root>
 						<Menu.Trigger
 							aria-label="Cuenta"
-							className="flex size-9 items-center justify-center rounded-full bg-teal-700/15 text-sm font-semibold text-teal-800 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						>
 							{initial}
 						</Menu.Trigger>

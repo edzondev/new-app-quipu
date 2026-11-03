@@ -17,6 +17,12 @@ export const AMOUNT_KEYS = {
 	savings: "savingsCents",
 } as const satisfies Record<Envelope, keyof EnvelopeAmounts>;
 
+export const ENVELOPE_LABELS: Record<Envelope, string> = {
+	needs: "Necesidades",
+	wants: "Gustos",
+	savings: "Ahorro",
+};
+
 export const NOTE_MAX_LENGTH = 40;
 
 const moneyFormat = new Intl.NumberFormat("en-US", {

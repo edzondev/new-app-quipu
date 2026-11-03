@@ -347,6 +347,77 @@ test("updateIncome S/ 100 → S/ 50 fails after saving S/ 120 from that income's
 	).rejects.toThrow("Ya usaste parte de este ingreso en tu ahorro. Retíralo primero.");
 });
 
+test("list returns the open cycle newest first and leaves out the other cycle", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 1_000,
+		envelope: "needs",
+	});
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 2_000,
+		envelope: "wants",
+	});
+
+	const october = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-20",
+	});
+	expect(october.rows.map((row) => row.amountCents)).toEqual([2_000, 1_000, 50_000]);
+	expect(october.rows.every((row) => row.who === null)).toBe(true);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 3_000,
+		envelope: "needs",
+	});
+
+	const november = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-11-01",
+	});
+	expect(november.rows.map((row) => row.amountCents)).toEqual([3_000]);
+});
+
+test("list in household is newest first with mine and author who", async () => {
+	const t = harness();
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	await ana.as.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.as.mutation(api.household.createHousehold, { name: "Casa" });
+	const { code } = await ana.as.mutation(api.household.createInvite, {});
+
+	const luis = await signIn(t, "luis@correo.com", "Luis");
+	await luis.as.mutation(api.profiles.completeOnboarding, onboard);
+	expect(await luis.as.mutation(api.household.joinHousehold, { code })).toEqual({ ok: true });
+
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "household",
+		amountCents: 1_000,
+		envelope: "needs",
+	});
+	await luis.as.mutation(api.transactions.addExpense, {
+		space: "household",
+		amountCents: 2_000,
+		envelope: "wants",
+	});
+
+	const list = await ana.as.query(api.transactions.list, {
+		space: "household",
+		today: "2026-10-20",
+	});
+	expect(list.rows.map((row) => row.amountCents)).toEqual([2_000, 1_000]);
+	expect(list.rows.map((row) => ({ mine: row.mine, who: row.who }))).toEqual([
+		{ mine: false, who: "Luis" },
+		{ mine: true, who: "Ana" },
+	]);
+});
+
 test("updateIncome S/ 100 → S/ 200 then deleteIncome restores envelopes from before the income", async () => {
 	const t = harness();
 	const ana = await anaOnOct20(t);

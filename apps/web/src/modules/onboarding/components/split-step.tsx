@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
+import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { StepHeader } from "#/modules/onboarding/components/step-header";
 import {
 	type CycleStepValues,
@@ -18,9 +19,9 @@ import {
 } from "#/modules/onboarding/schemas";
 
 const ENVELOPES = [
-	{ key: "needs", label: "Necesidades", dot: "bg-sky-800" },
-	{ key: "wants", label: "Gustos", dot: "bg-orange-600" },
-	{ key: "savings", label: "Ahorro", dot: "bg-teal-700" },
+	{ key: "needs", label: "Necesidades", dot: ENVELOPE_DOT.needs },
+	{ key: "wants", label: "Gustos", dot: ENVELOPE_DOT.wants },
+	{ key: "savings", label: "Ahorro", dot: ENVELOPE_DOT.savings },
 ] as const;
 
 type Props = {
@@ -111,7 +112,7 @@ export function SplitStep({ defaultValues, cycleStep, onBack }: Props) {
 																)
 															}
 															unstyled
-															className="w-14 border-0 border-b border-neutral-400 bg-transparent has-focus-visible:border-foreground has-aria-invalid:border-amber-500 [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-1 [&_[data-slot=input]]:text-right [&_[data-slot=input]]:tabular-nums"
+															className="w-14 border-0 border-b border-input bg-transparent has-focus-visible:border-foreground has-aria-invalid:border-warning [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-1 [&_[data-slot=input]]:text-right [&_[data-slot=input]]:tabular-nums"
 														/>
 														<span className="text-sm text-muted-foreground">%</span>
 														<span className="w-28 text-right text-sm tabular-nums text-muted-foreground">
