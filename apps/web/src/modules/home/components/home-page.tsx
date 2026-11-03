@@ -33,7 +33,7 @@ export function HomePage() {
 
 function Home({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
-	const ensureOpen = useEnsureOpenCycle(space);
+	const ensureOpen = useEnsureOpenCycle(space, today);
 
 	const home = useQuery(
 		convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space, today } : "skip"),

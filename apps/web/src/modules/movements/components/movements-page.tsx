@@ -44,7 +44,7 @@ function Movements({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	const [filterId, setFilterId] = useState<(typeof FILTERS)[number]["id"]>("all");
 	const filter = FILTERS.find((item) => item.id === filterId) ?? FILTERS[0];
-	const ensureOpen = useEnsureOpenCycle(space);
+	const ensureOpen = useEnsureOpenCycle(space, today);
 
 	const list = useQuery(
 		convexQuery(api.transactions.list, ensureOpen.isSuccess ? { space, today } : "skip"),

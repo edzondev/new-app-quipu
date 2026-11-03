@@ -1,6 +1,9 @@
+import { convexQuery } from "@convex-dev/react-query";
+import { api } from "@quipu/backend/convex/_generated/api";
+import { getLimaDate } from "@quipu/backend/shared/dates";
 import { createFileRoute, Outlet, redirect, retainSearchParams } from "@tanstack/react-router";
 import { AppBar } from "#/components/app-bar";
-import { getMyProfile } from "#/lib/profile";
+import { ensureOpenCycle } from "#/lib/ensure-open-cycle";
 import { RegisterProvider } from "#/modules/register/register-dialog";
 
 export const Route = createFileRoute("/_app")({
@@ -12,11 +15,18 @@ export const Route = createFileRoute("/_app")({
 	},
 	beforeLoad: async ({ context, search }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
-		const profile = await getMyProfile();
+		const profile = await context.queryClient.ensureQueryData(
+			convexQuery(api.profiles.myProfile, {}),
+		);
 		if (!profile?.plan) throw redirect({ to: "/onboarding" });
 		if (search.space === "household" && !profile.hasHousehold) {
 			throw redirect({ search: (prev) => ({ ...prev, space: undefined }) });
 		}
+		const space: "household" | "personal" = search.space === "household" ? "household" : "personal";
+		const today = getLimaDate();
+		// Must run before child loaders that read requireOpenCycle data.
+		await ensureOpenCycle(context.queryClient, context.convexQueryClient, space, today);
+		return { space, today };
 	},
 	component: AppLayout,
 });

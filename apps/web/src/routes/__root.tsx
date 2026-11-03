@@ -20,12 +20,19 @@ import appCss from "../styles.css?url";
 interface MyRouterContext {
 	queryClient: QueryClient;
 	convexQueryClient: ConvexQueryClient;
+	/** Filled by root beforeLoad on SSR; reused on client navigations. */
+	isAuthenticated?: boolean;
+	token?: string | null;
 }
 
 const getAuth = createServerFn({ method: "GET" }).handler(async () => await getToken());
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	beforeLoad: async (ctx) => {
+		// Client navigations already carry the token from the initial SSR load.
+		if (!import.meta.env.SSR && typeof ctx.context.isAuthenticated === "boolean") {
+			return { isAuthenticated: ctx.context.isAuthenticated, token: ctx.context.token };
+		}
 		const token = await getAuth();
 		if (token) ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
 		return { isAuthenticated: !!token, token };
