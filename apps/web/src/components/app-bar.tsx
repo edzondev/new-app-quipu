@@ -8,7 +8,6 @@ import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { authClient } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
-import { AUTH_TOKEN_QUERY_KEY } from "#/lib/auth-token";
 import { useRegister } from "#/modules/register/register-dialog";
 
 const pill =
@@ -34,7 +33,7 @@ export function AppBar() {
 			setSignOutError(getAuthErrorMessage(error));
 			return;
 		}
-		queryClient.removeQueries({ queryKey: AUTH_TOKEN_QUERY_KEY });
+		queryClient.clear();
 		await navigate({ to: "/sign-in" });
 	}
 
