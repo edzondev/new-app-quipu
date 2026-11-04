@@ -129,11 +129,7 @@ function Commitments({ today }: { today: string }) {
 						empty="Aún no pagas nada este ciclo."
 					>
 						{payments.map((payment) => (
-							<PaymentRow
-								key={`${payment.id}:${payment.dueDate}`}
-								payment={payment}
-								today={today}
-							/>
+							<PaymentRow key={payment.paymentId} payment={payment} today={today} />
 						))}
 					</Group>
 					<Group title="Pagados antes">

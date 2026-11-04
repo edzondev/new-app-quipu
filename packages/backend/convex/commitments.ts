@@ -194,6 +194,7 @@ export const list = query({
 		),
 		payments: v.array(
 			v.object({
+				paymentId: v.id("transactions"),
 				id: v.id("commitments"),
 				name: v.string(),
 				envelope: spendable,
@@ -219,6 +220,7 @@ export const list = query({
 					tx.cycleId === cycle._id
 						? [
 								{
+									paymentId: tx._id,
 									id: row._id,
 									name: row.name,
 									envelope: row.envelope,

@@ -384,6 +384,7 @@ test("list shows each commitment's state with the to-pay and already-paid totals
 	]);
 	expect(after.payments).toEqual([
 		{
+			paymentId: expect.any(String),
 			id: soat,
 			name: "SOAT",
 			envelope: "needs",
