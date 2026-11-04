@@ -159,6 +159,14 @@ describe("formatRecentDay", () => {
 		expect(formatRecentDay("2026-10-26", "2026-10-30")).toBe("lun");
 		expect(formatRecentDay("2026-10-23", "2026-10-30")).toBe("23 oct");
 	});
+
+	test("a future date reads as today", () => {
+		expect(formatRecentDay("2026-10-31", "2026-10-30")).toBe("hoy");
+	});
+
+	test("a date from another year carries the year", () => {
+		expect(formatRecentDay("2026-12-20", "2027-01-05")).toBe("20 dic 2026");
+	});
 });
 
 describe("formatPastDay", () => {

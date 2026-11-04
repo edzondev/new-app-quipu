@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { ACTION, EYEBROW } from "#/lib/typography";
 
 export function SectionHeading({
 	title,
@@ -8,14 +9,11 @@ export function SectionHeading({
 	to?: "/commitments" | "/movements";
 }) {
 	return (
-		<div className="flex items-center justify-between gap-3">
-			<h2 className="text-[13px] font-semibold">{title}</h2>
+		<div className="flex min-h-[34px] items-center justify-between gap-3">
+			<h2 className={EYEBROW}>{title}</h2>
 			{to ? (
-				<Link
-					to={to}
-					className="flex min-h-11 items-center text-[13px] font-medium text-muted-foreground hover:text-foreground"
-				>
-					Ver todos
+				<Link to={to} className={ACTION}>
+					Ver todo
 				</Link>
 			) : null}
 		</div>

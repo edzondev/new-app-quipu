@@ -1,23 +1,16 @@
+import { Popover } from "@base-ui/react/popover";
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
-import { formatDaysLeft, formatRange } from "@quipu/backend/shared/dates";
+import { formatDay, formatDaysLeft, formatRange } from "@quipu/backend/shared/dates";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import type { FunctionReturnType } from "convex/server";
 import { Button } from "#/components/ui/button";
-import {
-	Dialog,
-	DialogDescription,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-	DialogTrigger,
-} from "#/components/ui/dialog";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { EYEBROW } from "#/lib/typography";
 import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import type { Movement } from "#/modules/register/movement-draft";
 import { useRegister } from "#/modules/register/register-dialog";
@@ -25,7 +18,7 @@ import { EnvelopeCards } from "./envelope-cards";
 import { RecentMovements } from "./recent-movements";
 import { UpcomingCommitments } from "./upcoming-commitments";
 
-type Home = FunctionReturnType<typeof api.balances.getHome>;
+type HomeData = FunctionReturnType<typeof api.balances.getHome>;
 type Space = "personal" | "household";
 
 export function HomePage() {
@@ -107,7 +100,7 @@ function Overview({
 	space,
 	today,
 }: {
-	home: Home;
+	home: HomeData;
 	name: string;
 	items: CommitmentItem[];
 	rows: Movement[];
@@ -120,27 +113,26 @@ function Overview({
 	return (
 		<>
 			<header>
-				<h1 className="font-heading text-4xl font-medium tracking-tight">
-					{space === "household" ? "Nuestro espacio" : `Hola, ${firstName}`}
+				<h1 className="font-serif text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
+					{space === "household" ? "Nuestro espacio" : firstName ? `Hola, ${firstName}` : "Hola"}
 				</h1>
-				<p className="mt-2 text-sm text-muted-foreground">
+				<p className="mt-1.5 text-sm leading-normal text-muted-foreground">
 					Ciclo {formatRange(home.startDate, home.endDate)} · {formatDaysLeft(home.daysLeft)}
 				</p>
 			</header>
 
-			<div className="mt-8 grid gap-10 lg:grid-cols-2">
+			<div className="mt-9 grid gap-14 lg:grid-cols-[1.1fr_1fr]">
 				<section className="min-w-0">
-					<p className="text-[13px] font-semibold text-muted-foreground">
-						{space === "household" ? "Pueden gastar hoy juntos" : "Puedes gastar hoy"}
-					</p>
-					<p className="mt-2 font-mono text-[clamp(52px,15vw,80px)] leading-none tracking-tight tabular-nums">
-						<span className="align-super text-[0.38em] text-muted-foreground">S/</span>
-						{whole}
-						<span className="text-[0.45em] text-muted-foreground">.{decimals}</span>
-					</p>
-					<p className="mt-3 flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted-foreground">
-						Sin comprometer tu ciclo.
+					<div className="flex items-center gap-2">
+						<p className={EYEBROW}>
+							{space === "household" ? "Pueden gastar hoy juntos" : "Puedes gastar hoy"}
+						</p>
 						<Formula home={home} />
+					</div>
+					<p className="mt-2.5 flex items-start gap-1 font-mono text-[clamp(64px,13vw,112px)] leading-none tracking-[-0.03em]">
+						<span className="mt-2.5 text-2xl tracking-normal text-muted-foreground">S/</span>
+						<span>{whole}</span>
+						<span className="mt-2 text-[0.41em] text-muted-foreground">.{decimals}</span>
 					</p>
 					{home.dailyCents === 0 ? (
 						<p
@@ -155,46 +147,54 @@ function Overview({
 				<EnvelopeCards home={home} />
 			</div>
 
-			<UpcomingCommitments items={items} today={today} space={space} />
-			<RecentMovements rows={rows} today={today} />
+			<div className="mt-[52px] grid gap-14 border-t border-border/80 pt-7 lg:grid-cols-2">
+				<UpcomingCommitments items={items} today={today} space={space} />
+				<RecentMovements rows={rows} today={today} />
+			</div>
 		</>
 	);
 }
 
-function Formula({ home }: { home: Home }) {
+function Formula({ home }: { home: HomeData }) {
+	const freeCents = Math.max(0, home.needsCents + home.wantsCents - home.pendingCents);
+
 	return (
-		<Dialog>
-			<DialogTrigger className="flex min-h-11 cursor-pointer items-center font-medium underline underline-offset-4 hover:text-foreground">
-				¿Cómo se calcula?
-			</DialogTrigger>
-			<DialogPopup>
-				<DialogHeader>
-					<DialogTitle>¿Cómo se calcula?</DialogTitle>
-					<DialogDescription>
-						Lo libre en Necesidades y Gustos, menos lo que aún debes pagar, dividido entre los días
-						que quedan (hoy cuenta).
-					</DialogDescription>
-				</DialogHeader>
-				<DialogPanel>
-					<dl className="space-y-2 text-sm tabular-nums">
-						<div className="flex justify-between gap-4">
-							<dt className="text-muted-foreground">Libre en Necesidades y Gustos</dt>
-							<dd>S/ {formatCents(home.needsCents + home.wantsCents)}</dd>
-						</div>
-						{home.pendingCents > 0 ? (
-							<div className="flex justify-between gap-4">
-								<dt className="text-muted-foreground">Compromisos por pagar</dt>
-								<dd>−S/ {formatCents(home.pendingCents)}</dd>
+		<Popover.Root>
+			<Popover.Trigger
+				aria-label="Cómo se calcula"
+				className="relative inline-flex size-[22px] flex-none cursor-pointer items-center justify-center rounded-full border-[1.5px] border-input text-xs leading-none font-bold text-muted-foreground outline-none after:absolute after:-inset-[11px] focus-visible:ring-2 focus-visible:ring-ring data-popup-open:border-transparent data-popup-open:bg-foreground data-popup-open:text-background"
+			>
+				i
+			</Popover.Trigger>
+			<Popover.Portal>
+				<Popover.Positioner side="bottom" sideOffset={12} className="z-50">
+					<Popover.Popup className="w-[340px] max-w-[calc(100vw-48px)] rounded-2xl bg-background px-[18px] py-4 text-foreground shadow-lg ring-1 ring-border outline-none">
+						<Popover.Arrow className="size-3 rotate-45 border-t border-l border-border bg-background data-[side=bottom]:-top-1.5" />
+						<Popover.Title className="text-[15px] font-semibold">Cómo se calcula</Popover.Title>
+						<p className="mt-1.5 text-[13px] leading-[1.45]">
+							Lo libre de Necesidades y Gustos, menos lo que falta pagar, entre los días que quedan.
+						</p>
+						<dl className="mt-2.5 text-[13px] leading-[1.9] text-muted-foreground">
+							<div className="flex justify-between gap-3">
+								<dt>Libre en Necesidades + Gustos</dt>
+								<dd className="font-mono text-foreground">S/ {formatCents(freeCents)}</dd>
 							</div>
-						) : null}
-						<div className="flex justify-between gap-4">
-							<dt className="text-muted-foreground">Días que quedan (hoy cuenta)</dt>
-							<dd>÷ {home.daysLeft}</dd>
-						</div>
-					</dl>
-				</DialogPanel>
-			</DialogPopup>
-		</Dialog>
+							<div className="flex justify-between gap-3">
+								<dt>÷ días hasta el cierre ({formatDay(home.endDate)})</dt>
+								<dd className="font-mono text-foreground">{home.daysLeft}</dd>
+							</div>
+							<div className="mt-1 flex justify-between gap-3 border-t border-border pt-1 font-semibold text-foreground">
+								<dt>= puedes gastar hoy</dt>
+								<dd className="font-mono">S/ {formatCents(home.dailyCents)}</dd>
+							</div>
+						</dl>
+						<p className="mt-2 text-xs text-muted-foreground">
+							Lo libre ya no incluye tus compromisos por pagar ni tu ahorro.
+						</p>
+					</Popover.Popup>
+				</Popover.Positioner>
+			</Popover.Portal>
+		</Popover.Root>
 	);
 }
 

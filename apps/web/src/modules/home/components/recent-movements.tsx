@@ -10,9 +10,9 @@ export function RecentMovements({ rows, today }: { rows: Movement[]; today: stri
 	if (recent.length === 0) return null;
 
 	return (
-		<section className="mt-10">
+		<section>
 			<SectionHeading title="Movimientos recientes" to="/movements" />
-			<ul className="mt-1">
+			<ul>
 				{recent.map((row) => (
 					<MovementRow key={row.id} row={row} when={formatRecentDay(row.date, today)} />
 				))}

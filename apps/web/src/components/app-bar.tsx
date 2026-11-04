@@ -11,8 +11,9 @@ import { getAuthErrorMessage } from "#/lib/auth-errors";
 import { useRegister } from "#/modules/register/register-dialog";
 
 const pill =
-	"flex h-[30px] items-center rounded-full px-3 text-[12.5px] font-semibold text-muted-foreground";
+	"flex h-11 items-center rounded-[22px] px-4 text-sm font-semibold text-muted-foreground";
 const pillOn = "bg-background text-foreground shadow-[0_1px_3px_rgba(29,22,16,0.12)]";
+const navLink = "flex h-11 items-center rounded-[22px] px-[18px] text-[15px] font-semibold";
 
 export function AppBar() {
 	const { space } = useSearch({ from: "/_app" });
@@ -41,7 +42,7 @@ export function AppBar() {
 		<header className="border-b border-input bg-background">
 			<nav
 				aria-label="Principal"
-				className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between gap-4 px-6"
+				className="mx-auto flex min-h-16 w-full max-w-[1120px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-2"
 			>
 				<Link
 					to="/home"
@@ -50,12 +51,12 @@ export function AppBar() {
 					Quipu
 				</Link>
 
-				<div className="flex items-center gap-1">
+				<div className="flex gap-1">
 					<Link
 						to="/home"
 						activeProps={{ className: "bg-muted text-foreground" }}
 						inactiveProps={{ className: "text-muted-foreground" }}
-						className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
+						className={navLink}
 					>
 						Inicio
 					</Link>
@@ -63,7 +64,7 @@ export function AppBar() {
 						to="/movements"
 						activeProps={{ className: "bg-muted text-foreground" }}
 						inactiveProps={{ className: "text-muted-foreground" }}
-						className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
+						className={navLink}
 					>
 						Movimientos
 					</Link>
@@ -71,22 +72,15 @@ export function AppBar() {
 						to="/commitments"
 						activeProps={{ className: "bg-muted text-foreground" }}
 						inactiveProps={{ className: "text-muted-foreground" }}
-						className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
+						className={navLink}
 					>
 						Compromisos
 					</Link>
 				</div>
 
-				<div className="flex items-center gap-3">
-					<Button type="button" onClick={() => openRegister()} className="rounded-full">
-						Registrar
-					</Button>
+				<div className="flex items-center gap-2.5">
 					{profile.data?.hasHousehold ? (
-						<div
-							role="tablist"
-							aria-label="Espacio"
-							className="flex gap-0.5 rounded-full bg-muted p-[3px]"
-						>
+						<div role="tablist" aria-label="Espacio" className="flex rounded-3xl bg-muted p-0.5">
 							<Link
 								to="."
 								role="tab"
@@ -106,14 +100,16 @@ export function AppBar() {
 								Nuestro espacio
 							</Link>
 						</div>
-					) : (
-						<span className="text-[12.5px] font-semibold text-muted-foreground">Personal</span>
-					)}
+					) : null}
+
+					<Button type="button" onClick={() => openRegister()} className="rounded-full">
+						+ Registrar
+					</Button>
 
 					<Menu.Root>
 						<Menu.Trigger
 							aria-label="Cuenta"
-							className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							className="flex size-11 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						>
 							{initial}
 						</Menu.Trigger>
