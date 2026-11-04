@@ -1,4 +1,4 @@
-import { dayInMonth } from "./dates";
+import { addDays, dayInMonth } from "./dates";
 
 export type MonthlyCommitment = { amountCents: number; dueDay: number };
 
@@ -23,4 +23,46 @@ export function getPendingCents(
 			sum + amountCents * getMonthlyDueDates(dueDay, today, cycleEnd).length,
 		0,
 	);
+}
+
+export type Schedule =
+	| { frequency: "monthly"; dueDay: number }
+	| { frequency: "once"; dueDate: string };
+
+export type CommitmentStatus = "paid" | "overdue" | "upcoming" | "reserved" | "later";
+export type Occurrence = { dueDate: string; status: CommitmentStatus };
+
+const UPCOMING_DAYS = 3;
+
+export function isReserved(status: CommitmentStatus): boolean {
+	return status === "overdue" || status === "upcoming" || status === "reserved";
+}
+
+function getOpenStatus(dueDate: string, today: string, cycleEnd: string): CommitmentStatus {
+	if (dueDate < today) return "overdue";
+	if (dueDate > cycleEnd) return "later";
+	return dueDate <= addDays(today, UPCOMING_DAYS) ? "upcoming" : "reserved";
+}
+
+// Oldest first. A monthly one counts from the day it was created, up to the cycle end.
+// A one-off always has its single date, even when it falls after the cycle.
+function getDueDates(schedule: Schedule, createdOn: string, cycleEnd: string): string[] {
+	return schedule.frequency === "once"
+		? [schedule.dueDate]
+		: getMonthlyDueDates(schedule.dueDay, createdOn, cycleEnd);
+}
+
+// State comes from dates and the payment count alone: each payment settles the oldest
+// occurrence still open, so deleting a payment reopens it with no stored flag.
+export function getOccurrences(
+	schedule: Schedule,
+	createdOn: string,
+	paidCount: number,
+	today: string,
+	cycleEnd: string,
+): Occurrence[] {
+	return getDueDates(schedule, createdOn, cycleEnd).map((dueDate, index) => ({
+		dueDate,
+		status: index < paidCount ? "paid" : getOpenStatus(dueDate, today, cycleEnd),
+	}));
 }

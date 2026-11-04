@@ -16,6 +16,7 @@ import type * as goals from "../goals.js";
 import type * as household from "../household.js";
 import type * as http from "../http.js";
 import type * as model_budget from "../model/budget.js";
+import type * as model_commitments from "../model/commitments.js";
 import type * as model_cycles from "../model/cycles.js";
 import type * as model_plus from "../model/plus.js";
 import type * as model_spaces from "../model/spaces.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   household: typeof household;
   http: typeof http;
   "model/budget": typeof model_budget;
+  "model/commitments": typeof model_commitments;
   "model/cycles": typeof model_cycles;
   "model/plus": typeof model_plus;
   "model/spaces": typeof model_spaces;
