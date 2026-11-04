@@ -63,16 +63,16 @@ function AddCommitmentForm({
 	const amountCents = toCents(amount);
 	const dueDay = Number(day);
 	const errors = {
-		name: name.trim() ? undefined : "Escribe un nombre.",
-		amount: amountCents > 0 ? undefined : "Escribe un monto mayor que cero.",
+		name: name.trim() ? undefined : "Ponle un nombre.",
+		amount: amountCents > 0 ? undefined : "Escribe el monto de cada pago.",
 		when:
 			frequency === "monthly"
 				? isValidMonthDay(dueDay)
 					? undefined
-					: `Elige un día del 1 al ${MAX_MONTH_DAY}.`
+					: "Elige la fecha de vencimiento."
 				: isIsoDate(date)
 					? undefined
-					: "Elige una fecha.",
+					: "Elige la fecha de vencimiento.",
 	};
 	const invalid = Boolean(errors.name || errors.amount || errors.when);
 	const shown: Partial<typeof errors> = tried ? errors : {};
@@ -105,7 +105,7 @@ function AddCommitmentForm({
 					<Input
 						aria-label="Nombre"
 						aria-invalid={shown.name ? true : undefined}
-						placeholder="Nombre"
+						placeholder="ej. Luz del Sur"
 						maxLength={NAME_MAX}
 						value={name}
 						onChange={(event) => setName(event.target.value)}
@@ -116,7 +116,7 @@ function AddCommitmentForm({
 
 				<AmountField label="Monto" value={amount} onChange={setAmount} error={shown.amount} />
 
-				<ChoiceChips label="Sobre" options={ENVELOPES} value={envelope} onChange={setEnvelope} />
+				<ChoiceChips label="Sale de" options={ENVELOPES} value={envelope} onChange={setEnvelope} />
 				<ChoiceChips
 					label="Frecuencia"
 					options={FREQUENCIES}
@@ -131,9 +131,9 @@ function AddCommitmentForm({
 							inputMode="numeric"
 							min={1}
 							max={MAX_MONTH_DAY}
-							aria-label="Día del mes"
+							aria-label="Vence"
 							aria-invalid={shown.when ? true : undefined}
-							placeholder="Día del mes"
+							placeholder="Vence"
 							value={day}
 							onChange={(event) => setDay(event.target.value)}
 							className={cn(shown.when && "border-warning")}
@@ -141,7 +141,7 @@ function AddCommitmentForm({
 					) : (
 						<Input
 							type="date"
-							aria-label="Fecha"
+							aria-label="Vence"
 							aria-invalid={shown.when ? true : undefined}
 							value={date}
 							onChange={(event) => setDate(event.target.value)}
@@ -154,8 +154,11 @@ function AddCommitmentForm({
 				{save.isError ? <FieldError>{readError(save.error)}</FieldError> : null}
 			</DialogPanel>
 			<DialogFooter>
+				<Button variant="ghost" onClick={onDone}>
+					Cancelar
+				</Button>
 				<Button loading={save.isPending} onClick={submit}>
-					Guardar
+					Guardar compromiso
 				</Button>
 			</DialogFooter>
 		</DialogPopup>

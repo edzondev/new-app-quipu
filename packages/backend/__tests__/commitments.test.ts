@@ -132,8 +132,12 @@ type Ana = Awaited<ReturnType<typeof signIn>>;
 
 // Sign in under the fake clock: convex-test never lets _creationTime go back, so a real-time
 // sign-in would date every commitment today. Better Auth sessions last 7 days; stretch it to reach December.
-async function startAnaOct20(t: ReturnType<typeof harness>) {
-	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+async function startAnaAt(
+	t: ReturnType<typeof harness>,
+	now: string,
+	plan: Omit<typeof onboard, "cadence"> & { cadence: "monthly" | "biweekly" },
+) {
+	vi.useFakeTimers({ now: new Date(now) });
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	const user = await t.query(components.betterAuth.adapter.findOne, {
 		model: "user",
@@ -146,8 +150,12 @@ async function startAnaOct20(t: ReturnType<typeof harness>) {
 			update: { expiresAt: Date.UTC(2027, 0, 1) },
 		},
 	});
-	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.mutation(api.profiles.completeOnboarding, plan);
 	return ana;
+}
+
+function startAnaOct20(t: ReturnType<typeof harness>) {
+	return startAnaAt(t, "2026-10-20T17:00:00.000Z", onboard);
 }
 
 function addLuz(ana: Ana) {
@@ -491,4 +499,32 @@ test("a monthly due after the cycle end, listed before its day, shows next month
 		})),
 	).toEqual([{ name: "Internet", status: "later", dueDate: "2026-11-05", frequency: "monthly" }]);
 	expect(list.payableCents).toBe(0);
+});
+
+test("a monthly last paid in the previous cycle is listed as later, not as paid", async () => {
+	const t = harness();
+	const ana = await startAnaAt(t, "2026-11-01T17:00:00.000Z", {
+		...onboard,
+		cadence: "biweekly",
+	});
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Internet",
+		amountCents: 9_000,
+		envelope: "needs",
+		schedule: { frequency: "monthly", dueDay: 5 },
+	});
+	await ana.mutation(api.commitments.markPaid, {
+		space: "personal",
+		id: await firstCommitmentId(t),
+	});
+
+	vi.setSystemTime(new Date("2026-11-20T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-11-20" });
+	expect(list.items.map(({ name, status, dueDate }) => ({ name, status, dueDate }))).toEqual([
+		{ name: "Internet", status: "later", dueDate: "2026-12-05" },
+	]);
+	expect(list.paidCents).toBe(0);
 });

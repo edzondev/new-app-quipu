@@ -15,7 +15,7 @@ const BADGE = {
 	upcoming: { text: "Próximo", className: "bg-warning/15 text-warning-foreground" },
 } as const;
 
-const AMOUNT_ERROR = "Escribe un monto mayor que cero.";
+const AMOUNT_ERROR = "Escribe un monto.";
 
 function PayInline({
 	item,

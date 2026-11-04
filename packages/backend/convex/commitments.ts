@@ -162,8 +162,12 @@ export const list = query({
 			rows.map(async (row) => {
 				const payments = await getCommitmentPayments(ctx, row);
 				const occurrences = getCommitmentStates(row, payments.length, today, cycle.endDate);
+				const last = occurrences.at(-1);
+				// A monthly last paid in an earlier cycle has nothing to show here yet: its next charge is ahead.
+				const lastPaid =
+					last && (last.dueDate >= cycle.startDate || row.frequency === "once") ? last : undefined;
 				const current = occurrences.find(({ status }) => status !== "paid") ??
-					occurrences.at(-1) ?? {
+					lastPaid ?? {
 						dueDate: getNextDueDate(row, cycle.endDate),
 						status: "later" as const,
 					};

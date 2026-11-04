@@ -108,7 +108,7 @@ function Commitments({ today }: { today: string }) {
 
 			{items.length === 0 ? (
 				<p className="mt-10 text-sm text-muted-foreground">
-					Aún no tienes compromisos. Añade el primero y Quipu lo reserva por ti.
+					Sin compromisos. Añade tus pagos fijos y Quipu los reserva por ti.
 				</p>
 			) : (
 				<div className="mt-8 space-y-8">
