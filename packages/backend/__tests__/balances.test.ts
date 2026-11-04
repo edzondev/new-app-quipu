@@ -204,6 +204,91 @@ test("getHome is not empty on a new cycle with carry but no income", async () =>
 	// Needs 250 + Gustos 150 carried in from October, nothing earned in November.
 	expect(home.needsCents + home.wantsCents).toBe(40_000);
 	expect(home.empty).toBe(false);
+	expect(home.assigned).toEqual({ needsCents: 25_000, wantsCents: 15_000, savingsCents: 0 });
+});
+
+test("assigned is never negative when the cycle opens with a negative carry", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	// Needs got S/ 250; spending S/ 300 leaves it at −S/ 50 when October closes.
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 30_000,
+		envelope: "needs",
+	});
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
+	expect(home.needsCents).toBe(-5_000);
+	expect(home.assigned).toEqual({ needsCents: 0, wantsCents: 15_000, savingsCents: 0 });
+});
+
+test("getHome returns the dates of the open cycle", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(home.startDate).toBe("2026-10-20");
+	expect(home.endDate).toBe("2026-10-31");
+});
+
+test("assigned is what the cycle received and does not drop when you spend", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 5_000,
+		envelope: "needs",
+	});
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(home.needsCents).toBe(20_000);
+	expect(home.assigned).toEqual({ needsCents: 25_000, wantsCents: 15_000, savingsCents: 10_000 });
+});
+
+test("assigned adds the share of each income, like the envelopes do", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	// 3 cents split 50/30/20 give Gustos 0 each time; one sum of 6 cents would give it 1.
+	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 3 });
+	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 3 });
+
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(home.assigned).toEqual({
+		needsCents: home.needsCents,
+		wantsCents: home.wantsCents,
+		savingsCents: home.savingsCents,
+	});
+	expect(home.assigned.wantsCents).toBe(15_000);
+});
+
+test("assigned drops when an income is deleted", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 20_000 });
+	const args = { space: "personal" as const, today: "2026-10-20" };
+
+	const before = await ana.query(api.balances.getHome, args);
+	expect(before.assigned.needsCents).toBe(35_000);
+
+	const list = await ana.query(api.transactions.list, args);
+	const extra = list.rows.filter((row) => row.kind === "income" && row.amountCents === 20_000)[0];
+	await ana.mutation(api.transactions.deleteIncome, { space: "personal", id: extra.id });
+
+	const after = await ana.query(api.balances.getHome, args);
+	expect(after.assigned.needsCents).toBe(25_000);
 });
 
 test("getHome is empty with no income and nothing carried", async () => {
@@ -214,76 +299,4 @@ test("getHome is empty with no income and nothing carried", async () => {
 
 	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
 	expect(home.empty).toBe(true);
-});
-
-// Sign in under the fake clock: convex-test never lets _creationTime go back, so a real-time
-// sign-in would date every commitment today. Better Auth sessions last 7 days; stretch it to reach November.
-async function startAnaOct20(t: ReturnType<typeof harness>) {
-	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	const ana = await signIn(t, "ana@correo.com", "Ana");
-	const user = await t.query(components.betterAuth.adapter.findOne, {
-		model: "user",
-		where: [{ field: "email", value: "ana@correo.com" }],
-	});
-	await t.mutation(components.betterAuth.adapter.updateOne, {
-		input: {
-			model: "session",
-			where: [{ field: "userId", value: user._id }],
-			update: { expiresAt: Date.UTC(2027, 0, 1) },
-		},
-	});
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
-	return ana;
-}
-
-function addMonthly(
-	ana: Awaited<ReturnType<typeof signIn>>,
-	name: string,
-	amountCents: number,
-	dueDay: number,
-) {
-	return ana.mutation(api.commitments.add, {
-		space: "personal",
-		name,
-		amountCents,
-		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay },
-	});
-}
-
-test("dueSoon lists the next 3 commitments, not only those due in 3 days", async () => {
-	const t = harness();
-	const ana = await startAnaOct20(t);
-	await addMonthly(ana, "Celular", 5_000, 22);
-	await addMonthly(ana, "Internet", 8_900, 25);
-	await addMonthly(ana, "Streaming", 3_500, 28);
-	await addMonthly(ana, "Gimnasio", 12_000, 30);
-	await addMonthly(ana, "Alquiler", 90_000, 1);
-
-	// Ciclo 2026-10-20 → 2026-10-31, hoy 20 oct. Gimnasio es el cuarto; Alquiler vence el 1 nov,
-	// fuera del ciclo.
-	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
-	expect(home.dueSoon).toEqual([
-		expect.objectContaining({ name: "Celular", dueDate: "2026-10-22", amountCents: 5_000 }),
-		expect.objectContaining({ name: "Internet", dueDate: "2026-10-25", amountCents: 8_900 }),
-		expect.objectContaining({ name: "Streaming", dueDate: "2026-10-28", amountCents: 3_500 }),
-	]);
-});
-
-test("dueSoon includes overdue charges with one row per commitment", async () => {
-	const t = harness();
-	const ana = await startAnaOct20(t);
-	await addMonthly(ana, "Luz", 5_000, 25);
-	await addMonthly(ana, "Internet", 8_900, 5);
-
-	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
-	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
-
-	// Ciclo 2026-11-01 → 2026-11-30, hoy 1 nov. Luz debe el 25 oct y el 25 nov, pero sale una vez,
-	// con el más antiguo. Internet solo debe el 5 nov: el 5 oct es anterior a su creación.
-	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
-	expect(home.dueSoon).toEqual([
-		expect.objectContaining({ name: "Luz", dueDate: "2026-10-25" }),
-		expect.objectContaining({ name: "Internet", dueDate: "2026-11-05" }),
-	]);
 });

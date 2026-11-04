@@ -12,7 +12,7 @@ const KIND = {
 	withdrawal: { name: "Retiro del fondo", adds: true },
 } satisfies Record<Movement["kind"], { name: string; adds: boolean }>;
 
-export function MovementRow({ row }: { row: Movement }) {
+export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 	const openRegister = useRegister();
 	const { name, adds } = KIND[row.kind];
 	const isSaving = row.kind === "saving";
@@ -20,10 +20,12 @@ export function MovementRow({ row }: { row: Movement }) {
 		? "Ahorro · no es gasto"
 		: row.envelope
 			? ENVELOPE_LABELS[row.envelope]
-			: "Ingreso · Para este ciclo";
+			: when
+				? "Ingreso"
+				: "Ingreso · Para este ciclo";
 	// Personal leaves who null; household sends the author name and we swap mine → Tú here.
 	const whoLabel = row.mine && row.who !== null ? "Tú" : row.who;
-	const detail = [envelope, whoLabel].filter(Boolean).join(" · ");
+	const detail = [envelope, whoLabel, when].filter(Boolean).join(" · ");
 	const amount = formatCents(row.amountCents);
 	const signedAmount = isSaving ? amount : `${adds ? "+" : "−"}${amount}`;
 	const text = (
