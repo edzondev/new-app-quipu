@@ -1,4 +1,5 @@
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -7,6 +8,7 @@ import { Input } from "#/components/ui/input";
 import { useCountdown } from "#/hooks/use-countdown";
 import { authClient, sendSignInCode } from "#/lib/auth-client";
 import { type AuthError, getAuthErrorMessage } from "#/lib/auth-errors";
+import { clearAuthToken } from "#/lib/auth-token";
 import { otpStepSchema } from "#/modules/auth/schemas";
 
 type Props = {
@@ -22,6 +24,7 @@ function toOtpDigits(raw: string): string {
 }
 
 export function OtpStep({ email, name, onChangeEmail, onVerified }: Props) {
+	const queryClient = useQueryClient();
 	const [error, setError] = useState<AuthError>(null);
 	const [isResending, setIsResending] = useState(false);
 	const { secondsLeft, restart } = useCountdown();
@@ -37,6 +40,7 @@ export function OtpStep({ email, name, onChangeEmail, onVerified }: Props) {
 				setError(error);
 				return;
 			}
+			clearAuthToken(queryClient);
 			onVerified();
 		},
 	});

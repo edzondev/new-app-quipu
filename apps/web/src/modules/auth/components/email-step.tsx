@@ -1,4 +1,5 @@
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Fingerprint } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -7,6 +8,7 @@ import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { authClient, sendSignInCode } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
+import { clearAuthToken } from "#/lib/auth-token";
 import { emailStepSchema } from "#/modules/auth/schemas";
 
 type Props = {
@@ -16,6 +18,7 @@ type Props = {
 
 export function EmailStep({ defaultEmail, onSent }: Props) {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
 	const [isPasskeyPending, setIsPasskeyPending] = useState(false);
 
@@ -24,9 +27,13 @@ export function EmailStep({ defaultEmail, onSent }: Props) {
 	useEffect(() => {
 		void authClient.signIn
 			.passkey({ autoFill: true })
-			.then(({ data }) => data && navigate({ to: "/home" }))
+			.then(({ data }) => {
+				if (!data) return;
+				clearAuthToken(queryClient);
+				return navigate({ to: "/home" });
+			})
 			.catch(() => {});
-	}, [navigate]);
+	}, [navigate, queryClient]);
 
 	async function signInWithPasskey() {
 		setError(null);
@@ -37,6 +44,7 @@ export function EmailStep({ defaultEmail, onSent }: Props) {
 			setError("No pudimos usar tu llave. Si no tienes una en este equipo, entra con tu correo.");
 			return;
 		}
+		clearAuthToken(queryClient);
 		await navigate({ to: "/home" });
 	}
 
