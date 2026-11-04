@@ -28,11 +28,12 @@ const getAuth = createServerFn({ method: "GET" }).handler(async () => await getT
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	beforeLoad: async ({ context }) => {
 		// Token is served from cache; after AUTH_TOKEN_TTL_MS without observers it is GC'd.
-		const token = await context.queryClient.ensureQueryData({
+		const token = await context.queryClient.query({
 			queryKey: AUTH_TOKEN_QUERY_KEY,
 			// React Query rejects undefined; treat a missing session as null.
 			queryFn: async () => (await getAuth()) ?? null,
 			gcTime: AUTH_TOKEN_TTL_MS,
+			staleTime: "static",
 		});
 		// serverHttpClient is only used during SSR; the browser uses the Convex websocket client.
 		if (import.meta.env.SSR && token) {

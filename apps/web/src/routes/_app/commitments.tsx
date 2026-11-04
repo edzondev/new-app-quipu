@@ -5,9 +5,13 @@ import { CommitmentsPage } from "#/modules/commitments/components/commitments-pa
 
 export const Route = createFileRoute("/_app/commitments")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(
-			convexQuery(api.commitments.list, { space: context.space, today: context.today }),
+		await context.queryClient.query(
+			convexQuery(api.commitments.list, {
+				space: context.space,
+				today: context.today,
+			}),
 		);
 	},
+
 	component: CommitmentsPage,
 });
