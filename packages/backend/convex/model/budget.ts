@@ -1,10 +1,11 @@
 import { getDailyCents } from "../../shared/budget";
-import { getMonthlyDueDates, getPendingCents } from "../../shared/commitments";
-import { addDays, daysBetween } from "../../shared/dates";
+import { isReserved } from "../../shared/commitments";
+import { daysBetween } from "../../shared/dates";
 import type { Doc } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
+import { getCommitmentOccurrences } from "./commitments";
 
-const DUE_SOON_DAYS = 3;
+const DUE_SOON_COUNT = 3;
 
 /** The day's number and what feeds it. Shared by every read of the live budget. */
 export async function getDayBudget(
@@ -26,26 +27,29 @@ export async function getDayBudget(
 			.take(500),
 	]);
 	const hasIncome = cycleTx.some((tx) => tx.kind === "income");
-	const paidIds = new Set(
-		cycleTx.flatMap((tx) =>
-			tx.kind === "expense" && tx.commitmentId !== undefined ? [tx.commitmentId] : [],
-		),
-	);
-	const pending = commitmentRows.flatMap((row) =>
-		row.frequency === "monthly" && !paidIds.has(row._id)
-			? [{ id: row._id, name: row.name, amountCents: row.amountCents, dueDay: row.dueDay }]
-			: [],
+	const reserved = await Promise.all(
+		commitmentRows.map(async (row) => {
+			const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
+			return {
+				row,
+				dueDates: occurrences.filter((o) => isReserved(o.status)).map((o) => o.dueDate),
+			};
+		}),
 	);
 
 	const daysLeft = Math.max(0, daysBetween(today, cycle.endDate) + 1);
-	const pendingCents = getPendingCents(pending, today, cycle.endDate);
-	const horizon = addDays(today, DUE_SOON_DAYS);
-	const dueSoon = pending
-		.flatMap(({ dueDay, ...item }) => {
-			const [dueDate] = getMonthlyDueDates(dueDay, today, cycle.endDate);
-			return dueDate !== undefined && dueDate <= horizon ? [{ ...item, dueDate }] : [];
-		})
-		.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+	const pendingCents = reserved.reduce(
+		(sum, { row, dueDates }) => sum + row.amountCents * dueDates.length,
+		0,
+	);
+	const dueSoon = reserved
+		.flatMap(({ row, dueDates: [dueDate] }) =>
+			dueDate === undefined
+				? []
+				: [{ id: row._id, name: row.name, amountCents: row.amountCents, dueDate }],
+		)
+		.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+		.slice(0, DUE_SOON_COUNT);
 
 	return {
 		needsCents,

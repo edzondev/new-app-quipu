@@ -4,6 +4,7 @@ import { convexTest } from "convex-test";
 import { afterEach, expect, test, vi } from "vitest";
 import { api, components } from "../convex/_generated/api";
 import authSchema from "../convex/betterAuth/schema";
+import { ensureOpenCycle } from "../convex/model/cycles";
 import schema from "../convex/schema";
 import { getDailyCents } from "../shared/budget";
 
@@ -70,8 +71,8 @@ const onboard = {
 
 test("Luz S/ 50 day 25 lowers daily; markPaid cuts Needs and stops the discount", async () => {
 	const t = harness();
-	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	const ana = await signIn(t, "ana@correo.com", "Ana");
 	await ana.mutation(api.profiles.completeOnboarding, onboard);
 
 	await ana.mutation(api.commitments.add, {
@@ -125,4 +126,227 @@ test("once commitment paid in October cannot be marked paid again after ensureOp
 	await expect(ana.mutation(api.commitments.markPaid, { space: "personal", id })).rejects.toThrow(
 		"Este compromiso ya está pagado en este ciclo.",
 	);
+});
+
+type Ana = Awaited<ReturnType<typeof signIn>>;
+
+// Sign in under the fake clock: convex-test never lets _creationTime go back, so a real-time
+// sign-in would date every commitment today. Better Auth sessions last 7 days; stretch it to reach December.
+async function startAnaOct20(t: ReturnType<typeof harness>) {
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	const user = await t.query(components.betterAuth.adapter.findOne, {
+		model: "user",
+		where: [{ field: "email", value: "ana@correo.com" }],
+	});
+	await t.mutation(components.betterAuth.adapter.updateOne, {
+		input: {
+			model: "session",
+			where: [{ field: "userId", value: user._id }],
+			update: { expiresAt: Date.UTC(2027, 0, 1) },
+		},
+	});
+	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	return ana;
+}
+
+function addLuz(ana: Ana) {
+	return ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Luz",
+		amountCents: 5_000,
+		envelope: "needs",
+		schedule: { frequency: "monthly", dueDay: 25 },
+	});
+}
+
+function addSoat(ana: Ana) {
+	return ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "SOAT",
+		amountCents: 8_000,
+		envelope: "needs",
+		schedule: { frequency: "once", dueDate: "2026-10-22" },
+	});
+}
+
+function firstCommitmentId(t: ReturnType<typeof harness>) {
+	return t.run(async (ctx) => (await ctx.db.query("commitments").take(1))[0]._id);
+}
+
+async function luzUnpaidIntoNovember(t: ReturnType<typeof harness>) {
+	const ana = await startAnaOct20(t);
+	await addLuz(ana);
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+	return ana;
+}
+
+test("overdue unpaid Luz stays reserved", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addLuz(ana);
+
+	vi.setSystemTime(new Date("2026-10-26T17:00:00.000Z"));
+	// Ciclo 2026-10-20 → 2026-10-31. Hoy 26 oct: quedan 6 días. Luz venció el 25 sin pagar.
+	// (25_000 + 15_000 − 5_000) / 6 = 5_833
+	const balances = await ana.query(api.balances.getBalances, { space: "personal" });
+	expect(balances.dailyCents).toBe(5_833);
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-26" });
+	expect(home.pendingCents).toBe(5_000);
+});
+
+test("a one-off commitment is reserved before and after its due date", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addSoat(ana);
+
+	// Ciclo 2026-10-20 → 2026-10-31. Hoy 20 oct: quedan 12 días. (40_000 − 8_000) / 12 = 2_666
+	const day20 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(day20.pendingCents).toBe(8_000);
+	expect(day20.dailyCents).toBe(2_666);
+
+	vi.setSystemTime(new Date("2026-10-23T17:00:00.000Z"));
+	// Hoy 23 oct: SOAT venció el 22 sin pagar, quedan 9 días. (40_000 − 8_000) / 9 = 3_555
+	const day23 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-23" });
+	expect(day23.pendingCents).toBe(8_000);
+	expect(day23.dailyCents).toBe(3_555);
+});
+
+test("unpaid Luz carries into the next cycle next to the new charge", async () => {
+	const t = harness();
+	const ana = await luzUnpaidIntoNovember(t);
+
+	// Ciclo 2026-11-01 → 2026-11-30, 30 días. Dos cargos de 5_000: la Luz vencida del 25 oct
+	// y la Luz del 25 nov. Arrastra 25_000 + 15_000. (40_000 − 10_000) / 30 = 1_000
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
+	expect(home.pendingCents).toBe(10_000);
+	expect(home.dailyCents).toBe(1_000);
+	expect(home.dueSoon[0].dueDate).toBe("2026-10-25");
+});
+
+test("markPaid settles the oldest charge first and never pays ahead", async () => {
+	const t = harness();
+	const ana = await luzUnpaidIntoNovember(t);
+	const id = await firstCommitmentId(t);
+	const home = () => ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
+
+	// Ciclo 2026-11-01 → 2026-11-30, 30 días. Pagar mueve 5_000 de Necesidades a pagado y quita
+	// 5_000 de lo reservado, así que el número del día no cambia: (40_000 − 10_000) / 30 = 1_000.
+	await ana.mutation(api.commitments.markPaid, { space: "personal", id });
+	const first = await home();
+	// Paga la Luz del 25 oct. (20_000 + 15_000 − 5_000) / 30 = 1_000
+	expect(first.needsCents).toBe(20_000);
+	expect(first.pendingCents).toBe(5_000);
+	expect(first.dueSoon[0].dueDate).toBe("2026-11-25");
+	expect(first.dailyCents).toBe(1_000);
+
+	await ana.mutation(api.commitments.markPaid, { space: "personal", id });
+	const second = await home();
+	// Paga la Luz del 25 nov. (15_000 + 15_000 − 0) / 30 = 1_000
+	expect(second.needsCents).toBe(15_000);
+	expect(second.pendingCents).toBe(0);
+	expect(second.dailyCents).toBe(1_000);
+
+	// La Luz del 25 dic es del ciclo siguiente: no se paga por adelantado.
+	await expect(ana.mutation(api.commitments.markPaid, { space: "personal", id })).rejects.toThrow(
+		"Este compromiso ya está pagado en este ciclo.",
+	);
+	expect((await home()).dailyCents).toBe(1_000);
+});
+
+test("a paid one-off is never reserved again", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addSoat(ana);
+	await ana.mutation(api.commitments.markPaid, {
+		space: "personal",
+		id: await firstCommitmentId(t),
+	});
+
+	// Ciclo 2026-10-20 → 2026-10-31. SOAT pagado el 20 oct: nada reservado.
+	const oct = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(oct.pendingCents).toBe(0);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+	// Ciclo 2026-11-01 → 2026-11-30.
+	const nov = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
+	expect(nov.pendingCents).toBe(0);
+
+	await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		await ensureOpenCycle(ctx, space, "2026-12-01", space.ownerId);
+	});
+	// Ciclo 2026-12-01 → 2026-12-31.
+	const dec = await ana.query(api.balances.getHome, { space: "personal", today: "2026-12-01" });
+	expect(dec.pendingCents).toBe(0);
+});
+
+test("an unpaid one-off carries into the next cycle", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addSoat(ana);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+	// Ciclo 2026-11-01 → 2026-11-30. SOAT venció el 22 oct sin pagar: sigue reservado.
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
+	expect(home.pendingCents).toBe(8_000);
+});
+
+test("deleting the expense that paid Luz reopens the charge", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addLuz(ana);
+	const id = await firstCommitmentId(t);
+	vi.setSystemTime(new Date("2026-10-26T17:00:00.000Z"));
+	const home = () => ana.query(api.balances.getHome, { space: "personal", today: "2026-10-26" });
+
+	// Ciclo 2026-10-20 → 2026-10-31. Hoy 26 oct: quedan 6 días. Pagar o borrar el pago mueve
+	// 5_000 entre saldo y reservado; el número del día no cambia.
+	await ana.mutation(api.commitments.markPaid, { space: "personal", id });
+	const paid = await home();
+	// (20_000 + 15_000 − 0) / 6 = 5_833
+	expect(paid.needsCents).toBe(20_000);
+	expect(paid.pendingCents).toBe(0);
+	expect(paid.dailyCents).toBe(5_833);
+
+	const expenseId = await t.run(async (ctx) => {
+		const tx = await ctx.db
+			.query("transactions")
+			.withIndex("by_commitmentId", (q) => q.eq("commitmentId", id))
+			.first();
+		if (!tx) throw new Error("Luz payment not found");
+		return tx._id;
+	});
+	await ana.mutation(api.transactions.deleteExpense, { space: "personal", id: expenseId });
+	const reopened = await home();
+	// (25_000 + 15_000 − 5_000) / 6 = 5_833
+	expect(reopened.needsCents).toBe(25_000);
+	expect(reopened.pendingCents).toBe(5_000);
+	expect(reopened.dailyCents).toBe(5_833);
+});
+
+test("a commitment only counts from the day it was created", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Alquiler",
+		amountCents: 20_000,
+		envelope: "needs",
+		schedule: { frequency: "monthly", dueDay: 1 },
+	});
+
+	// Ciclo 2026-10-20 → 2026-10-31. El 1 oct es antes de crearlo y el 1 nov cae fuera del ciclo.
+	const oct = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(oct.pendingCents).toBe(0);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+	// Ciclo 2026-11-01 → 2026-11-30, 30 días. (40_000 − 20_000) / 30 = 666
+	const nov = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
+	expect(nov.pendingCents).toBe(20_000);
+	expect(nov.dailyCents).toBe(666);
 });

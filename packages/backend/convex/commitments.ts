@@ -4,6 +4,7 @@ import { isIsoDate } from "../shared/dates";
 import { isValidMonthDay } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation } from "./_generated/server";
+import { getCommitmentOccurrences } from "./model/commitments";
 import { requireOpenCycle } from "./model/cycles";
 import { requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind, spendable } from "./schema";
@@ -128,15 +129,8 @@ export const markPaid = mutation({
 		const row = await ctx.db.get("commitments", id);
 		if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 
-		const lastPay = await ctx.db
-			.query("transactions")
-			.withIndex("by_commitmentId", (q) => q.eq("commitmentId", id))
-			.order("desc")
-			.first();
-		if (row.frequency === "once" && lastPay) throw new ConvexError(ALREADY_PAID);
-		if (row.frequency === "monthly" && lastPay?.cycleId === cycle._id) {
-			throw new ConvexError(ALREADY_PAID);
-		}
+		const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
+		if (occurrences.every(({ status }) => status === "paid")) throw new ConvexError(ALREADY_PAID);
 
 		const key = AMOUNT_KEYS[row.envelope];
 		await ctx.db.insert("transactions", {
