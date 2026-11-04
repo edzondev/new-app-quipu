@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
 	dayInMonth,
 	formatDayHeading,
+	formatPastDay,
 	getCycleRange,
 	getFirstCycleRange,
 	getLimaDate,
@@ -138,5 +139,15 @@ describe("getFirstCycleRange", () => {
 			startDate: "2026-10-28",
 			endDate: "2026-10-31",
 		});
+	});
+});
+
+describe("formatPastDay", () => {
+	test("a day of this year has no year", () => {
+		expect(formatPastDay("2026-07-22", "2026-10-30")).toBe("22 jul");
+	});
+
+	test("a day of another year carries it", () => {
+		expect(formatPastDay("2026-12-31", "2027-01-02")).toBe("31 dic 2026");
 	});
 });

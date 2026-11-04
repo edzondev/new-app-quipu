@@ -1,13 +1,19 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { ENVELOPE_LABELS, formatCents, toCents } from "@quipu/backend/shared/budget";
+import { ENVELOPE_LABELS, type Envelope, formatCents, toCents } from "@quipu/backend/shared/budget";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "cn";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { readError } from "#/lib/read-error";
-import { canPay, type CommitmentItem, describeDue } from "../commitment-view";
+import {
+	canPay,
+	type CommitmentItem,
+	describeDue,
+	describePaid,
+	type Payment,
+} from "../commitment-view";
 import { AmountField } from "./amount-field";
 
 const BADGE = {
@@ -68,19 +74,25 @@ function PayInline({
 	);
 }
 
-export function CommitmentRow({
-	item,
-	today,
-	space,
+function RowLayout({
+	envelope,
+	paid,
+	name,
+	badge,
+	detail,
+	amountCents,
+	action,
+	below,
 }: {
-	item: CommitmentItem;
-	today: string;
-	space: "personal" | "household";
+	envelope: Envelope;
+	paid: boolean;
+	name: string;
+	badge?: (typeof BADGE)[keyof typeof BADGE] | null;
+	detail: string;
+	amountCents: number;
+	action?: React.ReactNode;
+	below?: React.ReactNode;
 }) {
-	const [paying, setPaying] = useState(false);
-	const badge = item.status === "overdue" || item.status === "upcoming" ? BADGE[item.status] : null;
-	const paid = item.status === "paid";
-
 	return (
 		<li className="border-b border-border/60 last:border-0">
 			<div className="flex items-center gap-3 py-3.5">
@@ -89,13 +101,13 @@ export function CommitmentRow({
 						aria-hidden
 						className={cn(
 							"size-2.5 rounded-full",
-							paid ? "bg-muted-foreground" : ENVELOPE_DOT[item.envelope],
+							paid ? "bg-muted-foreground" : ENVELOPE_DOT[envelope],
 						)}
 					/>
 				</span>
 				<span className="min-w-0 flex-1">
 					<span className="flex items-center gap-2">
-						<span className="truncate text-sm font-semibold">{item.name}</span>
+						<span className="truncate text-sm font-semibold">{name}</span>
 						{badge ? (
 							<span
 								className={cn(
@@ -107,9 +119,7 @@ export function CommitmentRow({
 							</span>
 						) : null}
 					</span>
-					<span className="block truncate text-xs text-muted-foreground">
-						{describeDue(item, today)}
-					</span>
+					<span className="block truncate text-xs text-muted-foreground">{detail}</span>
 				</span>
 				<span
 					className={cn(
@@ -117,9 +127,49 @@ export function CommitmentRow({
 						paid && "text-muted-foreground",
 					)}
 				>
-					S/ {formatCents(item.amountCents)}
+					S/ {formatCents(amountCents)}
 				</span>
-				{canPay(item) ? (
+				{action}
+			</div>
+			{below}
+		</li>
+	);
+}
+
+export function PaymentRow({ payment, today }: { payment: Payment; today: string }) {
+	return (
+		<RowLayout
+			paid
+			envelope={payment.envelope}
+			name={payment.name}
+			detail={describePaid(payment, today)}
+			amountCents={payment.amountCents}
+		/>
+	);
+}
+
+export function CommitmentRow({
+	item,
+	today,
+	space,
+}: {
+	item: CommitmentItem;
+	today: string;
+	space: "personal" | "household";
+}) {
+	const [paying, setPaying] = useState(false);
+	const badge = item.status === "overdue" || item.status === "upcoming" ? BADGE[item.status] : null;
+
+	return (
+		<RowLayout
+			paid={item.status === "paid"}
+			envelope={item.envelope}
+			name={item.name}
+			badge={badge}
+			detail={describeDue(item, today)}
+			amountCents={item.amountCents}
+			action={
+				canPay(item) ? (
 					<Button
 						variant={item.status === "upcoming" ? "default" : "outline"}
 						size="sm"
@@ -129,9 +179,11 @@ export function CommitmentRow({
 					>
 						Marcar pagado
 					</Button>
-				) : null}
-			</div>
-			{paying ? <PayInline item={item} space={space} onClose={() => setPaying(false)} /> : null}
-		</li>
+				) : null
+			}
+			below={
+				paying ? <PayInline item={item} space={space} onClose={() => setPaying(false)} /> : null
+			}
+		/>
 	);
 }

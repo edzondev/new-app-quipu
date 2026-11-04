@@ -67,6 +67,12 @@ export function formatDay(date: string): string {
 	return `${day} ${MONTHS[month - 1]}`;
 }
 
+/** A past day, with its year only when it is not this year's: "22 jul" or "31 dic 2026". */
+export function formatPastDay(date: string, today: string): string {
+	const year = date.slice(0, 4);
+	return year === today.slice(0, 4) ? formatDay(date) : `${formatDay(date)} ${year}`;
+}
+
 export function formatDayHeading(date: string, today: string): string {
 	const weekday = WEEKDAYS[new Date(toUtc(date)).getUTCDay()] ?? "";
 	if (date === today) return `Hoy · ${weekday} ${formatDay(date)}`;

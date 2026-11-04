@@ -8,9 +8,9 @@ import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
-import { type CommitmentItem, groupCommitments } from "../commitment-view";
+import { groupCommitments } from "../commitment-view";
 import { AddCommitmentDialog } from "./add-commitment-dialog";
-import { CommitmentRow } from "./commitment-row";
+import { CommitmentRow, PaymentRow } from "./commitment-row";
 
 export function CommitmentsPage() {
 	const today = useLimaDate();
@@ -21,19 +21,15 @@ export function CommitmentsPage() {
 function Group({
 	title,
 	totalCents,
-	items,
 	empty,
-	today,
-	space,
+	children,
 }: {
 	title: string;
 	totalCents?: number;
-	items: CommitmentItem[];
 	empty?: string;
-	today: string;
-	space: "personal" | "household";
+	children: React.ReactNode[];
 }) {
-	if (items.length === 0 && !empty) return null;
+	if (children.length === 0 && !empty) return null;
 	return (
 		<section>
 			<h2 className="flex items-baseline justify-between text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
@@ -42,14 +38,10 @@ function Group({
 					<span className="tabular-nums">S/ {formatCents(totalCents)}</span>
 				)}
 			</h2>
-			{items.length === 0 ? (
+			{children.length === 0 ? (
 				<p className="mt-3 text-sm text-muted-foreground">{empty}</p>
 			) : (
-				<ul className="mt-1">
-					{items.map((item) => (
-						<CommitmentRow key={item.id} item={item} today={today} space={space} />
-					))}
-				</ul>
+				<ul className="mt-1">{children}</ul>
 			)}
 		</section>
 	);
@@ -95,7 +87,7 @@ function Commitments({ today }: { today: string }) {
 		);
 	}
 
-	const { items, payableCents, paidCents } = list.data;
+	const { items, payments, payableCents, paidCents } = list.data;
 	const groups = groupCommitments(items);
 
 	return (
@@ -112,7 +104,7 @@ function Commitments({ today }: { today: string }) {
 				</Button>
 			</header>
 
-			{items.length === 0 ? (
+			{items.length === 0 && payments.length === 0 ? (
 				<p className="mt-10 text-sm text-muted-foreground">
 					Sin compromisos. Añade tus pagos fijos y Quipu los reserva por ti.
 				</p>
@@ -121,23 +113,34 @@ function Commitments({ today }: { today: string }) {
 					<p className="text-sm text-muted-foreground tabular-nums">
 						S/ {formatCents(payableCents)} por pagar · S/ {formatCents(paidCents)} pagado este ciclo
 					</p>
-					<Group
-						title="Por pagar este ciclo"
-						totalCents={payableCents}
-						items={groups.pending}
-						today={today}
-						space={space}
-					/>
-					<Group title="Más adelante" items={groups.later} today={today} space={space} />
+					<Group title="Por pagar este ciclo" totalCents={payableCents}>
+						{groups.pending.map((item) => (
+							<CommitmentRow key={item.id} item={item} today={today} space={space} />
+						))}
+					</Group>
+					<Group title="Más adelante">
+						{groups.later.map((item) => (
+							<CommitmentRow key={item.id} item={item} today={today} space={space} />
+						))}
+					</Group>
 					<Group
 						title="Ya pagados este ciclo"
 						totalCents={paidCents}
-						items={groups.paidNow}
 						empty="Aún no pagas nada este ciclo."
-						today={today}
-						space={space}
-					/>
-					<Group title="Pagados antes" items={groups.paidBefore} today={today} space={space} />
+					>
+						{payments.map((payment) => (
+							<PaymentRow
+								key={`${payment.id}:${payment.dueDate}`}
+								payment={payment}
+								today={today}
+							/>
+						))}
+					</Group>
+					<Group title="Pagados antes">
+						{groups.paidBefore.map((item) => (
+							<CommitmentRow key={item.id} item={item} today={today} space={space} />
+						))}
+					</Group>
 				</div>
 			)}
 

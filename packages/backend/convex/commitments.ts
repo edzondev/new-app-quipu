@@ -142,38 +142,36 @@ const listItem = {
 };
 
 type Charge =
-	| { status: "paid"; dueDate: string; paidOn: string; paidThisCycle: boolean }
+	| { status: "paid"; dueDate: string; paidOn: string; amountCents: number }
 	| { status: Exclude<CommitmentStatus, "paid">; dueDate: string };
 
 /**
- * The charge a commitment shows: its oldest open one, else the last paid one. A paid monthly only
- * stays while its payment belongs to this cycle; otherwise its next charge is what is ahead.
- * A paid one-off stays for good.
+ * The charge a commitment shows: its oldest open one. With none open, a monthly shows its next
+ * charge, and a one-off paid in an earlier cycle shows as paid, with what was paid. A one-off
+ * paid in this cycle has no row: its payment is listed in `payments`.
  */
 function pickCharge(
 	row: Doc<"commitments">,
 	occurrences: Occurrence[],
 	payments: Doc<"transactions">[],
 	cycle: Doc<"cycles">,
-): Charge {
-	const open = occurrences.findIndex(({ status }) => status !== "paid");
-	const index = open === -1 ? occurrences.length - 1 : open;
-	const occurrence = occurrences[index];
-	// Each payment settled the oldest open occurrence, so payment i settled occurrence i.
-	const payment = payments[index];
-	if (occurrence && occurrence.status !== "paid") {
-		return { dueDate: occurrence.dueDate, status: occurrence.status };
+): Charge | undefined {
+	const open = occurrences.find(({ status }) => status !== "paid");
+	if (open && open.status !== "paid") return { dueDate: open.dueDate, status: open.status };
+	if (row.frequency === "monthly") {
+		return { dueDate: getNextDueDate(row, cycle.endDate), status: "later" };
 	}
-	if (occurrence && payment) {
-		const paidThisCycle = payment.cycleId === cycle._id;
-		if (paidThisCycle || row.frequency === "once") {
-			return { dueDate: occurrence.dueDate, status: "paid", paidOn: payment.date, paidThisCycle };
-		}
-	}
-	return { dueDate: getNextDueDate(row, cycle.endDate), status: "later" };
+	const payment = payments[0];
+	if (!payment || payment.cycleId === cycle._id) return undefined;
+	return {
+		dueDate: row.dueDate,
+		status: "paid",
+		paidOn: payment.date,
+		amountCents: payment.amountCents,
+	};
 }
 
-/** One row per commitment. Totals follow the day's number. */
+/** One row per commitment, plus every payment made this cycle. Totals follow the day's number. */
 export const list = query({
 	args: { space: spaceKind, today: v.string() },
 	returns: v.object({
@@ -181,12 +179,8 @@ export const list = query({
 		paidCents: v.number(),
 		items: v.array(
 			v.union(
-				v.object({
-					...listItem,
-					status: v.literal("paid"),
-					paidOn: v.string(),
-					paidThisCycle: v.boolean(),
-				}),
+				// A paid row shows what was paid, so `amountCents` here is the payment's.
+				v.object({ ...listItem, status: v.literal("paid"), paidOn: v.string() }),
 				v.object({
 					...listItem,
 					status: v.union(
@@ -197,6 +191,16 @@ export const list = query({
 					),
 				}),
 			),
+		),
+		payments: v.array(
+			v.object({
+				id: v.id("commitments"),
+				name: v.string(),
+				envelope: spendable,
+				amountCents: v.number(),
+				paidOn: v.string(),
+				dueDate: v.string(),
+			}),
 		),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
@@ -210,36 +214,56 @@ export const list = query({
 			rows.map(async (row) => {
 				const payments = await getCommitmentPayments(ctx, row);
 				const occurrences = getCommitmentStates(row, payments.length, today, cycle.endDate);
-				const reservedCount = occurrences.filter(({ status }) => isReserved(status)).length;
-				const paidCents = payments.reduce(
-					(sum, tx) => (tx.cycleId === cycle._id ? sum + tx.amountCents : sum),
-					0,
+				// Each payment settled the oldest open occurrence, so payment i settled occurrence i.
+				const cyclePayments = payments.flatMap((tx, index) =>
+					tx.cycleId === cycle._id
+						? [
+								{
+									id: row._id,
+									name: row.name,
+									envelope: row.envelope,
+									amountCents: tx.amountCents,
+									paidOn: tx.date,
+									dueDate: occurrences[index]?.dueDate ?? tx.date,
+								},
+							]
+						: [],
 				);
 				return {
 					row,
 					charge: pickCharge(row, occurrences, payments, cycle),
-					reservedCount,
-					paidCents,
+					reservedCount: occurrences.filter(({ status }) => isReserved(status)).length,
+					cyclePayments,
 				};
 			}),
 		);
 		const items = charges
-			.map(({ row, charge }) => ({
-				id: row._id,
-				name: row.name,
-				amountCents: row.amountCents,
-				envelope: row.envelope,
-				frequency: row.frequency,
-				...charge,
-			}))
+			.flatMap(({ row, charge }) =>
+				charge
+					? [
+							{
+								id: row._id,
+								name: row.name,
+								amountCents: row.amountCents,
+								envelope: row.envelope,
+								frequency: row.frequency,
+								...charge,
+							},
+						]
+					: [],
+			)
 			.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+		const payments = charges
+			.flatMap(({ cyclePayments }) => cyclePayments)
+			.sort((a, b) => a.paidOn.localeCompare(b.paidOn) || a.dueDate.localeCompare(b.dueDate));
 		return {
 			payableCents: charges.reduce(
 				(sum, { row, reservedCount }) => sum + row.amountCents * reservedCount,
 				0,
 			),
-			paidCents: charges.reduce((sum, { paidCents }) => sum + paidCents, 0),
+			paidCents: payments.reduce((sum, { amountCents }) => sum + amountCents, 0),
 			items,
+			payments,
 		};
 	},
 });
