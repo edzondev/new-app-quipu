@@ -1,9 +1,10 @@
 import { ConvexError, type Infer, v } from "convex/values";
 import { AMOUNT_KEYS, isValidCents } from "../shared/budget";
 import { isIsoDate } from "../shared/dates";
+import { isReserved } from "../shared/commitments";
 import { isValidMonthDay } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation } from "./_generated/server";
+import { type MutationCtx, mutation, query } from "./_generated/server";
 import { getCommitmentOccurrences } from "./model/commitments";
 import { requireOpenCycle } from "./model/cycles";
 import { requireSpace, type SpaceKind } from "./model/spaces";
@@ -13,6 +14,8 @@ const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
 const NOT_FOUND = "No encontramos este dato.";
 const ALREADY_PAID = "Este compromiso ya está pagado en este ciclo.";
 const NAME_MAX = 40;
+const COMMITMENTS_CAP = 100;
+const CYCLE_TX_CAP = 500;
 
 const schedule = v.union(
 	v.object({
@@ -121,10 +124,84 @@ export const remove = mutation({
 	},
 });
 
+/** One row per commitment: its oldest unpaid charge, or the last paid one. Totals follow the day's number. */
+export const list = query({
+	args: { space: spaceKind, today: v.string() },
+	returns: v.object({
+		payableCents: v.number(),
+		paidCents: v.number(),
+		items: v.array(
+			v.object({
+				id: v.id("commitments"),
+				name: v.string(),
+				amountCents: v.number(),
+				envelope: spendable,
+				dueDate: v.string(),
+				status: v.union(
+					v.literal("paid"),
+					v.literal("overdue"),
+					v.literal("upcoming"),
+					v.literal("reserved"),
+					v.literal("later"),
+				),
+			}),
+		),
+	}),
+	handler: async (ctx, { space: kind, today }) => {
+		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
+		const { space, cycle } = await requireOpenCycle(ctx, kind, today);
+		const [rows, cycleTx] = await Promise.all([
+			ctx.db
+				.query("commitments")
+				.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+				.take(COMMITMENTS_CAP),
+			ctx.db
+				.query("transactions")
+				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+				.take(CYCLE_TX_CAP),
+		]);
+		const charges = await Promise.all(
+			rows.map(async (row) => {
+				const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
+				const current = occurrences.find(({ status }) => status !== "paid") ?? occurrences.at(-1);
+				const reservedCount = occurrences.filter(({ status }) => isReserved(status)).length;
+				return { row, current, reservedCount };
+			}),
+		);
+		const items = charges
+			.flatMap(({ row, current }) =>
+				current
+					? [
+							{
+								id: row._id,
+								name: row.name,
+								amountCents: row.amountCents,
+								envelope: row.envelope,
+								...current,
+							},
+						]
+					: [],
+			)
+			.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+		return {
+			payableCents: charges.reduce(
+				(sum, { row, reservedCount }) => sum + row.amountCents * reservedCount,
+				0,
+			),
+			paidCents: cycleTx.reduce(
+				(sum, tx) =>
+					tx.kind === "expense" && tx.commitmentId !== undefined ? sum + tx.amountCents : sum,
+				0,
+			),
+			items,
+		};
+	},
+});
+
 export const markPaid = mutation({
-	args: { space: spaceKind, id: v.id("commitments") },
+	args: { space: spaceKind, id: v.id("commitments"), amountCents: v.optional(v.number()) },
 	returns: v.null(),
-	handler: async (ctx, { space: kind, id }) => {
+	handler: async (ctx, { space: kind, id, amountCents }) => {
 		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
 		const row = await ctx.db.get("commitments", id);
 		if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
@@ -132,19 +209,22 @@ export const markPaid = mutation({
 		const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
 		if (occurrences.every(({ status }) => status === "paid")) throw new ConvexError(ALREADY_PAID);
 
+		const paidCents = amountCents ?? row.amountCents;
+		if (!isValidCents(paidCents)) throw new ConvexError(BAD_INPUT);
+
 		const key = AMOUNT_KEYS[row.envelope];
 		await ctx.db.insert("transactions", {
 			kind: "expense",
 			spaceId: space._id,
 			cycleId: cycle._id,
 			userId,
-			amountCents: row.amountCents,
+			amountCents: paidCents,
 			date: today,
 			envelope: row.envelope,
 			commitmentId: id,
 		});
 		await ctx.db.patch("cycles", cycle._id, {
-			envelopes: { ...cycle.envelopes, [key]: cycle.envelopes[key] - row.amountCents },
+			envelopes: { ...cycle.envelopes, [key]: cycle.envelopes[key] - paidCents },
 		});
 		return null;
 	},
