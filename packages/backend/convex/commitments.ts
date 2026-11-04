@@ -1,7 +1,7 @@
 import { ConvexError, type Infer, v } from "convex/values";
 import { AMOUNT_KEYS, isValidCents } from "../shared/budget";
 import { isIsoDate } from "../shared/dates";
-import { isReserved } from "../shared/commitments";
+import { getNextDueDate, isReserved } from "../shared/commitments";
 import { isValidMonthDay } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
@@ -15,7 +15,6 @@ const NOT_FOUND = "No encontramos este dato.";
 const ALREADY_PAID = "Este compromiso ya está pagado en este ciclo.";
 const NAME_MAX = 40;
 const COMMITMENTS_CAP = 100;
-const CYCLE_TX_CAP = 500;
 
 const schedule = v.union(
 	v.object({
@@ -158,30 +157,28 @@ export const list = query({
 			ctx.db
 				.query("transactions")
 				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-				.take(CYCLE_TX_CAP),
+				.collect(),
 		]);
 		const charges = await Promise.all(
 			rows.map(async (row) => {
 				const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
-				const current = occurrences.find(({ status }) => status !== "paid") ?? occurrences.at(-1);
+				const current = occurrences.find(({ status }) => status !== "paid") ??
+					occurrences.at(-1) ?? {
+						dueDate: getNextDueDate(row, cycle.endDate),
+						status: "later" as const,
+					};
 				const reservedCount = occurrences.filter(({ status }) => isReserved(status)).length;
 				return { row, current, reservedCount };
 			}),
 		);
 		const items = charges
-			.flatMap(({ row, current }) =>
-				current
-					? [
-							{
-								id: row._id,
-								name: row.name,
-								amountCents: row.amountCents,
-								envelope: row.envelope,
-								...current,
-							},
-						]
-					: [],
-			)
+			.map(({ row, current }) => ({
+				id: row._id,
+				name: row.name,
+				amountCents: row.amountCents,
+				envelope: row.envelope,
+				...current,
+			}))
 			.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 		return {
 			payableCents: charges.reduce(

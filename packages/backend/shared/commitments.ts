@@ -66,3 +66,10 @@ export function getOccurrences(
 		status: index < paidCount ? "paid" : getOpenStatus(dueDate, today, cycleEnd),
 	}));
 }
+
+// First due date after `date`. A monthly with no charge left in the cycle still has one: the next month's.
+export function getNextDueDate(schedule: Schedule, date: string): string {
+	if (schedule.frequency === "once") return schedule.dueDate;
+	const from = addDays(date, 1);
+	return getMonthlyDueDates(schedule.dueDay, from, addDays(from, 31))[0];
+}

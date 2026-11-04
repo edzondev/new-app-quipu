@@ -434,3 +434,37 @@ test("a one-off dated after the cycle end can be paid ahead", async () => {
 		25_000 - 6_000,
 	);
 });
+
+test("a monthly with no charge left in the cycle still lists its next due date, and cannot be paid ahead", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	vi.setSystemTime(new Date("2026-10-26T17:00:00.000Z"));
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Internet",
+		amountCents: 9_000,
+		envelope: "needs",
+		schedule: { frequency: "monthly", dueDay: 15 },
+	});
+	const id = await firstCommitmentId(t);
+
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-10-26" });
+	expect(list.items.map(({ name, status, dueDate }) => ({ name, status, dueDate }))).toEqual([
+		{ name: "Internet", status: "later", dueDate: "2026-11-15" },
+	]);
+	expect(list.payableCents).toBe(0);
+
+	await expect(ana.mutation(api.commitments.markPaid, { space: "personal", id })).rejects.toThrow(
+		"Este compromiso ya está pagado en este ciclo.",
+	);
+});
+
+test("list shows the oldest open charge, not the newest one", async () => {
+	const t = harness();
+	const ana = await luzUnpaidIntoNovember(t);
+
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-11-01" });
+	expect(list.items.map(({ name, status, dueDate }) => ({ name, status, dueDate }))).toEqual([
+		{ name: "Luz", status: "overdue", dueDate: "2026-10-25" },
+	]);
+});
