@@ -75,6 +75,32 @@ export const list = query({
 	},
 });
 
+export const fund = query({
+	args: { space: spaceKind },
+	returns: v.object({
+		fundCents: v.number(),
+		fundGoalCents: v.union(v.number(), v.null()),
+	}),
+	handler: async (ctx, { space: kind }) => {
+		const { space } = await requireSpace(ctx, kind);
+		return { fundCents: space.fundCents, fundGoalCents: space.fundGoalCents ?? null };
+	},
+});
+
+export const setFundGoal = mutation({
+	args: { space: spaceKind, targetCents: v.number() },
+	returns: v.null(),
+	handler: async (ctx, { space: kind, targetCents }) => {
+		const { userId, space } = await requireSpace(ctx, kind);
+		if (!isValidCents(targetCents)) throw new ConvexError(BAD_INPUT);
+		if (space.ownerId !== userId) {
+			throw new ConvexError("Solo quien creó el hogar define la meta del fondo.");
+		}
+		await ctx.db.patch("spaces", space._id, { fundGoalCents: targetCents });
+		return null;
+	},
+});
+
 export const add = mutation({
 	args: {
 		space: spaceKind,

@@ -240,18 +240,142 @@ test("saving S/ 100 empties Ahorro; S/ 101 fails; withdraw over fund fails", asy
 		ana.as.mutation(api.transactions.withdrawSaving, {
 			space: "personal",
 			amountCents: 10_100,
-			envelope: "needs",
+			reason: "other",
 		}),
 	).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
 
 	await ana.as.mutation(api.transactions.withdrawSaving, {
 		space: "personal",
 		amountCents: 10_000,
-		envelope: "needs",
+		reason: "other",
 	});
 	const afterWithdraw = await ana.as.query(api.balances.getBalances, { space: "personal" });
 	expect(afterWithdraw.needsCents).toBe(35_000);
 	expect(afterWithdraw.savingsCents).toBe(0);
+});
+
+async function anaWithFund(t: ReturnType<typeof harness>) {
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 10_000 });
+	return ana;
+}
+
+function readFundCents(t: ReturnType<typeof harness>) {
+	return t.run(async (ctx) => (await ctx.db.query("spaces").take(1))[0].fundCents);
+}
+
+test("withdrawing S/ 100 as emergency raises Necesidades 10000 and empties the fund", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 10_000,
+		reason: "emergency",
+	});
+
+	const after = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(after.needsCents).toBe(before.needsCents + 10_000);
+	expect(after.wantsCents).toBe(before.wantsCents);
+	expect(await readFundCents(t)).toBe(0);
+	const withdrawal = await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		const rows = await ctx.db
+			.query("transactions")
+			.withIndex("by_spaceId_kind", (q) => q.eq("spaceId", space._id).eq("kind", "withdrawal"))
+			.take(5);
+		return rows[0];
+	});
+	expect(withdrawal).toMatchObject({
+		kind: "withdrawal",
+		reason: "emergency",
+		amountCents: 10_000,
+	});
+});
+
+test("a withdrawal without a reason fails and moves nothing", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+
+	await expect(
+		// @ts-expect-error reason is required
+		ana.as.mutation(api.transactions.withdrawSaving, { space: "personal", amountCents: 10_000 }),
+	).rejects.toThrow();
+
+	expect(await readFundCents(t)).toBe(10_000);
+});
+
+test("a withdrawal with an unknown reason fails and moves nothing", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+
+	await expect(
+		ana.as.mutation(api.transactions.withdrawSaving, {
+			space: "personal",
+			amountCents: 10_000,
+			// @ts-expect-error not one of the allowed reasons
+			reason: "vacation",
+		}),
+	).rejects.toThrow();
+
+	expect(await readFundCents(t)).toBe(10_000);
+});
+
+test("withdrawing from an empty fund fails and changes nothing", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await expect(
+		ana.as.mutation(api.transactions.withdrawSaving, {
+			space: "personal",
+			amountCents: 100,
+			reason: "emergency",
+		}),
+	).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toEqual(before);
+	expect(await readFundCents(t)).toBe(0);
+});
+
+test("el segundo retiro que pasa el fondo falla y no cambia nada", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 6_000,
+		reason: "emergency",
+	});
+	const afterFirst = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await expect(
+		ana.as.mutation(api.transactions.withdrawSaving, {
+			space: "personal",
+			amountCents: 6_000,
+			reason: "emergency",
+		}),
+	).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toEqual(afterFirst);
+	expect(await readFundCents(t)).toBe(4_000);
+});
+
+test("a withdrawal raises the amount you can spend today", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	const args = { space: "personal" as const, today: "2026-10-20" };
+	const before = await ana.as.query(api.balances.getHome, args);
+
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 10_000,
+		reason: "emergency",
+	});
+
+	const after = await ana.as.query(api.balances.getHome, args);
+	expect(after.dailyCents).toBeGreaterThan(before.dailyCents);
 });
 
 test("updateIncome S/ 100 → S/ 200 updates envelopes to the new split", async () => {

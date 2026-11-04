@@ -12,7 +12,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { requireOpenCycle } from "./model/cycles";
-import { movementKind, spaceKind, spendable } from "./schema";
+import { movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
 
 type SpaceKind = Doc<"spaces">["kind"];
 type TxKind = Doc<"transactions">["kind"];
@@ -248,16 +248,15 @@ export const withdrawSaving = mutation({
 	args: {
 		space: spaceKind,
 		amountCents: v.number(),
-		envelope: spendable,
+		reason: withdrawalReason,
 		note: v.optional(v.string()),
 	},
 	returns: v.null(),
-	handler: async (ctx, { space: kind, amountCents, envelope, note }) => {
+	handler: async (ctx, { space: kind, amountCents, reason, note }) => {
 		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
 		if (!isValidCents(amountCents) || amountCents > space.fundCents) {
 			throw new ConvexError(BAD_INPUT);
 		}
-		const key = AMOUNT_KEYS[envelope];
 		await ctx.db.insert("transactions", {
 			kind: "withdrawal",
 			spaceId: space._id,
@@ -265,11 +264,11 @@ export const withdrawSaving = mutation({
 			userId,
 			amountCents,
 			date: today,
-			reason: "other",
+			reason,
 			note: cleanNote(note),
 		});
 		await ctx.db.patch("cycles", cycle._id, {
-			envelopes: patchEnvelope(cycle.envelopes, key, amountCents),
+			envelopes: patchEnvelope(cycle.envelopes, "needsCents", amountCents),
 		});
 		await ctx.db.patch("spaces", space._id, {
 			fundCents: space.fundCents - amountCents,
