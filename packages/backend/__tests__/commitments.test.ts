@@ -550,3 +550,81 @@ test("paidCents only counts payments made in the current cycle", async () => {
 	});
 	expect(november.paidCents).toBe(0);
 });
+
+test("a one-off paid in an earlier cycle stays listed as paid with its payment date, and paidCents leaves it out", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addSoat(ana);
+	await ana.mutation(api.commitments.markPaid, {
+		space: "personal",
+		id: await firstCommitmentId(t),
+	});
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-11-01" });
+	expect(list.items).toMatchObject([
+		{
+			name: "SOAT",
+			status: "paid",
+			dueDate: "2026-10-22",
+			paidOn: "2026-10-20",
+			paidThisCycle: false,
+		},
+	]);
+	expect(list.paidCents).toBe(0);
+});
+
+test("a monthly overdue from the last cycle and paid in this one is listed as paid, matching paidCents", async () => {
+	const t = harness();
+	const ana = await startAnaAt(t, "2026-10-20T17:00:00.000Z", { ...onboard, cadence: "biweekly" });
+	await addLuz(ana);
+	vi.setSystemTime(new Date("2026-11-03T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+	await ana.mutation(api.commitments.markPaid, {
+		space: "personal",
+		id: await firstCommitmentId(t),
+	});
+
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-11-03" });
+	expect(list.items).toMatchObject([
+		{
+			name: "Luz",
+			status: "paid",
+			dueDate: "2026-10-25",
+			paidOn: "2026-11-03",
+			paidThisCycle: true,
+		},
+	]);
+	expect(list.paidCents).toBe(5_000);
+	expect(list.payableCents).toBe(0);
+});
+
+test("a charge due on the cycle's first day is listed as itself, open and then paid", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Internet",
+		amountCents: 9_000,
+		envelope: "needs",
+		schedule: { frequency: "monthly", dueDay: 1 },
+	});
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+	const list = () => ana.query(api.commitments.list, { space: "personal", today: "2026-11-01" });
+
+	expect((await list()).items).toMatchObject([{ status: "upcoming", dueDate: "2026-11-01" }]);
+
+	await ana.mutation(api.commitments.markPaid, {
+		space: "personal",
+		id: await firstCommitmentId(t),
+	});
+
+	const paid = await list();
+	expect(paid.items).toMatchObject([
+		{ status: "paid", dueDate: "2026-11-01", paidOn: "2026-11-01", paidThisCycle: true },
+	]);
+	expect(paid.paidCents).toBe(9_000);
+});

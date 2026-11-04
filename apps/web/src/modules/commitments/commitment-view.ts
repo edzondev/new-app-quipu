@@ -5,21 +5,19 @@ import type { FunctionReturnType } from "convex/server";
 
 export type CommitmentItem = FunctionReturnType<typeof api.commitments.list>["items"][number];
 
-const GROUP_OF = {
-	overdue: "pending",
-	upcoming: "pending",
-	reserved: "pending",
-	later: "later",
-	paid: "paid",
-} as const satisfies Record<CommitmentItem["status"], string>;
-
 export function groupCommitments(items: CommitmentItem[]) {
-	const groups: Record<(typeof GROUP_OF)[CommitmentItem["status"]], CommitmentItem[]> = {
+	const groups: Record<"pending" | "later" | "paidNow" | "paidBefore", CommitmentItem[]> = {
 		pending: [],
 		later: [],
-		paid: [],
+		paidNow: [],
+		paidBefore: [],
 	};
-	for (const item of items) groups[GROUP_OF[item.status]].push(item);
+	for (const item of items) {
+		if (item.status === "paid")
+			(item.paidThisCycle ? groups.paidNow : groups.paidBefore).push(item);
+		else if (item.status === "later") groups.later.push(item);
+		else groups.pending.push(item);
+	}
 	return groups;
 }
 
@@ -32,8 +30,12 @@ export function describeDue(item: CommitmentItem, today: string) {
 	const envelope = ENVELOPE_LABELS[item.envelope];
 	const date = formatDay(item.dueDate);
 	switch (item.status) {
-		case "paid":
-			return `Pagado · ${envelope}`;
+		case "paid": {
+			const year = item.paidOn.slice(0, 4);
+			const paidOn =
+				year === today.slice(0, 4) ? formatDay(item.paidOn) : `${formatDay(item.paidOn)} ${year}`;
+			return `Pagado el ${paidOn} · ${envelope}`;
+		}
 		case "overdue":
 			return `Venció el ${date} · ${envelope}`;
 		case "later":

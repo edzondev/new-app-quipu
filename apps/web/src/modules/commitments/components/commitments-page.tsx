@@ -22,16 +22,18 @@ function Group({
 	title,
 	totalCents,
 	items,
+	empty,
 	today,
 	space,
 }: {
 	title: string;
 	totalCents?: number;
 	items: CommitmentItem[];
+	empty?: string;
 	today: string;
 	space: "personal" | "household";
 }) {
-	if (items.length === 0) return null;
+	if (items.length === 0 && !empty) return null;
 	return (
 		<section>
 			<h2 className="flex items-baseline justify-between text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
@@ -40,11 +42,15 @@ function Group({
 					<span className="tabular-nums">S/ {formatCents(totalCents)}</span>
 				)}
 			</h2>
-			<ul className="mt-1">
-				{items.map((item) => (
-					<CommitmentRow key={item.id} item={item} today={today} space={space} />
-				))}
-			</ul>
+			{items.length === 0 ? (
+				<p className="mt-3 text-sm text-muted-foreground">{empty}</p>
+			) : (
+				<ul className="mt-1">
+					{items.map((item) => (
+						<CommitmentRow key={item.id} item={item} today={today} space={space} />
+					))}
+				</ul>
+			)}
 		</section>
 	);
 }
@@ -112,6 +118,9 @@ function Commitments({ today }: { today: string }) {
 				</p>
 			) : (
 				<div className="mt-8 space-y-8">
+					<p className="text-sm text-muted-foreground tabular-nums">
+						S/ {formatCents(payableCents)} por pagar · S/ {formatCents(paidCents)} pagado este ciclo
+					</p>
 					<Group
 						title="Por pagar este ciclo"
 						totalCents={payableCents}
@@ -121,12 +130,14 @@ function Commitments({ today }: { today: string }) {
 					/>
 					<Group title="Más adelante" items={groups.later} today={today} space={space} />
 					<Group
-						title="Ya pagados"
+						title="Ya pagados este ciclo"
 						totalCents={paidCents}
-						items={groups.paid}
+						items={groups.paidNow}
+						empty="Aún no pagas nada este ciclo."
 						today={today}
 						space={space}
 					/>
+					<Group title="Pagados antes" items={groups.paidBefore} today={today} space={space} />
 				</div>
 			)}
 
