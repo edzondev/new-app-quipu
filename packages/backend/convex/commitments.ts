@@ -5,7 +5,11 @@ import { getNextDueDate, isReserved } from "../shared/commitments";
 import { isValidMonthDay } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
-import { getCommitmentOccurrences } from "./model/commitments";
+import {
+	getCommitmentOccurrences,
+	getCommitmentPayments,
+	getCommitmentStates,
+} from "./model/commitments";
 import { requireOpenCycle } from "./model/cycles";
 import { requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind, spendable } from "./schema";
@@ -135,6 +139,7 @@ export const list = query({
 				name: v.string(),
 				amountCents: v.number(),
 				envelope: spendable,
+				frequency: v.union(v.literal("monthly"), v.literal("once")),
 				dueDate: v.string(),
 				status: v.union(
 					v.literal("paid"),
@@ -149,26 +154,25 @@ export const list = query({
 	handler: async (ctx, { space: kind, today }) => {
 		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
 		const { space, cycle } = await requireOpenCycle(ctx, kind, today);
-		const [rows, cycleTx] = await Promise.all([
-			ctx.db
-				.query("commitments")
-				.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
-				.take(COMMITMENTS_CAP),
-			ctx.db
-				.query("transactions")
-				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-				.collect(),
-		]);
+		const rows = await ctx.db
+			.query("commitments")
+			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+			.take(COMMITMENTS_CAP);
 		const charges = await Promise.all(
 			rows.map(async (row) => {
-				const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
+				const payments = await getCommitmentPayments(ctx, row);
+				const occurrences = getCommitmentStates(row, payments.length, today, cycle.endDate);
 				const current = occurrences.find(({ status }) => status !== "paid") ??
 					occurrences.at(-1) ?? {
 						dueDate: getNextDueDate(row, cycle.endDate),
 						status: "later" as const,
 					};
 				const reservedCount = occurrences.filter(({ status }) => isReserved(status)).length;
-				return { row, current, reservedCount };
+				const paidCents = payments.reduce(
+					(sum, tx) => (tx.cycleId === cycle._id ? sum + tx.amountCents : sum),
+					0,
+				);
+				return { row, current, reservedCount, paidCents };
 			}),
 		);
 		const items = charges
@@ -177,6 +181,7 @@ export const list = query({
 				name: row.name,
 				amountCents: row.amountCents,
 				envelope: row.envelope,
+				frequency: row.frequency,
 				...current,
 			}))
 			.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -185,11 +190,7 @@ export const list = query({
 				(sum, { row, reservedCount }) => sum + row.amountCents * reservedCount,
 				0,
 			),
-			paidCents: cycleTx.reduce(
-				(sum, tx) =>
-					tx.kind === "expense" && tx.commitmentId !== undefined ? sum + tx.amountCents : sum,
-				0,
-			),
+			paidCents: charges.reduce((sum, { paidCents }) => sum + paidCents, 0),
 			items,
 		};
 	},
