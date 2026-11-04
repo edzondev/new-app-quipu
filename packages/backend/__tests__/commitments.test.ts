@@ -350,3 +350,121 @@ test("a commitment only counts from the day it was created", async () => {
 	expect(nov.pendingCents).toBe(20_000);
 	expect(nov.dailyCents).toBe(666);
 });
+
+test("list shows each commitment's state with the to-pay and already-paid totals", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addLuz(ana);
+	await addSoat(ana);
+	vi.setSystemTime(new Date("2026-10-23T17:00:00.000Z"));
+	const list = () => ana.query(api.commitments.list, { space: "personal", today: "2026-10-23" });
+
+	const before = await list();
+	expect(before.items.map(({ name, status, dueDate }) => ({ name, status, dueDate }))).toEqual([
+		{ name: "SOAT", status: "overdue", dueDate: "2026-10-22" },
+		{ name: "Luz", status: "upcoming", dueDate: "2026-10-25" },
+	]);
+	expect(before.payableCents).toBe(13_000);
+	expect(before.paidCents).toBe(0);
+
+	const soat = before.items[0].id;
+	await ana.mutation(api.commitments.markPaid, { space: "personal", id: soat });
+
+	const after = await list();
+	expect(after.items.map(({ name, status }) => ({ name, status }))).toEqual([
+		{ name: "SOAT", status: "paid" },
+		{ name: "Luz", status: "upcoming" },
+	]);
+	expect(after.payableCents).toBe(5_000);
+	expect(after.paidCents).toBe(8_000);
+});
+
+test("paying S/ 45 for a S/ 50 commitment cuts Needs by 4_500 and counts 4_500 as paid", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addLuz(ana);
+	const id = await firstCommitmentId(t);
+
+	await ana.mutation(api.commitments.markPaid, { space: "personal", id, amountCents: 4_500 });
+
+	const balances = await ana.query(api.balances.getBalances, { space: "personal" });
+	expect(balances.needsCents).toBe(25_000 - 4_500);
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-10-20" });
+	expect(list.items[0].status).toBe("paid");
+	expect(list.paidCents).toBe(4_500);
+	expect(list.payableCents).toBe(0);
+});
+
+test("markPaid rejects an amount that is not positive whole cents", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addLuz(ana);
+	const id = await firstCommitmentId(t);
+
+	for (const amountCents of [0, -500, 45.5]) {
+		await expect(
+			ana.mutation(api.commitments.markPaid, { space: "personal", id, amountCents }),
+		).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+	}
+});
+
+test("a one-off dated after the cycle end can be paid ahead", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Seguro",
+		amountCents: 6_000,
+		envelope: "needs",
+		schedule: { frequency: "once", dueDate: "2026-11-05" },
+	});
+	const id = await firstCommitmentId(t);
+	const list = () => ana.query(api.commitments.list, { space: "personal", today: "2026-10-20" });
+
+	const before = await list();
+	expect(before.items[0].status).toBe("later");
+	expect(before.payableCents).toBe(0);
+
+	await ana.mutation(api.commitments.markPaid, { space: "personal", id });
+
+	const after = await list();
+	expect(after.items[0].status).toBe("paid");
+	expect(after.paidCents).toBe(6_000);
+	expect((await ana.query(api.balances.getBalances, { space: "personal" })).needsCents).toBe(
+		25_000 - 6_000,
+	);
+});
+
+test("a monthly with no charge left in the cycle still lists its next due date, and cannot be paid ahead", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	vi.setSystemTime(new Date("2026-10-26T17:00:00.000Z"));
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Internet",
+		amountCents: 9_000,
+		envelope: "needs",
+		schedule: { frequency: "monthly", dueDay: 15 },
+	});
+	const id = await firstCommitmentId(t);
+
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-10-26" });
+	expect(list.items.map(({ name, status, dueDate }) => ({ name, status, dueDate }))).toEqual([
+		{ name: "Internet", status: "later", dueDate: "2026-11-15" },
+	]);
+	expect(list.payableCents).toBe(0);
+
+	await expect(ana.mutation(api.commitments.markPaid, { space: "personal", id })).rejects.toThrow(
+		"Este compromiso ya está pagado en este ciclo.",
+	);
+});
+
+test("list shows the oldest open charge, not the newest one", async () => {
+	const t = harness();
+	const ana = await luzUnpaidIntoNovember(t);
+
+	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-11-01" });
+	expect(list.items.map(({ name, status, dueDate }) => ({ name, status, dueDate }))).toEqual([
+		{ name: "Luz", status: "overdue", dueDate: "2026-10-25" },
+	]);
+});
