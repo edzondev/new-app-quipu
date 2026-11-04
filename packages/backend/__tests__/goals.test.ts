@@ -109,3 +109,77 @@ test("saving S/ 100 to Viaje a Cusco then deleting the goal moves it to the fund
 	expect(fundCents).toBe(10_000);
 	expect(await ana.query(api.goals.list, { space: "personal" })).toEqual([]);
 });
+
+async function anaOnOct20(t: ReturnType<typeof harness>) {
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	return ana;
+}
+
+test("saving S/ 50 and setting the goal to S/ 4,200 shows the fund and its goal", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.transactions.addSaving, { space: "personal", amountCents: 5_000 });
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 420_000 });
+
+	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
+		fundCents: 5_000,
+		fundGoalCents: 420_000,
+	});
+});
+
+test("without a fund goal, fund reads fundGoalCents as null", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+
+	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
+		fundCents: 0,
+		fundGoalCents: null,
+	});
+});
+
+test("setting the fund goal again replaces it", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 420_000 });
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 600_000 });
+
+	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal" });
+	expect(fundGoalCents).toBe(600_000);
+});
+
+test("a fund goal of 0, negative or with decimals fails and keeps the old one", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 420_000 });
+
+	for (const targetCents of [0, -100, 100.5]) {
+		await expect(
+			ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents }),
+		).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+	}
+
+	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal" });
+	expect(fundGoalCents).toBe(420_000);
+});
+
+test("in a household only who created it sets the fund goal; both read it", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.household.createHousehold, { name: "Casa" });
+	const { code } = await ana.mutation(api.household.createInvite, {});
+	const luis = await signIn(t, "luis@correo.com", "Luis");
+	await luis.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.mutation(api.household.joinHousehold, { code });
+
+	await expect(
+		luis.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 }),
+	).rejects.toThrow("Solo quien creó el hogar define la meta del fondo.");
+	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 });
+
+	for (const member of [ana, luis]) {
+		const { fundGoalCents } = await member.query(api.goals.fund, { space: "household" });
+		expect(fundGoalCents).toBe(420_000);
+	}
+});
