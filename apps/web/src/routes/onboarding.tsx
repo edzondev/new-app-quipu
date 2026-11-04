@@ -12,9 +12,7 @@ import type { OnboardingValues } from "#/modules/onboarding/schemas";
 export const Route = createFileRoute("/onboarding")({
 	beforeLoad: async ({ context }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
-		const profile = await context.queryClient.ensureQueryData(
-			convexQuery(api.profiles.myProfile, {}),
-		);
+		const profile = await context.queryClient.query(convexQuery(api.profiles.myProfile, {}));
 		if (profile?.plan) throw redirect({ to: "/home" });
 	},
 	head: () => ({

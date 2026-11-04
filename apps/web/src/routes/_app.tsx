@@ -15,9 +15,7 @@ export const Route = createFileRoute("/_app")({
 	},
 	beforeLoad: async ({ context, search }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
-		const profile = await context.queryClient.ensureQueryData(
-			convexQuery(api.profiles.myProfile, {}),
-		);
+		const profile = await context.queryClient.query(convexQuery(api.profiles.myProfile, {}));
 		if (!profile?.plan) throw redirect({ to: "/onboarding" });
 		if (search.space === "household" && !profile.hasHousehold) {
 			throw redirect({ search: (prev) => ({ ...prev, space: undefined }) });

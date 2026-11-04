@@ -2,7 +2,7 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useMutation } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
-import { ConvexError } from "convex/values";
+import { readError } from "#/lib/read-error";
 import type { Kind, Movement } from "./movement-draft";
 
 type GoalId = FunctionReturnType<typeof api.goals.list>[number]["id"];
@@ -29,11 +29,6 @@ export type SaveValues =
 	  };
 
 type Command = SaveValues | { kind: "delete"; entity: Exclude<Kind, "saving">; id: Movement["id"] };
-
-function readError(error: unknown) {
-	if (error instanceof ConvexError && typeof error.data === "string") return error.data;
-	return "No pudimos guardarlo. Inténtalo otra vez.";
-}
 
 export function useMovementActions(space: "personal" | "household", onDone: () => void) {
 	const addExpense = useConvexMutation(api.transactions.addExpense);

@@ -1,11 +1,20 @@
 import { ConvexError, type Infer, v } from "convex/values";
 import { AMOUNT_KEYS, isValidCents } from "../shared/budget";
 import { isIsoDate } from "../shared/dates";
-import { getNextDueDate, isReserved } from "../shared/commitments";
+import {
+	type CommitmentStatus,
+	getNextDueDate,
+	isReserved,
+	type Occurrence,
+} from "../shared/commitments";
 import { isValidMonthDay } from "../shared/plan";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
-import { getCommitmentOccurrences } from "./model/commitments";
+import {
+	getCommitmentOccurrences,
+	getCommitmentPayments,
+	getCommitmentStates,
+} from "./model/commitments";
 import { requireOpenCycle } from "./model/cycles";
 import { requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind, spendable } from "./schema";
@@ -123,74 +132,140 @@ export const remove = mutation({
 	},
 });
 
-/** One row per commitment: its oldest unpaid charge, or the last paid one. Totals follow the day's number. */
+const listItem = {
+	id: v.id("commitments"),
+	name: v.string(),
+	amountCents: v.number(),
+	envelope: spendable,
+	frequency: v.union(v.literal("monthly"), v.literal("once")),
+	dueDate: v.string(),
+};
+
+type Charge =
+	| { status: "paid"; dueDate: string; paidOn: string; amountCents: number }
+	| { status: Exclude<CommitmentStatus, "paid">; dueDate: string };
+
+/**
+ * The charge a commitment shows: its oldest open one. With none open, a monthly shows its next
+ * charge, and a one-off paid in an earlier cycle shows as paid, with what was paid. A one-off
+ * paid in this cycle has no row: its payment is listed in `payments`.
+ */
+function pickCharge(
+	row: Doc<"commitments">,
+	occurrences: Occurrence[],
+	payments: Doc<"transactions">[],
+	cycle: Doc<"cycles">,
+): Charge | undefined {
+	const open = occurrences.find(({ status }) => status !== "paid");
+	if (open && open.status !== "paid") return { dueDate: open.dueDate, status: open.status };
+	if (row.frequency === "monthly") {
+		return { dueDate: getNextDueDate(row, cycle.endDate), status: "later" };
+	}
+	const payment = payments[0];
+	if (!payment || payment.cycleId === cycle._id) return undefined;
+	return {
+		dueDate: row.dueDate,
+		status: "paid",
+		paidOn: payment.date,
+		amountCents: payment.amountCents,
+	};
+}
+
+/** One row per commitment, plus every payment made this cycle. Totals follow the day's number. */
 export const list = query({
 	args: { space: spaceKind, today: v.string() },
 	returns: v.object({
 		payableCents: v.number(),
 		paidCents: v.number(),
 		items: v.array(
+			v.union(
+				// A paid row shows what was paid, so `amountCents` here is the payment's.
+				v.object({ ...listItem, status: v.literal("paid"), paidOn: v.string() }),
+				v.object({
+					...listItem,
+					status: v.union(
+						v.literal("overdue"),
+						v.literal("upcoming"),
+						v.literal("reserved"),
+						v.literal("later"),
+					),
+				}),
+			),
+		),
+		payments: v.array(
 			v.object({
+				paymentId: v.id("transactions"),
 				id: v.id("commitments"),
 				name: v.string(),
-				amountCents: v.number(),
 				envelope: spendable,
+				amountCents: v.number(),
+				paidOn: v.string(),
 				dueDate: v.string(),
-				status: v.union(
-					v.literal("paid"),
-					v.literal("overdue"),
-					v.literal("upcoming"),
-					v.literal("reserved"),
-					v.literal("later"),
-				),
 			}),
 		),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
 		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
 		const { space, cycle } = await requireOpenCycle(ctx, kind, today);
-		const [rows, cycleTx] = await Promise.all([
-			ctx.db
-				.query("commitments")
-				.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
-				.take(COMMITMENTS_CAP),
-			ctx.db
-				.query("transactions")
-				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-				.collect(),
-		]);
+		const rows = await ctx.db
+			.query("commitments")
+			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+			.take(COMMITMENTS_CAP);
 		const charges = await Promise.all(
 			rows.map(async (row) => {
-				const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
-				const current = occurrences.find(({ status }) => status !== "paid") ??
-					occurrences.at(-1) ?? {
-						dueDate: getNextDueDate(row, cycle.endDate),
-						status: "later" as const,
-					};
-				const reservedCount = occurrences.filter(({ status }) => isReserved(status)).length;
-				return { row, current, reservedCount };
+				const payments = await getCommitmentPayments(ctx, row);
+				const occurrences = getCommitmentStates(row, payments.length, today, cycle.endDate);
+				// Each payment settled the oldest open occurrence, so payment i settled occurrence i.
+				const cyclePayments = payments.flatMap((tx, index) =>
+					tx.cycleId === cycle._id
+						? [
+								{
+									paymentId: tx._id,
+									id: row._id,
+									name: row.name,
+									envelope: row.envelope,
+									amountCents: tx.amountCents,
+									paidOn: tx.date,
+									dueDate: occurrences[index]?.dueDate ?? tx.date,
+								},
+							]
+						: [],
+				);
+				return {
+					row,
+					charge: pickCharge(row, occurrences, payments, cycle),
+					reservedCount: occurrences.filter(({ status }) => isReserved(status)).length,
+					cyclePayments,
+				};
 			}),
 		);
 		const items = charges
-			.map(({ row, current }) => ({
-				id: row._id,
-				name: row.name,
-				amountCents: row.amountCents,
-				envelope: row.envelope,
-				...current,
-			}))
+			.flatMap(({ row, charge }) =>
+				charge
+					? [
+							{
+								id: row._id,
+								name: row.name,
+								amountCents: row.amountCents,
+								envelope: row.envelope,
+								frequency: row.frequency,
+								...charge,
+							},
+						]
+					: [],
+			)
 			.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+		const payments = charges
+			.flatMap(({ cyclePayments }) => cyclePayments)
+			.sort((a, b) => a.paidOn.localeCompare(b.paidOn) || a.dueDate.localeCompare(b.dueDate));
 		return {
 			payableCents: charges.reduce(
 				(sum, { row, reservedCount }) => sum + row.amountCents * reservedCount,
 				0,
 			),
-			paidCents: cycleTx.reduce(
-				(sum, tx) =>
-					tx.kind === "expense" && tx.commitmentId !== undefined ? sum + tx.amountCents : sum,
-				0,
-			),
+			paidCents: payments.reduce((sum, { amountCents }) => sum + amountCents, 0),
 			items,
+			payments,
 		};
 	},
 });

@@ -3,9 +3,9 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
+import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
 import {
 	DialogDescription,
@@ -33,45 +33,6 @@ const ENVELOPES: { value: Envelope; label: string }[] = [
 	{ value: "needs", label: ENVELOPE_LABELS.needs },
 	{ value: "wants", label: ENVELOPE_LABELS.wants },
 ];
-
-function ChoiceChips<T extends string>({
-	label,
-	options,
-	value,
-	onChange,
-}: {
-	label: string;
-	options: { value: T; label: string }[];
-	value: T;
-	onChange: (value: T) => void;
-}) {
-	return (
-		<fieldset className="flex min-w-0 flex-wrap gap-2 border-0 p-0">
-			<legend className="sr-only">{label}</legend>
-			{options.map((option) => (
-				<label
-					key={option.value}
-					className={cn(
-						"inline-flex min-h-11 items-center rounded-full px-3 py-1.5 text-sm font-semibold has-focus-visible:ring-2 has-focus-visible:ring-ring",
-						value === option.value
-							? "bg-foreground text-background"
-							: "bg-muted text-muted-foreground",
-					)}
-				>
-					<input
-						type="radio"
-						name={label}
-						value={option.value}
-						checked={value === option.value}
-						onChange={() => onChange(option.value)}
-						className="sr-only"
-					/>
-					{option.label}
-				</label>
-			))}
-		</fieldset>
-	);
-}
 
 function DeleteButton({
 	kind,

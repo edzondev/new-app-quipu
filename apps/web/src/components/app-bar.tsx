@@ -67,6 +67,14 @@ export function AppBar() {
 					>
 						Movimientos
 					</Link>
+					<Link
+						to="/commitments"
+						activeProps={{ className: "bg-muted text-foreground" }}
+						inactiveProps={{ className: "text-muted-foreground" }}
+						className="flex h-9 items-center rounded-full px-3.5 text-[13.5px] font-medium"
+					>
+						Compromisos
+					</Link>
 				</div>
 
 				<div className="flex items-center gap-3">

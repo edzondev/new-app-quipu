@@ -25,7 +25,7 @@ export function ensureOpenCycle(
 	space: Space,
 	today: string,
 ) {
-	return queryClient.ensureQueryData({
+	return queryClient.query({
 		queryKey: ensureOpenQueryKey(space, today),
 		staleTime: Number.POSITIVE_INFINITY,
 		queryFn: () => runEnsureOpen(convexQueryClient, space),

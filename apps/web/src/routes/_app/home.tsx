@@ -5,7 +5,7 @@ import { HomePage } from "#/modules/home/components/home-page";
 
 export const Route = createFileRoute("/_app/home")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(
+		await context.queryClient.query(
 			convexQuery(api.balances.getHome, { space: context.space, today: context.today }),
 		);
 	},

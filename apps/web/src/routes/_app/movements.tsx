@@ -7,8 +7,8 @@ export const Route = createFileRoute("/_app/movements")({
 	loader: async ({ context }) => {
 		const args = { space: context.space, today: context.today };
 		await Promise.all([
-			context.queryClient.ensureQueryData(convexQuery(api.transactions.list, args)),
-			context.queryClient.ensureQueryData(convexQuery(api.balances.getHome, args)),
+			context.queryClient.query(convexQuery(api.transactions.list, args)),
+			context.queryClient.query(convexQuery(api.balances.getHome, args)),
 		]);
 	},
 	component: MovementsPage,

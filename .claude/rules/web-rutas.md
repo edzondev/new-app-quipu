@@ -5,7 +5,8 @@ paths:
 
 # Rutas web (TanStack Router)
 
-1. **El loader precarga con el query client del contexto.** `context.queryClient.ensureQueryData(convexQuery(api.x.y, args))`. Dos o más lecturas van en `Promise.all`.
+1. **El loader precarga con el query client del contexto.** `context.queryClient.query(convexQuery(api.x.y, args))`. Dos o más lecturas van en `Promise.all`.
+   - `ensureQueryData` está deprecada en TanStack Query. `convexQuery` ya trae `staleTime: Infinity`, así que `query` basta. Con una query propia, agrega `staleTime: "static"` (`__root.tsx:31-37`) o `query` volverá a pedir el dato cuando esté viejo.
    - Bueno: `routes/_app/home.tsx:7-11`. En paralelo: `routes/_app/movements.tsx:7-13`.
    - Malo: una server function en cada navegación. Antes de `36ce768`, `_app.tsx` línea 15 hacía `await getMyProfile()` y las rutas no tenían loader. Cada clic esperaba dos viajes al servidor (`git show 36ce768^:apps/web/src/routes/_app.tsx`).
 2. **`space` y `today` vienen del contexto.** `_app.beforeLoad` los calcula y los devuelve (`_app.tsx:25-29`). Los loaders hijos los leen de `context`.
