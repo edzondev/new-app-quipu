@@ -83,3 +83,16 @@ export function formatDayHeading(date: string, today: string): string {
 export function formatRange(startDate: string, endDate: string): string {
 	return `${formatDay(startDate)} → ${formatDay(endDate)}`;
 }
+
+/** How a recent movement dates itself: "hoy", "ayer", a weekday inside the week, else "12 oct". */
+export function formatRecentDay(date: string, today: string): string {
+	const daysAgo = daysBetween(date, today);
+	if (daysAgo <= 0) return "hoy";
+	if (daysAgo === 1) return "ayer";
+	if (daysAgo < 7) return WEEKDAYS[new Date(toUtc(date)).getUTCDay()] ?? "";
+	return formatPastDay(date, today);
+}
+
+export function formatDaysLeft(days: number): string {
+	return days === 1 ? "queda 1 día" : `quedan ${days} días`;
+}

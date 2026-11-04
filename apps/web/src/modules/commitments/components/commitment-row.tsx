@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { readError } from "#/lib/read-error";
+import { ACTION } from "#/lib/typography";
 import {
 	canPay,
 	type CommitmentItem,
@@ -93,43 +94,48 @@ function RowLayout({
 	action?: React.ReactNode;
 	below?: React.ReactNode;
 }) {
+	const amount = (
+		<span className={cn("font-mono text-[15px]", paid && "text-muted-foreground")}>
+			S/ {formatCents(amountCents)}
+		</span>
+	);
+
 	return (
-		<li className="border-b border-border/60 last:border-0">
-			<div className="flex items-center gap-3 py-3.5">
-				<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
-					<span
-						aria-hidden
-						className={cn(
-							"size-2.5 rounded-full",
-							paid ? "bg-muted-foreground" : ENVELOPE_DOT[envelope],
-						)}
-					/>
-				</span>
-				<span className="min-w-0 flex-1">
-					<span className="flex items-center gap-2">
-						<span className="truncate text-sm font-semibold">{name}</span>
-						{badge ? (
-							<span
-								className={cn(
-									"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-									badge.className,
-								)}
-							>
-								{badge.text}
-							</span>
-						) : null}
+		<li className="border-b border-border/60">
+			<div className="flex min-h-[60px] items-center justify-between gap-4 py-2.5">
+				<div className="flex min-w-0 items-center gap-3.5">
+					<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
+						<span
+							aria-hidden
+							className={cn(
+								"size-2 rounded-full",
+								paid ? "bg-muted-foreground" : ENVELOPE_DOT[envelope],
+							)}
+						/>
 					</span>
-					<span className="block truncate text-xs text-muted-foreground">{detail}</span>
-				</span>
-				<span
-					className={cn(
-						"shrink-0 text-sm font-semibold tabular-nums",
-						paid && "text-muted-foreground",
-					)}
-				>
-					S/ {formatCents(amountCents)}
-				</span>
-				{action}
+					<span className="min-w-0">
+						<span className="flex items-center gap-2">
+							<span className="truncate text-[15px] leading-[1.3] font-semibold">{name}</span>
+							{badge ? (
+								<span
+									className={cn(
+										"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+										badge.className,
+									)}
+								>
+									{badge.text}
+								</span>
+							) : null}
+						</span>
+						<span className="mt-0.5 block truncate text-[12.5px] text-muted-foreground">
+							{detail}
+						</span>
+					</span>
+				</div>
+				<div className="flex shrink-0 items-center gap-[18px]">
+					{action}
+					{amount}
+				</div>
 			</div>
 			{below}
 		</li>
@@ -170,15 +176,14 @@ export function CommitmentRow({
 			amountCents={item.amountCents}
 			action={
 				canPay(item) ? (
-					<Button
-						variant={item.status === "upcoming" ? "default" : "outline"}
-						size="sm"
-						className="min-h-11"
+					<button
+						type="button"
+						className={ACTION}
 						aria-expanded={paying}
 						onClick={() => setPaying((open) => !open)}
 					>
-						Marcar pagado
-					</Button>
+						Ya pagué
+					</button>
 				) : null
 			}
 			below={

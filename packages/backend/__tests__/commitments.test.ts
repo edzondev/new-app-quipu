@@ -230,7 +230,6 @@ test("unpaid Luz carries into the next cycle next to the new charge", async () =
 	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
 	expect(home.pendingCents).toBe(10_000);
 	expect(home.dailyCents).toBe(1_000);
-	expect(home.dueSoon[0].dueDate).toBe("2026-10-25");
 });
 
 test("markPaid settles the oldest charge first and never pays ahead", async () => {
@@ -246,7 +245,6 @@ test("markPaid settles the oldest charge first and never pays ahead", async () =
 	// Paga la Luz del 25 oct. (20_000 + 15_000 − 5_000) / 30 = 1_000
 	expect(first.needsCents).toBe(20_000);
 	expect(first.pendingCents).toBe(5_000);
-	expect(first.dueSoon[0].dueDate).toBe("2026-11-25");
 	expect(first.dailyCents).toBe(1_000);
 
 	await ana.mutation(api.commitments.markPaid, { space: "personal", id });

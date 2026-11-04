@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 import {
 	dayInMonth,
 	formatDayHeading,
+	formatDaysLeft,
 	formatPastDay,
+	formatRecentDay,
 	getCycleRange,
 	getFirstCycleRange,
 	getLimaDate,
@@ -139,6 +141,31 @@ describe("getFirstCycleRange", () => {
 			startDate: "2026-10-28",
 			endDate: "2026-10-31",
 		});
+	});
+});
+
+describe("formatDaysLeft", () => {
+	test("the last day is singular, the rest are plural", () => {
+		expect(formatDaysLeft(16)).toBe("quedan 16 días");
+		expect(formatDaysLeft(1)).toBe("queda 1 día");
+		expect(formatDaysLeft(0)).toBe("quedan 0 días");
+	});
+});
+
+describe("formatRecentDay", () => {
+	test("today and yesterday are named, the rest of the week by weekday, older by date", () => {
+		expect(formatRecentDay("2026-10-30", "2026-10-30")).toBe("hoy");
+		expect(formatRecentDay("2026-10-29", "2026-10-30")).toBe("ayer");
+		expect(formatRecentDay("2026-10-26", "2026-10-30")).toBe("lun");
+		expect(formatRecentDay("2026-10-23", "2026-10-30")).toBe("23 oct");
+	});
+
+	test("a future date reads as today", () => {
+		expect(formatRecentDay("2026-10-31", "2026-10-30")).toBe("hoy");
+	});
+
+	test("a date from another year carries the year", () => {
+		expect(formatRecentDay("2026-12-20", "2027-01-05")).toBe("20 dic 2026");
 	});
 });
 

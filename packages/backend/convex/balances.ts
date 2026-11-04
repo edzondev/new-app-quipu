@@ -4,7 +4,7 @@ import { query } from "./_generated/server";
 import { getDayBudget } from "./model/budget";
 import { requireOpenCycle } from "./model/cycles";
 import { requirePlan } from "./model/spaces";
-import { spaceKind } from "./schema";
+import { amounts, spaceKind } from "./schema";
 
 const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
 
@@ -32,22 +32,17 @@ export const getBalances = query({
 export const getHome = query({
 	args: { space: spaceKind, today: v.string() },
 	returns: v.object({
+		startDate: v.string(),
+		endDate: v.string(),
 		needsCents: v.number(),
 		wantsCents: v.number(),
 		savingsCents: v.number(),
+		assigned: amounts,
 		dailyCents: v.number(),
 		daysLeft: v.number(),
 		pendingCents: v.number(),
 		planIncomeCents: v.number(),
 		empty: v.boolean(),
-		dueSoon: v.array(
-			v.object({
-				id: v.id("commitments"),
-				name: v.string(),
-				amountCents: v.number(),
-				dueDate: v.string(),
-			}),
-		),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
 		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
@@ -57,6 +52,8 @@ export const getHome = query({
 		const { needsCents, wantsCents } = cycle.carryIn;
 		return {
 			...budget,
+			startDate: cycle.startDate,
+			endDate: cycle.endDate,
 			planIncomeCents: plan.incomeCents,
 			// Envelopes at 0 can still mean money moved (spent, saved); empty is no income and no carry.
 			empty: !hasIncome && needsCents + wantsCents === 0,

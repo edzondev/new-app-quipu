@@ -1,28 +1,24 @@
+import { Popover } from "@base-ui/react/popover";
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
-import { addDays, formatDay } from "@quipu/backend/shared/dates";
-import { useQuery } from "@tanstack/react-query";
+import { formatDay, formatDaysLeft, formatRange } from "@quipu/backend/shared/dates";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { Button } from "#/components/ui/button";
-import {
-	Dialog,
-	DialogDescription,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-	DialogTrigger,
-} from "#/components/ui/dialog";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
-import { ENVELOPE_DOT } from "#/lib/envelope-dot";
+import { EYEBROW } from "#/lib/typography";
+import type { CommitmentItem } from "#/modules/commitments/commitment-view";
+import type { Movement } from "#/modules/register/movement-draft";
 import { useRegister } from "#/modules/register/register-dialog";
+import { EnvelopeCards } from "./envelope-cards";
+import { RecentMovements } from "./recent-movements";
+import { UpcomingCommitments } from "./upcoming-commitments";
 
-type Home = FunctionReturnType<typeof api.balances.getHome>;
+type HomeData = FunctionReturnType<typeof api.balances.getHome>;
 type Space = "personal" | "household";
 
 export function HomePage() {
@@ -33,24 +29,51 @@ export function HomePage() {
 
 function Home({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
+	const queryClient = useQueryClient();
 	const ensureOpen = useEnsureOpenCycle(space, today);
+	const args: { space: Space; today: string } | "skip" = ensureOpen.isSuccess
+		? { space, today }
+		: "skip";
 
-	const home = useQuery(
-		convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space, today } : "skip"),
-	);
+	const home = useQuery(convexQuery(api.balances.getHome, args));
+	const commitments = useQuery(convexQuery(api.commitments.list, args));
+	const movements = useQuery(convexQuery(api.transactions.list, args));
+	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 
-	if (ensureOpen.isError) {
+	if (
+		ensureOpen.isError ||
+		home.isError ||
+		commitments.isError ||
+		movements.isError ||
+		profile.isError
+	) {
 		return (
-			<p role="alert" className="pt-6 text-sm text-warning-foreground">
-				No pudimos abrir tu ciclo. Recarga la página.
-			</p>
+			<div role="alert" className="pt-6">
+				<p className="text-sm text-warning-foreground">No pudimos cargar tu inicio.</p>
+				<Button
+					variant="outline"
+					className="mt-3"
+					onClick={() => {
+						void queryClient.invalidateQueries();
+					}}
+				>
+					Reintentar
+				</Button>
+			</div>
 		);
 	}
 	if (!home.data) return <HomeSkeleton />;
-	return home.data.empty ? (
-		<EmptyCycle planIncomeCents={home.data.planIncomeCents} />
-	) : (
-		<Overview home={home.data} space={space} today={today} />
+	if (home.data.empty) return <EmptyCycle planIncomeCents={home.data.planIncomeCents} />;
+	if (!commitments.data || !movements.data || !profile.data) return <HomeSkeleton />;
+	return (
+		<Overview
+			home={home.data}
+			name={profile.data.name}
+			items={commitments.data.items}
+			rows={movements.data.rows}
+			space={space}
+			today={today}
+		/>
 	);
 }
 
@@ -69,129 +92,109 @@ function HomeSkeleton() {
 	);
 }
 
-function dueLabel(dueDate: string, today: string) {
-	if (dueDate === today) return "Vence hoy";
-	if (dueDate === addDays(today, 1)) return "Vence mañana";
-	return `Vence ${formatDay(dueDate)}`;
-}
-
-function Overview({ home, space, today }: { home: Home; space: Space; today: string }) {
-	const envelopes = [
-		{ label: "Necesidades", cents: home.needsCents, dot: ENVELOPE_DOT.needs, spendable: true },
-		{ label: "Gustos", cents: home.wantsCents, dot: ENVELOPE_DOT.wants, spendable: true },
-		{ label: "Ahorro", cents: home.savingsCents, dot: ENVELOPE_DOT.savings, spendable: false },
-	];
+function Overview({
+	home,
+	name,
+	items,
+	rows,
+	space,
+	today,
+}: {
+	home: HomeData;
+	name: string;
+	items: CommitmentItem[];
+	rows: Movement[];
+	space: Space;
+	today: string;
+}) {
+	const [firstName = name] = name.trim().split(/\s+/);
 	const [whole, decimals] = formatCents(home.dailyCents).split(".");
 
 	return (
 		<>
-			<section className="mt-6">
-				<p className="text-[13px] font-semibold text-muted-foreground">
-					{space === "household" ? "Pueden gastar hoy juntos" : "Puedes gastar hoy"}
+			<header>
+				<h1 className="font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
+					{space === "household" ? "Nuestro espacio" : firstName ? `Hola, ${firstName}` : "Hola"}
+				</h1>
+				<p className="mt-1.5 text-sm leading-normal text-muted-foreground">
+					Ciclo {formatRange(home.startDate, home.endDate)} · {formatDaysLeft(home.daysLeft)}
 				</p>
-				<div className="mt-2 flex items-start justify-between gap-4">
-					<p className="font-mono text-[72px] leading-none tracking-tight tabular-nums sm:text-[80px]">
-						<span className="align-super text-[0.38em] text-muted-foreground">S/</span>
-						{whole}
-						<span className="text-[0.45em] text-muted-foreground">.{decimals}</span>
-					</p>
-					<Formula home={home} />
-				</div>
-				<p className="mt-3 text-[13px] text-muted-foreground">
-					Sin comprometer tu ciclo. Quedan {home.daysLeft} {home.daysLeft === 1 ? "día" : "días"}.
-				</p>
-				{home.dailyCents === 0 ? (
-					<p
-						role="status"
-						className="mt-4 rounded-2xl bg-warning/16 px-4 py-3 text-sm text-warning-foreground"
-					>
-						Hoy no queda para gastar. Tu Ahorro está protegido.
-					</p>
-				) : null}
-			</section>
+			</header>
 
-			<section className="mt-10">
-				<h2 className="text-[13px] font-semibold">Sobres</h2>
-				<ul className="mt-2">
-					{envelopes.map((envelope) => (
-						<li
-							key={envelope.label}
-							className="flex items-center justify-between gap-3 border-b border-border/80 py-3.5 last:border-0"
+			<div className="mt-9 grid gap-14 lg:grid-cols-[1.1fr_1fr]">
+				<section className="min-w-0">
+					<div className="flex items-center gap-2">
+						<p className={EYEBROW}>
+							{space === "household" ? "Pueden gastar hoy juntos" : "Puedes gastar hoy"}
+						</p>
+						<Formula home={home} />
+					</div>
+					<p className="mt-2.5 flex items-start gap-1 font-mono text-[clamp(64px,13vw,112px)] leading-none tracking-[-0.03em]">
+						<span className="mt-2.5 text-2xl tracking-normal text-muted-foreground">S/</span>
+						<span>{whole}</span>
+						<span className="mt-2 text-[0.41em] text-muted-foreground">.{decimals}</span>
+					</p>
+					{home.dailyCents === 0 ? (
+						<p
+							role="status"
+							className="mt-4 rounded-2xl bg-warning/16 px-4 py-3 text-sm text-warning-foreground"
 						>
-							<span className="flex items-center gap-2.5">
-								<span aria-hidden className={cn("size-2.5 rounded-full", envelope.dot)} />
-								<span className="text-[15px] font-semibold">{envelope.label}</span>
-								{envelope.spendable && envelope.cents === 0 ? (
-									<span className="text-xs font-semibold text-warning-foreground">Agotado</span>
-								) : null}
-							</span>
-							<span className="font-mono text-[15px] font-semibold tabular-nums">
-								S/ {formatCents(envelope.cents)}
-							</span>
-						</li>
-					))}
-				</ul>
-			</section>
-
-			{home.dueSoon.length > 0 ? (
-				<section className="mt-10">
-					<h2 className="text-[13px] font-semibold">Por pagar</h2>
-					<ul className="mt-2">
-						{home.dueSoon.map((item) => (
-							<li
-								key={item.id}
-								className="flex items-center justify-between gap-4 border-b border-border/80 py-3.5 last:border-0"
-							>
-								<div className="min-w-0">
-									<p className="truncate text-[15px] font-semibold">{item.name}</p>
-									<p className="text-xs text-muted-foreground">{dueLabel(item.dueDate, today)}</p>
-								</div>
-								<span className="shrink-0 font-mono text-[15px] font-semibold tabular-nums">
-									S/ {formatCents(item.amountCents)}
-								</span>
-							</li>
-						))}
-					</ul>
+							Hoy no queda para gastar. Tu Ahorro está protegido.
+						</p>
+					) : null}
 				</section>
-			) : null}
+
+				<EnvelopeCards home={home} />
+			</div>
+
+			<div className="mt-[52px] grid gap-14 border-t border-border/80 pt-7 lg:grid-cols-2">
+				<UpcomingCommitments items={items} today={today} space={space} />
+				<RecentMovements rows={rows} today={today} />
+			</div>
 		</>
 	);
 }
 
-function Formula({ home }: { home: Home }) {
+function Formula({ home }: { home: HomeData }) {
+	const freeCents = Math.max(0, home.needsCents + home.wantsCents - home.pendingCents);
+
 	return (
-		<Dialog>
-			<DialogTrigger
+		<Popover.Root>
+			<Popover.Trigger
 				aria-label="Cómo se calcula"
-				className="mt-1 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+				className="relative inline-flex size-[22px] flex-none cursor-pointer items-center justify-center rounded-full border-[1.5px] border-input text-xs leading-none font-bold text-muted-foreground outline-none after:absolute after:-inset-[11px] focus-visible:ring-2 focus-visible:ring-ring data-popup-open:border-transparent data-popup-open:bg-foreground data-popup-open:text-background"
 			>
 				i
-			</DialogTrigger>
-			<DialogPopup>
-				<DialogHeader>
-					<DialogTitle>Cómo se calcula</DialogTitle>
-					<DialogDescription>Ya descontamos tus compromisos y tu ahorro.</DialogDescription>
-				</DialogHeader>
-				<DialogPanel>
-					<dl className="space-y-2 text-sm tabular-nums">
-						<div className="flex justify-between gap-4">
-							<dt className="text-muted-foreground">Libre en Necesidades y Gustos</dt>
-							<dd>S/ {formatCents(home.needsCents + home.wantsCents)}</dd>
-						</div>
-						{home.pendingCents > 0 ? (
-							<div className="flex justify-between gap-4">
-								<dt className="text-muted-foreground">Compromisos por pagar</dt>
-								<dd>−S/ {formatCents(home.pendingCents)}</dd>
+			</Popover.Trigger>
+			<Popover.Portal>
+				<Popover.Positioner side="bottom" sideOffset={12} className="z-50">
+					<Popover.Popup className="w-[340px] max-w-[calc(100vw-48px)] rounded-2xl bg-background px-[18px] py-4 text-foreground shadow-lg ring-1 ring-border outline-none">
+						<Popover.Arrow className="size-3 rotate-45 border-t border-l border-border bg-background data-[side=bottom]:-top-1.5" />
+						<Popover.Title className="text-[15px] font-semibold">Cómo se calcula</Popover.Title>
+						<p className="mt-1.5 text-[13px] leading-[1.45]">
+							Lo libre de Necesidades y Gustos, menos lo que falta pagar, entre los días que quedan.
+						</p>
+						<dl className="mt-2.5 text-[13px] leading-[1.9] text-muted-foreground">
+							<div className="flex justify-between gap-3">
+								<dt>Libre en Necesidades + Gustos</dt>
+								<dd className="font-mono text-foreground">S/ {formatCents(freeCents)}</dd>
 							</div>
-						) : null}
-						<div className="flex justify-between gap-4">
-							<dt className="text-muted-foreground">Días que quedan (hoy cuenta)</dt>
-							<dd>÷ {home.daysLeft}</dd>
-						</div>
-					</dl>
-				</DialogPanel>
-			</DialogPopup>
-		</Dialog>
+							<div className="flex justify-between gap-3">
+								<dt>÷ días hasta el cierre ({formatDay(home.endDate)})</dt>
+								<dd className="font-mono text-foreground">{home.daysLeft}</dd>
+							</div>
+							<div className="mt-1 flex justify-between gap-3 border-t border-border pt-1 font-semibold text-foreground">
+								<dt>= puedes gastar hoy</dt>
+								<dd className="font-mono">S/ {formatCents(home.dailyCents)}</dd>
+							</div>
+						</dl>
+						<p className="mt-2 text-xs text-muted-foreground">
+							Lo libre ya no incluye tus compromisos por pagar ni tu ahorro.
+						</p>
+					</Popover.Popup>
+				</Popover.Positioner>
+			</Popover.Portal>
+		</Popover.Root>
 	);
 }
 
