@@ -528,3 +528,25 @@ test("a monthly last paid in the previous cycle is listed as later, not as paid"
 	]);
 	expect(list.paidCents).toBe(0);
 });
+
+test("paidCents only counts payments made in the current cycle", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await addLuz(ana);
+	await ana.mutation(api.commitments.markPaid, {
+		space: "personal",
+		id: await firstCommitmentId(t),
+	});
+
+	const october = await ana.query(api.commitments.list, { space: "personal", today: "2026-10-20" });
+	expect(october.paidCents).toBe(5_000);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const november = await ana.query(api.commitments.list, {
+		space: "personal",
+		today: "2026-11-01",
+	});
+	expect(november.paidCents).toBe(0);
+});

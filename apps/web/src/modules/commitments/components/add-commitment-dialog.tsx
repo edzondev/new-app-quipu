@@ -165,18 +165,22 @@ function AddCommitmentForm({
 	);
 }
 
+/** `space` is the one the dialog was opened in; null keeps it closed. */
 export function AddCommitmentDialog({
-	open,
-	onOpenChange,
 	space,
+	onClose,
 }: {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	space: "personal" | "household";
+	space: "personal" | "household" | null;
+	onClose: () => void;
 }) {
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			{open ? <AddCommitmentForm space={space} onDone={() => onOpenChange(false)} /> : null}
+		<Dialog
+			open={space !== null}
+			onOpenChange={(open) => {
+				if (!open) onClose();
+			}}
+		>
+			{space ? <AddCommitmentForm space={space} onDone={onClose} /> : null}
 		</Dialog>
 	);
 }

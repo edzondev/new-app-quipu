@@ -52,7 +52,7 @@ function Group({
 function Commitments({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	const queryClient = useQueryClient();
-	const [adding, setAdding] = useState(false);
+	const [addingIn, setAddingIn] = useState<typeof space | null>(null);
 	const ensureOpen = useEnsureOpenCycle(space, today);
 	const list = useQuery(
 		convexQuery(api.commitments.list, ensureOpen.isSuccess ? { space, today } : "skip"),
@@ -101,7 +101,7 @@ function Commitments({ today }: { today: string }) {
 						Lo que pagas cada mes. Quipu lo reserva antes de que gastes.
 					</p>
 				</div>
-				<Button variant="outline" className="shrink-0" onClick={() => setAdding(true)}>
+				<Button variant="outline" className="shrink-0" onClick={() => setAddingIn(space)}>
 					+ Añadir compromiso
 				</Button>
 			</header>
@@ -130,7 +130,7 @@ function Commitments({ today }: { today: string }) {
 				</div>
 			)}
 
-			<AddCommitmentDialog open={adding} onOpenChange={setAdding} space={space} />
+			<AddCommitmentDialog space={addingIn} onClose={() => setAddingIn(null)} />
 		</>
 	);
 }
