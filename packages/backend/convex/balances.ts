@@ -1,12 +1,11 @@
-import { ConvexError, v } from "convex/values";
-import { isIsoDate } from "../shared/dates";
+import { v } from "convex/values";
+import { isoDateSchema } from "../shared/dates";
 import { query } from "./_generated/server";
 import { getDayBudget } from "./model/budget";
 import { requireOpenCycle } from "./model/cycles";
+import { parseInput } from "./model/input";
 import { requirePlan } from "./model/spaces";
 import { amounts, spaceKind } from "./schema";
-
-const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
 
 export const getBalances = query({
 	args: { space: spaceKind },
@@ -45,7 +44,7 @@ export const getHome = query({
 		empty: v.boolean(),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
-		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
+		parseInput(isoDateSchema, today);
 		const { space, cycle } = await requireOpenCycle(ctx, kind, today);
 		const plan = await requirePlan(ctx, space);
 		const { hasIncome, ...budget } = await getDayBudget(ctx, space._id, cycle, today);

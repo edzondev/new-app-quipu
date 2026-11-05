@@ -564,3 +564,48 @@ test("updateIncome S/ 100 → S/ 200 then deleteIncome restores envelopes from b
 		savingsCents: before.savingsCents,
 	});
 });
+
+test("one cent more than Ahorro or than the fund fails and changes nothing", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+
+	await expect(
+		ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 1 }),
+	).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+	await expect(
+		ana.as.mutation(api.transactions.withdrawSaving, {
+			space: "personal",
+			amountCents: 10_001,
+			reason: "other",
+		}),
+	).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+
+	expect(await readFundCents(t)).toBe(10_000);
+});
+
+test("a note counts its length after trimming: 40 characters save, 41 fail", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const note = "n".repeat(40);
+
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 5_000,
+		envelope: "needs",
+		note: `  ${note}  `,
+	});
+	await expect(
+		ana.as.mutation(api.transactions.addExpense, {
+			space: "personal",
+			amountCents: 5_000,
+			envelope: "needs",
+			note: `${note}n`,
+		}),
+	).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-20",
+	});
+	expect(rows.filter((row) => row.kind === "expense").map((row) => row.note)).toEqual([note]);
+});

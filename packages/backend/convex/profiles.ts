@@ -1,10 +1,12 @@
 import { ConvexError, v } from "convex/values";
+import * as z from "zod/mini";
 import { applyIncome, ZERO_AMOUNTS } from "../shared/budget";
 import { getLimaDate } from "../shared/dates";
 import { isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { createFirstCycle } from "./model/cycles";
+import { BAD_INPUT, parseInput } from "./model/input";
 import { getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
 
@@ -55,14 +57,8 @@ export const completeOnboarding = mutation({
 		const profile = await getProfile(ctx, user._id);
 		if (!profile) throw new ConvexError("No encontramos tu perfil.");
 
-		if (
-			!isValidPlan(planValue) ||
-			!Number.isSafeInteger(todayCents) ||
-			todayCents < 0 ||
-			!isValidSplit(splitValue)
-		) {
-			throw new ConvexError("Revisa los datos e inténtalo otra vez.");
-		}
+		parseInput(z.int().check(z.nonnegative()), todayCents);
+		if (!isValidPlan(planValue) || !isValidSplit(splitValue)) throw new ConvexError(BAD_INPUT);
 
 		// First onboarding wins. Later changes go through Ajustes, so a second call
 		// must not rewrite the plan while leaving the first cycle untouched.

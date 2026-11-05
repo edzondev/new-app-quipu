@@ -1,3 +1,4 @@
+import * as z from "zod/mini";
 import type { Cadence, CycleStartDay } from "./plan";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -9,9 +10,7 @@ export function getLimaDate(now = new Date()): string {
 	return limaDateFormat.format(now);
 }
 
-export function isIsoDate(value: string): boolean {
-	return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
-}
+export const isoDateSchema = z.iso.date();
 
 function toUtc(date: string): number {
 	return Date.parse(`${date}T00:00:00Z`);

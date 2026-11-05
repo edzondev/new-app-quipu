@@ -284,6 +284,42 @@ test("editing a goal without a month removes its month; with a month sets it", a
 	expect(withMonth.targetMonth).toBe("2027-05");
 });
 
+test("a goal month that is not 01-12 fails on add and update and keeps the old month", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.goals.add, {
+		space: "personal",
+		name: "Viaje a Cusco",
+		targetCents: 500_000,
+		targetMonth: "2027-03",
+	});
+	const [goal] = await ana.query(api.goals.list, { space: "personal" });
+
+	for (const targetMonth of ["2027-13", "2027-00"]) {
+		await expect(
+			ana.mutation(api.goals.add, {
+				space: "personal",
+				name: "Laptop nueva",
+				targetCents: 350_000,
+				targetMonth,
+			}),
+		).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+		await expect(
+			ana.mutation(api.goals.update, {
+				space: "personal",
+				id: goal.id,
+				name: "Viaje a Cusco",
+				targetCents: 500_000,
+				targetMonth,
+			}),
+		).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+	}
+
+	const goals = await ana.query(api.goals.list, { space: "personal" });
+	expect(goals).toHaveLength(1);
+	expect(goals[0].targetMonth).toBe("2027-03");
+});
+
 async function suggestedFor(plan: {
 	cadence?: "monthly" | "biweekly" | "weekly";
 	cycleStartDay?: number;
@@ -341,4 +377,49 @@ test("fund with a date that is not a date fails", async () => {
 	await expect(ana.query(api.goals.fund, { space: "personal", today: "hoy" })).rejects.toThrow(
 		"Revisa los datos e inténtalo otra vez.",
 	);
+});
+
+test("a day that does not exist on the calendar fails as today and as a commitment due date", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+
+	for (const date of ["2026-02-30", "2026-02-29", "2026-04-31", "2026-11-31"]) {
+		await expect(ana.query(api.goals.fund, { space: "personal", today: date })).rejects.toThrow(
+			"Revisa los datos e inténtalo otra vez.",
+		);
+		await expect(
+			ana.mutation(api.commitments.add, {
+				space: "personal",
+				name: "SOAT",
+				amountCents: 6_000,
+				envelope: "needs",
+				schedule: { frequency: "once", dueDate: date },
+			}),
+		).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+	}
+
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "SOAT",
+		amountCents: 6_000,
+		envelope: "needs",
+		schedule: { frequency: "once", dueDate: "2028-02-29" },
+	});
+});
+
+test("a goal name counts its length after trimming: 40 characters save, 41 or blank fail", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const name = "a".repeat(40);
+	const goal = { space: "personal" as const, targetCents: 100_000 };
+
+	await ana.mutation(api.goals.add, { ...goal, name: `  ${name}  ` });
+	for (const bad of [`${name}a`, "   ", ""]) {
+		await expect(ana.mutation(api.goals.add, { ...goal, name: bad })).rejects.toThrow(
+			"Revisa los datos e inténtalo otra vez.",
+		);
+	}
+
+	const goals = await ana.query(api.goals.list, { space: "personal" });
+	expect(goals.map((item) => item.name)).toEqual([name]);
 });

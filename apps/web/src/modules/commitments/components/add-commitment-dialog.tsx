@@ -1,8 +1,8 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { ENVELOPE_LABELS, toCents } from "@quipu/backend/shared/budget";
-import { isIsoDate } from "@quipu/backend/shared/dates";
-import { isValidMonthDay, MAX_MONTH_DAY } from "@quipu/backend/shared/plan";
+import { ENVELOPE_LABELS, NAME_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
+import { isoDateSchema } from "@quipu/backend/shared/dates";
+import { MAX_MONTH_DAY, monthDaySchema } from "@quipu/backend/shared/plan";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "cn";
 import { useState } from "react";
@@ -20,11 +20,10 @@ import {
 import { Input } from "#/components/ui/input";
 import { readError } from "#/lib/read-error";
 import { AmountField } from "./amount-field";
+import { FieldError } from "./field-error";
 
 type Envelope = "needs" | "wants";
 type Frequency = "monthly" | "once";
-
-const NAME_MAX = 40;
 
 const ENVELOPES: { value: Envelope; label: string }[] = [
 	{ value: "needs", label: ENVELOPE_LABELS.needs },
@@ -35,14 +34,6 @@ const FREQUENCIES: { value: Frequency; label: string }[] = [
 	{ value: "monthly", label: "Cada mes" },
 	{ value: "once", label: "Una vez" },
 ];
-
-function FieldError({ children }: { children?: string }) {
-	return children ? (
-		<p role="alert" className="mt-1.5 text-xs text-warning-foreground">
-			{children}
-		</p>
-	) : null;
-}
 
 function AddCommitmentForm({
 	space,
@@ -67,10 +58,10 @@ function AddCommitmentForm({
 		amount: amountCents > 0 ? undefined : "Escribe el monto de cada pago.",
 		when:
 			frequency === "monthly"
-				? isValidMonthDay(dueDay)
+				? monthDaySchema.safeParse(dueDay).success
 					? undefined
 					: "Elige la fecha de vencimiento."
-				: isIsoDate(date)
+				: isoDateSchema.safeParse(date).success
 					? undefined
 					: "Elige la fecha de vencimiento.",
 	};
@@ -106,7 +97,7 @@ function AddCommitmentForm({
 						aria-label="Nombre"
 						aria-invalid={shown.name ? true : undefined}
 						placeholder="ej. Luz del Sur"
-						maxLength={NAME_MAX}
+						maxLength={NAME_MAX_LENGTH}
 						value={name}
 						onChange={(event) => setName(event.target.value)}
 						className={cn(shown.name && "border-warning")}

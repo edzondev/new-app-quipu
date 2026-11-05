@@ -1,4 +1,5 @@
 import type { Infer } from "convex/values";
+import * as z from "zod/mini";
 import type { amounts, envelope } from "../convex/schema";
 import type { Split } from "./plan";
 
@@ -24,6 +25,18 @@ export const ENVELOPE_LABELS: Record<Envelope, string> = {
 };
 
 export const NOTE_MAX_LENGTH = 40;
+export const NAME_MAX_LENGTH = 40;
+
+export const centsSchema = z.int().check(z.positive());
+export const centsAtMost = (max: number) => centsSchema.check(z.maximum(max));
+export const nameSchema = z.string().check(z.trim(), z.minLength(1), z.maxLength(NAME_MAX_LENGTH));
+/** An absent or blank note is stored as no note. */
+export const noteSchema = z.optional(
+	z.pipe(
+		z.string().check(z.trim(), z.maxLength(NOTE_MAX_LENGTH)),
+		z.transform((note) => note || undefined),
+	),
+);
 
 const moneyFormat = new Intl.NumberFormat("en-US", {
 	minimumFractionDigits: 2,
@@ -38,10 +51,6 @@ export function toCents(raw: string): number {
 		: raw.replace(/,/g, "");
 	const value = Number(normalized);
 	return Number.isFinite(value) && value > 0 ? Math.round(value * 100) : 0;
-}
-
-export function isValidCents(cents: number): boolean {
-	return Number.isSafeInteger(cents) && cents > 0;
 }
 
 export function formatCents(cents: number): string {
