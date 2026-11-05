@@ -126,6 +126,7 @@ test("saving S/ 50 and setting the goal to S/ 4,200 shows the fund and its goal"
 	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
 		fundCents: 5_000,
 		fundGoalCents: 420_000,
+		isOwner: true,
 	});
 });
 
@@ -136,7 +137,34 @@ test("without a fund goal, fund reads fundGoalCents as null", async () => {
 	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
 		fundCents: 0,
 		fundGoalCents: null,
+		isOwner: true,
 	});
+});
+
+test("removing the fund goal keeps the money in the fund", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.transactions.addSaving, { space: "personal", amountCents: 5_000 });
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 420_000 });
+
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: null });
+
+	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
+		fundCents: 5_000,
+		fundGoalCents: null,
+		isOwner: true,
+	});
+});
+
+test("after removing the fund goal, a new one can be set", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 420_000 });
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: null });
+	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 600_000 });
+
+	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal" });
+	expect(fundGoalCents).toBe(600_000);
 });
 
 test("setting the fund goal again replaces it", async () => {
@@ -182,4 +210,60 @@ test("in a household only who created it sets the fund goal; both read it", asyn
 		const { fundGoalCents } = await member.query(api.goals.fund, { space: "household" });
 		expect(fundGoalCents).toBe(420_000);
 	}
+});
+
+test("in a household only who created it sees isOwner and can remove the fund goal", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.household.createHousehold, { name: "Casa" });
+	const { code } = await ana.mutation(api.household.createInvite, {});
+	const luis = await signIn(t, "luis@correo.com", "Luis");
+	await luis.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.mutation(api.household.joinHousehold, { code });
+	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 });
+
+	expect((await ana.query(api.goals.fund, { space: "household" })).isOwner).toBe(true);
+	expect((await luis.query(api.goals.fund, { space: "household" })).isOwner).toBe(false);
+
+	await expect(
+		luis.mutation(api.goals.setFundGoal, { space: "household", targetCents: null }),
+	).rejects.toThrow("Solo quien creó el hogar define la meta del fondo.");
+	expect((await luis.query(api.goals.fund, { space: "household" })).fundGoalCents).toBe(420_000);
+
+	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: null });
+	for (const member of [ana, luis]) {
+		expect((await member.query(api.goals.fund, { space: "household" })).fundGoalCents).toBeNull();
+	}
+});
+
+test("editing a goal without a month removes its month; with a month sets it", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.goals.add, {
+		space: "personal",
+		name: "Viaje a Cusco",
+		targetCents: 500_000,
+		targetMonth: "2027-03",
+	});
+	const [goal] = await ana.query(api.goals.list, { space: "personal" });
+	expect(goal.targetMonth).toBe("2027-03");
+
+	await ana.mutation(api.goals.update, {
+		space: "personal",
+		id: goal.id,
+		name: "Viaje a Cusco",
+		targetCents: 600_000,
+	});
+	const [withoutMonth] = await ana.query(api.goals.list, { space: "personal" });
+	expect(withoutMonth).toMatchObject({ targetCents: 600_000, targetMonth: null });
+
+	await ana.mutation(api.goals.update, {
+		space: "personal",
+		id: goal.id,
+		name: "Viaje a Cusco",
+		targetCents: 600_000,
+		targetMonth: "2027-05",
+	});
+	const [withMonth] = await ana.query(api.goals.list, { space: "personal" });
+	expect(withMonth.targetMonth).toBe("2027-05");
 });
