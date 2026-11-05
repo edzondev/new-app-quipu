@@ -7,14 +7,15 @@ import {
 	type EnvelopeAmounts,
 	noteSchema,
 	subtractAmounts,
+	ZERO_AMOUNTS,
 } from "../shared/budget";
-import { isoDateSchema } from "../shared/dates";
+import { addDays, isEarlyIncomeWindow, isoDateSchema } from "../shared/dates";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { requireOpenCycle } from "./model/cycles";
 import { parseInput } from "./model/input";
-import { movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
+import { extraType, movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
 
 type SpaceKind = Doc<"spaces">["kind"];
 type TxKind = Doc<"transactions">["kind"];
@@ -131,17 +132,25 @@ export const deleteExpense = mutation({
 	},
 });
 
+/** Without `extra` it is income "Para este ciclo"; in the last 3 days of the cycle it is the next cycle's. */
 export const addIncome = mutation({
 	args: {
 		space: spaceKind,
 		amountCents: v.number(),
+		extra: v.optional(v.object({ type: extraType, toSavings: v.boolean() })),
 		note: v.optional(v.string()),
 	},
 	returns: v.null(),
-	handler: async (ctx, { space: kind, amountCents, note }) => {
+	handler: async (ctx, { space: kind, amountCents, extra, note }) => {
 		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
 		parseInput(centsSchema, amountCents);
-		const { envelopes, allocation } = applyIncome(cycle.envelopes, amountCents, cycle.split);
+		const forNextCycle = !extra && isEarlyIncomeWindow(today, cycle.endDate);
+		const { envelopes, allocation } = applyIncome(
+			cycle.envelopes,
+			amountCents,
+			cycle.split,
+			extra?.toSavings,
+		);
 		await ctx.db.insert("transactions", {
 			kind: "income",
 			spaceId: space._id,
@@ -149,10 +158,13 @@ export const addIncome = mutation({
 			userId,
 			amountCents,
 			date: today,
+			extraType: extra?.type,
+			toSavings: extra?.toSavings,
+			forNextCycle: forNextCycle || undefined,
 			allocation,
 			note: parseInput(noteSchema, note),
 		});
-		await ctx.db.patch("cycles", cycle._id, { envelopes });
+		if (!forNextCycle) await ctx.db.patch("cycles", cycle._id, { envelopes });
 		return null;
 	},
 });
@@ -170,9 +182,10 @@ export const updateIncome = mutation({
 		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
 		parseInput(centsSchema, amountCents);
 		const { envelopes, allocation } = applyIncome(
-			subtractAmounts(cycle.envelopes, row.allocation),
+			subtractAmounts(cycle.envelopes, row.forNextCycle ? ZERO_AMOUNTS : row.allocation),
 			amountCents,
 			cycle.split,
+			row.toSavings,
 		);
 		if (envelopes.savingsCents < 0) throw new ConvexError(INCOME_ALREADY_SAVED);
 		await ctx.db.patch("transactions", id, {
@@ -180,7 +193,7 @@ export const updateIncome = mutation({
 			allocation,
 			note: parseInput(noteSchema, note),
 		});
-		await ctx.db.patch("cycles", cycle._id, { envelopes });
+		if (!row.forNextCycle) await ctx.db.patch("cycles", cycle._id, { envelopes });
 		return null;
 	},
 });
@@ -191,9 +204,11 @@ export const deleteIncome = mutation({
 	handler: async (ctx, { space: kind, id }) => {
 		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
 		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
-		await ctx.db.patch("cycles", cycle._id, {
-			envelopes: envelopesWithoutIncome(cycle.envelopes, row.allocation),
-		});
+		if (!row.forNextCycle) {
+			await ctx.db.patch("cycles", cycle._id, {
+				envelopes: envelopesWithoutIncome(cycle.envelopes, row.allocation),
+			});
+		}
 		await ctx.db.delete("transactions", id);
 		return null;
 	},
@@ -273,7 +288,10 @@ function listedEnvelope(row: Doc<"transactions">) {
 	return null;
 }
 
-/** Open cycle movements, newest first. `who` is the author name in household, else null. */
+/**
+ * Open cycle movements, newest first. `startsOn` is the next cycle's first day for an early income, else null.
+ * `who` is the author name in household, else null.
+ */
 export const list = query({
 	args: { space: spaceKind, today: v.string() },
 	returns: v.object({
@@ -287,6 +305,8 @@ export const list = query({
 				date: v.string(),
 				note: v.union(v.string(), v.null()),
 				envelope: v.union(v.literal("needs"), v.literal("wants"), v.literal("savings"), v.null()),
+				extra: v.boolean(),
+				startsOn: v.union(v.string(), v.null()),
 				mine: v.boolean(),
 				who: v.union(v.string(), v.null()),
 			}),
@@ -322,6 +342,8 @@ export const list = query({
 				date: row.date,
 				note: row.note ?? null,
 				envelope: listedEnvelope(row),
+				extra: row.kind === "income" && row.extraType !== undefined,
+				startsOn: row.kind === "income" && row.forNextCycle ? addDays(cycle.endDate, 1) : null,
 				mine: row.userId === userId,
 				who: space.kind === "household" ? (whoByUser.get(row.userId) ?? null) : null,
 			})),

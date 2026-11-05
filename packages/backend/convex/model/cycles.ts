@@ -1,5 +1,5 @@
 import { ConvexError } from "convex/values";
-import { ZERO_AMOUNTS } from "../../shared/budget";
+import { addAmounts, ZERO_AMOUNTS } from "../../shared/budget";
 import { addDays, getCycleRange, getFirstCycleRange, getLimaDate } from "../../shared/dates";
 import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -84,6 +84,20 @@ export async function getOrCreateNextCycle(
 	return next;
 }
 
+async function moveEarlyIncomes(ctx: MutationCtx, fromId: Id<"cycles">, toId: Id<"cycles">) {
+	const nextEarly = () =>
+		ctx.db
+			.query("transactions")
+			.withIndex("by_forNextCycle_cycleId", (q) => q.eq("forNextCycle", true).eq("cycleId", fromId))
+			.first();
+	let moved = ZERO_AMOUNTS;
+	for (let row = await nextEarly(); row?.kind === "income"; row = await nextEarly()) {
+		moved = addAmounts(moved, row.allocation);
+		await ctx.db.patch("transactions", row._id, { cycleId: toId, forNextCycle: undefined });
+	}
+	return moved;
+}
+
 /** Closes `cycle` and returns the next one. Idempotent if `closedAt` is already set. */
 export async function closeCycle(
 	ctx: MutationCtx,
@@ -123,11 +137,10 @@ export async function closeCycle(
 
 	await ctx.db.patch("cycles", next._id, {
 		carryIn,
-		envelopes: {
-			needsCents: carryIn.needsCents,
-			wantsCents: carryIn.wantsCents,
-			savingsCents: 0,
-		},
+		envelopes: addAmounts(
+			{ ...carryIn, savingsCents: 0 },
+			await moveEarlyIncomes(ctx, cycle._id, next._id),
+		),
 	});
 	await ctx.db.patch("cycles", cycle._id, { closedAt: Date.now() });
 	const closedNext = await ctx.db.get("cycles", next._id);

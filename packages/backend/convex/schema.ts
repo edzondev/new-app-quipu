@@ -120,6 +120,8 @@ export default defineSchema({
 				...movement,
 				kind: v.literal("income"),
 				extraType: v.optional(extraType),
+				toSavings: v.optional(v.boolean()),
+				forNextCycle: v.optional(v.boolean()),
 				allocation: amounts,
 			}),
 			v.object({
@@ -142,6 +144,7 @@ export default defineSchema({
 		),
 	)
 		.index("by_cycleId", ["cycleId"])
+		.index("by_forNextCycle_cycleId", ["forNextCycle", "cycleId"])
 		.index("by_toCycleId", ["toCycleId"])
 		.index("by_spaceId_kind", ["spaceId", "kind"])
 		.index("by_commitmentId", ["commitmentId"]),

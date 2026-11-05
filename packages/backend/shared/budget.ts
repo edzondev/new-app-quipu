@@ -90,8 +90,11 @@ export function applyIncome(
 	envelopes: EnvelopeAmounts,
 	amountCents: number,
 	split: Split,
+	toSavings = false,
 ): { envelopes: EnvelopeAmounts; allocation: EnvelopeAmounts } {
-	const allocation = splitIncome(amountCents, split);
+	const allocation = toSavings
+		? { ...ZERO_AMOUNTS, savingsCents: amountCents }
+		: splitIncome(amountCents, split);
 	return { envelopes: addAmounts(envelopes, allocation), allocation };
 }
 
