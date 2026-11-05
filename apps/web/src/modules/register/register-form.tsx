@@ -1,12 +1,21 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { ENVELOPE_LABELS, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
+import {
+	AMOUNT_KEYS,
+	ENVELOPE_LABELS,
+	formatCents,
+	getDailyCents,
+	NOTE_MAX_LENGTH,
+	toCents,
+} from "@quipu/backend/shared/budget";
+import { addDays, formatDay, isEarlyIncomeWindow } from "@quipu/backend/shared/dates";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import type { FunctionReturnType } from "convex/server";
+import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
 import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "#/components/ui/collapsible";
 import {
 	DialogDescription,
 	DialogFooter,
@@ -16,30 +25,47 @@ import {
 	DialogTitle,
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
+import { Label } from "#/components/ui/label";
+import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
+import { useLimaDate } from "#/hooks/use-lima-date";
 import type { Draft, Kind } from "./movement-draft";
 import { useMovementActions } from "./use-movement-actions";
 
-type GoalId = FunctionReturnType<typeof api.goals.list>[number]["id"];
+type Extra = NonNullable<FunctionArgs<typeof api.transactions.addIncome>["extra"]>;
 type Envelope = "needs" | "wants";
-type DeletableKind = Exclude<Kind, "saving">;
+type IncomeType = "cycle" | "extra";
+type Destination = "envelopes" | "savings";
 
 const KINDS: { value: Kind; label: string }[] = [
 	{ value: "expense", label: "Gasto" },
 	{ value: "income", label: "Ingreso" },
-	{ value: "saving", label: "Aporte a una meta" },
 ];
 
-const ENVELOPES: { value: Envelope; label: string }[] = [
-	{ value: "needs", label: ENVELOPE_LABELS.needs },
-	{ value: "wants", label: ENVELOPE_LABELS.wants },
+const INCOME_TYPES: { value: IncomeType; label: string }[] = [
+	{ value: "cycle", label: "Para este ciclo" },
+	{ value: "extra", label: "Extra" },
 ];
+
+const EXTRA_TYPES: { value: Extra["type"]; label: string }[] = [
+	{ value: "gratification", label: "Gratificación" },
+	{ value: "bonus", label: "Bono" },
+	{ value: "repayment", label: "Deuda que te devolvieron" },
+	{ value: "other", label: "Otro" },
+];
+
+const DESTINATIONS: { value: Destination; label: string }[] = [
+	{ value: "envelopes", label: "Sumar a mis sobres" },
+	{ value: "savings", label: "Directo a Ahorro" },
+];
+
+const ENVELOPES: Envelope[] = ["needs", "wants"];
 
 function DeleteButton({
 	kind,
 	disabled,
 	onDelete,
 }: {
-	kind: DeletableKind;
+	kind: Kind;
 	disabled: boolean;
 	onDelete: () => void;
 }) {
@@ -72,33 +98,64 @@ function DeleteButton({
 
 export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => void }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
-	const goals = useQuery(convexQuery(api.goals.list, { space })).data ?? [];
+	const today = useLimaDate();
+	const ensureOpen = useEnsureOpenCycle(space, today);
+	const homeArgs: { space: "personal" | "household"; today: string } | "skip" = ensureOpen.isSuccess
+		? { space, today }
+		: "skip";
+	const home = useQuery(convexQuery(api.balances.getHome, homeArgs)).data;
 	const { save, remove, pending, error } = useMovementActions(space, onDone);
 
 	const [kind, setKind] = useState(draft.kind);
 	const [amount, setAmount] = useState(draft.amount);
 	const [note, setNote] = useState(draft.note ?? "");
-	const [envelope, setEnvelope] = useState(draft.envelope ?? "needs");
-	const [pickedGoal, setPickedGoal] = useState<GoalId>();
+	const [envelope, setEnvelope] = useState<Envelope>(draft.envelope ?? "needs");
+	const [incomeType, setIncomeType] = useState<IncomeType>("cycle");
+	const [extraType, setExtraType] = useState<Extra["type"]>("other");
+	const [destination, setDestination] = useState<Destination>("envelopes");
 
-	const kinds = goals.length > 0 ? KINDS : KINDS.filter((item) => item.value !== "saving");
-	const selected = kinds.some((item) => item.value === kind) ? kind : "expense";
-	const goalId = goals.find((goal) => goal.id === pickedGoal)?.id ?? goals[0]?.id;
-	const amountCents = toCents(amount);
 	const editId = draft.id;
-	const editKind = draft.kind === "saving" ? null : draft.kind;
+	const amountCents = toCents(amount);
+	const originalCents = editId ? toCents(draft.amount) : 0;
 	const noteValue = note.trim() || undefined;
-	const canSave = amountCents > 0 && !pending && (selected !== "saving" || goalId !== undefined);
+	const isExpense = kind === "expense";
+
+	const envelopeOptions = ENVELOPES.map((value) => ({
+		value,
+		label: home
+			? `${ENVELOPE_LABELS[value]} · S/ ${formatCents(home[AMOUNT_KEYS[value]])}`
+			: ENVELOPE_LABELS[value],
+	}));
+	// Editing an expense gives its own amount back to the envelope it came from.
+	const room = home
+		? home[AMOUNT_KEYS[envelope]] + (envelope === draft.envelope ? originalCents : 0)
+		: 0;
+	const dailyAfter = home
+		? getDailyCents(
+				home.needsCents + home.wantsCents - home.pendingCents - (amountCents - originalCents),
+				home.daysLeft,
+			)
+		: 0;
+	const incomeNote =
+		incomeType === "extra"
+			? destination === "savings"
+				? "Tu número de hoy no cambia."
+				: null
+			: home && isEarlyIncomeWindow(today, home.endDate)
+				? `Para el ciclo que empieza el ${formatDay(addDays(home.endDate, 1))}. Tu número de hoy no cambia.`
+				: null;
 
 	return (
 		<DialogPopup>
 			<DialogHeader>
 				<DialogTitle>Registrar</DialogTitle>
-				<DialogDescription>Queda en el ciclo de hoy.</DialogDescription>
+				<DialogDescription>
+					En {space === "household" ? "Nuestro espacio" : "Personal"}
+				</DialogDescription>
 			</DialogHeader>
 			<DialogPanel className="flex flex-col gap-5">
 				{editId ? null : (
-					<ChoiceChips label="Tipo" options={kinds} value={selected} onChange={setKind} />
+					<ChoiceChips label="Tipo" options={KINDS} value={kind} onChange={setKind} />
 				)}
 
 				<div className="flex items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground">
@@ -115,36 +172,77 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 					/>
 				</div>
 
-				{selected === "expense" ? (
-					<ChoiceChips label="Sobre" options={ENVELOPES} value={envelope} onChange={setEnvelope} />
+				{isExpense ? (
+					<>
+						<div className="flex flex-col gap-2">
+							<p aria-hidden className="text-sm text-muted-foreground">
+								Sale de
+							</p>
+							<ChoiceChips
+								label="Sale de"
+								options={envelopeOptions}
+								value={envelope}
+								onChange={setEnvelope}
+							/>
+							{home && amountCents > room ? (
+								<p role="status" className="text-xs text-warning-foreground">
+									Supera lo que queda en {ENVELOPE_LABELS[envelope]} (S/{" "}
+									{formatCents(Math.max(0, room))})
+								</p>
+							) : null}
+						</div>
+						{home && amountCents > 0 ? (
+							<p className="text-sm text-muted-foreground">
+								Disponible hoy: S/ {formatCents(home.dailyCents)} → S/ {formatCents(dailyAfter)}
+							</p>
+						) : null}
+					</>
 				) : null}
 
-				{selected === "saving" ? (
-					<label className="flex flex-col gap-1.5 text-sm">
-						<span className="text-muted-foreground">Meta</span>
-						<select
-							value={goalId}
-							onChange={(event) =>
-								setPickedGoal(goals.find((goal) => goal.id === event.target.value)?.id)
-							}
-							className="h-9 rounded-lg border border-input bg-background px-3"
-						>
-							{goals.map((goal) => (
-								<option key={goal.id} value={goal.id}>
-									{goal.name}
-								</option>
-							))}
-						</select>
-					</label>
+				{!isExpense && !editId ? (
+					<>
+						<ChoiceChips
+							label="Tipo de ingreso"
+							options={INCOME_TYPES}
+							value={incomeType}
+							onChange={setIncomeType}
+						/>
+						{incomeType === "extra" ? (
+							<>
+								<ChoiceChips
+									label="Tipo de extra"
+									options={EXTRA_TYPES}
+									value={extraType}
+									onChange={setExtraType}
+								/>
+								<ChoiceChips
+									label="Destino del extra"
+									options={DESTINATIONS}
+									value={destination}
+									onChange={setDestination}
+								/>
+							</>
+						) : null}
+						{incomeNote ? <p className="text-sm text-muted-foreground">{incomeNote}</p> : null}
+					</>
 				) : null}
 
-				<Input
-					aria-label="Nota"
-					placeholder="Nota (opcional)"
-					maxLength={NOTE_MAX_LENGTH}
-					value={note}
-					onChange={(event) => setNote(event.target.value)}
-				/>
+				<Collapsible defaultOpen={Boolean(draft.note)}>
+					<CollapsibleTrigger className="min-h-11 text-sm font-semibold text-muted-foreground">
+						Más detalles
+					</CollapsibleTrigger>
+					<CollapsiblePanel>
+						<Label className="mt-2 flex flex-col gap-1.5 text-sm">
+							<span className="text-muted-foreground">Concepto · opcional</span>
+							<Input
+								placeholder={isExpense ? "Ej. almuerzo" : "Ej. pago de cliente"}
+								maxLength={NOTE_MAX_LENGTH}
+								value={note}
+								onChange={(event) => setNote(event.target.value)}
+							/>
+						</Label>
+					</CollapsiblePanel>
+				</Collapsible>
 
 				{error ? (
 					<p role="alert" className="text-xs text-warning-foreground">
@@ -153,36 +251,37 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 				) : null}
 			</DialogPanel>
 			<DialogFooter>
-				{editId && editKind ? (
+				{editId ? (
 					<DeleteButton
-						kind={editKind}
+						kind={draft.kind}
 						disabled={pending}
-						onDelete={() => remove(editKind, editId)}
+						onDelete={() => remove(draft.kind, editId)}
 					/>
 				) : null}
 				<Button
 					loading={pending}
-					disabled={!canSave}
-					onClick={() => {
-						if (selected === "saving") {
-							if (!goalId) return;
-							save({ kind: "saving", amountCents, note: noteValue, goalId });
-							return;
-						}
-						if (selected === "expense") {
-							save({
-								kind: "expense",
-								id: draft.id,
-								amountCents,
-								envelope,
-								note: noteValue,
-							});
-							return;
-						}
-						save({ kind: "income", id: draft.id, amountCents, note: noteValue });
-					}}
+					disabled={amountCents <= 0 || pending}
+					onClick={() =>
+						save(
+							isExpense
+								? { kind, id: editId, amountCents, envelope, note: noteValue }
+								: {
+										kind,
+										id: editId,
+										amountCents,
+										note: noteValue,
+										extra:
+											incomeType === "extra"
+												? {
+														type: extraType,
+														toSavings: destination === "savings",
+													}
+												: undefined,
+									},
+						)
+					}
 				>
-					Guardar
+					{editId ? "Guardar" : isExpense ? "Guardar gasto" : "Guardar ingreso"}
 				</Button>
 			</DialogFooter>
 		</DialogPopup>

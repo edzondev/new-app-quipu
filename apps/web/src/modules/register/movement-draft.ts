@@ -1,7 +1,7 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 
-export type Kind = "expense" | "income" | "saving";
+export type Kind = "expense" | "income";
 
 export type Movement = FunctionReturnType<typeof api.transactions.list>["rows"][number];
 
