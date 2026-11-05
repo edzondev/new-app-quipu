@@ -19,6 +19,7 @@ export type SaveValues =
 			amountCents: number;
 			note?: string;
 			extra?: FunctionArgs<typeof api.transactions.addIncome>["extra"];
+			forNextCycle?: boolean;
 	  };
 
 type Command = SaveValues | { kind: "delete"; entity: Kind; id: Movement["id"] };
@@ -51,7 +52,7 @@ export function useMovementActions(space: "personal" | "household", onDone: () =
 					const base = { space, amountCents: command.amountCents, note: command.note };
 					return command.id
 						? updateIncome({ ...base, id: command.id })
-						: addIncome({ ...base, extra: command.extra });
+						: addIncome({ ...base, extra: command.extra, forNextCycle: command.forNextCycle });
 				}
 			}
 		},

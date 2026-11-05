@@ -958,3 +958,67 @@ test("an early income still starts November in a cycle with more than 500 moveme
 		savingsCents: 20_000,
 	});
 });
+
+test("choosing the rest of October on 30 Oct puts the income in the current cycle", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 100_000,
+		forNextCycle: false,
+	});
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: before.needsCents + 50_000,
+		wantsCents: before.wantsCents + 30_000,
+		savingsCents: before.savingsCents + 20_000,
+	});
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+	expect(rows[0]).toMatchObject({ amountCents: 100_000, startsOn: null });
+});
+
+test("choosing November on 30 Oct waits for the new cycle, same as sending nothing", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 100_000,
+		forNextCycle: true,
+	});
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toEqual(before);
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+	expect(rows[0]).toMatchObject({ amountCents: 100_000, startsOn: "2026-11-01" });
+});
+
+test("Inicio reports the window and the early income with the day it starts", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const args = { space: "personal" as const, today: "2026-10-20" };
+	expect(await ana.as.query(api.balances.getHome, args)).toMatchObject({
+		earlyWindow: false,
+		earlyIncome: null,
+	});
+
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+
+	expect(
+		await ana.as.query(api.balances.getHome, { space: "personal", today: "2026-10-30" }),
+	).toMatchObject({
+		earlyWindow: true,
+		earlyIncome: { amountCents: 100_000, startsOn: "2026-11-01" },
+	});
+});

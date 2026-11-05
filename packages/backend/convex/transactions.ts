@@ -14,6 +14,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { requireOpenCycle } from "./model/cycles";
+import { requirePlan } from "./model/spaces";
 import { parseInput } from "./model/input";
 import { extraType, movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
 
@@ -132,19 +133,25 @@ export const deleteExpense = mutation({
 	},
 });
 
-/** Without `extra` it is income "Para este ciclo"; in the last 3 days of the cycle it is the next cycle's. */
+/**
+ * Without `extra` it is income "Para este ciclo". Inside the early window it goes to the next cycle
+ * unless `forNextCycle` is false.
+ */
 export const addIncome = mutation({
 	args: {
 		space: spaceKind,
 		amountCents: v.number(),
 		extra: v.optional(v.object({ type: extraType, toSavings: v.boolean() })),
+		forNextCycle: v.optional(v.boolean()),
 		note: v.optional(v.string()),
 	},
 	returns: v.null(),
-	handler: async (ctx, { space: kind, amountCents, extra, note }) => {
+	handler: async (ctx, { space: kind, amountCents, extra, forNextCycle: chosen, note }) => {
 		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
 		parseInput(centsSchema, amountCents);
-		const forNextCycle = !extra && isEarlyIncomeWindow(today, cycle.endDate);
+		const plan = await requirePlan(ctx, space);
+		const forNextCycle =
+			!extra && isEarlyIncomeWindow(plan.cadence, today, cycle.endDate) && chosen !== false;
 		const { envelopes, allocation } = applyIncome(
 			cycle.envelopes,
 			amountCents,

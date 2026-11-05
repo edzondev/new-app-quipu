@@ -3,6 +3,10 @@ import type { Cadence, CycleStartDay } from "./plan";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTHS = "ene feb mar abr may jun jul ago set oct nov dic".split(" ");
+const MONTH_NAMES =
+	"enero febrero marzo abril mayo junio julio agosto setiembre octubre noviembre diciembre".split(
+		" ",
+	);
 const WEEKDAYS = "dom lun mar mié jue vie sáb".split(" ");
 const limaDateFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" });
 
@@ -28,11 +32,11 @@ export function daysBetween(from: string, to: string): number {
 	return Math.round((toUtc(to) - toUtc(from)) / DAY_MS);
 }
 
-const EARLY_INCOME_DAYS = 3;
+const EARLY_INCOME_DAYS: Record<Cadence, number> = { monthly: 3, biweekly: 2, weekly: 1 };
 
-/** The last 3 days of a cycle, today included. A cycle income registered then is the next cycle's. */
-export function isEarlyIncomeWindow(today: string, endDate: string): boolean {
-	return daysBetween(today, endDate) < EARLY_INCOME_DAYS;
+/** The last days of a cycle (3 monthly, 2 biweekly, 1 weekly), today included. */
+export function isEarlyIncomeWindow(cadence: Cadence, today: string, endDate: string): boolean {
+	return daysBetween(today, endDate) < EARLY_INCOME_DAYS[cadence];
 }
 
 // month is 0-based and may overflow (-1, 12); Date.UTC rolls the year.
@@ -66,6 +70,10 @@ export function getCycleRange(cadence: Cadence, startDay: CycleStartDay, date: s
 /** First cycle after onboarding: from today to the day before the next payday. */
 export function getFirstCycleRange(cadence: Cadence, startDay: CycleStartDay, today: string) {
 	return { startDate: today, endDate: getCycleRange(cadence, startDay, today).endDate };
+}
+
+export function monthName(date: string): string {
+	return MONTH_NAMES[Number(date.split("-")[1]) - 1];
 }
 
 export function formatDay(date: string): string {

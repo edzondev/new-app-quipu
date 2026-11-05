@@ -1,5 +1,5 @@
 import { ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared/budget";
-import { formatDay } from "@quipu/backend/shared/dates";
+import { formatDay, monthName } from "@quipu/backend/shared/dates";
 import { cn } from "cn";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { canEdit, editDraft, type Movement } from "#/modules/register/movement-draft";
@@ -15,7 +15,7 @@ const KIND = {
 
 function incomeLabel(row: Movement, when?: string) {
 	if (row.extra) return "Ingreso · Extra";
-	if (row.startsOn) return `Ingreso · Para el ciclo que empieza el ${formatDay(row.startsOn)}`;
+	if (row.startsOn) return `Ingreso · Para ${monthName(row.startsOn)} · ${formatDay(row.date)}`;
 	return when ? "Ingreso" : "Ingreso · Para este ciclo";
 }
 

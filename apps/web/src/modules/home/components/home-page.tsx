@@ -121,6 +121,12 @@ function Overview({
 				</p>
 			</header>
 
+			{home.earlyIncome ? (
+				<p role="status" className="mt-4 rounded-2xl bg-muted px-4 py-3 text-sm">
+					Sueldo registrado: empieza el {formatDay(home.earlyIncome.startsOn)}
+				</p>
+			) : null}
+
 			<div className="mt-9 grid gap-14 lg:grid-cols-[1.1fr_1fr]">
 				<section className="min-w-0">
 					<div className="flex items-center gap-2">

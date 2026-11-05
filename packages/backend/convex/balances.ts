@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { isoDateSchema } from "../shared/dates";
+import { addDays, isEarlyIncomeWindow, isoDateSchema } from "../shared/dates";
 import { query } from "./_generated/server";
 import { getDayBudget } from "./model/budget";
 import { requireOpenCycle } from "./model/cycles";
@@ -42,18 +42,23 @@ export const getHome = query({
 		pendingCents: v.number(),
 		planIncomeCents: v.number(),
 		empty: v.boolean(),
+		earlyWindow: v.boolean(),
+		earlyIncome: v.union(v.object({ amountCents: v.number(), startsOn: v.string() }), v.null()),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
 		parseInput(isoDateSchema, today);
 		const { space, cycle } = await requireOpenCycle(ctx, kind, today);
 		const plan = await requirePlan(ctx, space);
-		const { hasIncome, ...budget } = await getDayBudget(ctx, space._id, cycle, today);
+		const { hasIncome, earlyCents, ...budget } = await getDayBudget(ctx, space._id, cycle, today);
 		const { needsCents, wantsCents } = cycle.carryIn;
 		return {
 			...budget,
 			startDate: cycle.startDate,
 			endDate: cycle.endDate,
 			planIncomeCents: plan.incomeCents,
+			earlyWindow: isEarlyIncomeWindow(plan.cadence, today, cycle.endDate),
+			earlyIncome:
+				earlyCents > 0 ? { amountCents: earlyCents, startsOn: addDays(cycle.endDate, 1) } : null,
 			// Envelopes at 0 can still mean money moved (spent, saved); empty is no income and no carry.
 			empty: !hasIncome && needsCents + wantsCents === 0,
 		};

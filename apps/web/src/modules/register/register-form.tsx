@@ -8,11 +8,10 @@ import {
 	NOTE_MAX_LENGTH,
 	toCents,
 } from "@quipu/backend/shared/budget";
-import { addDays, formatDay, isEarlyIncomeWindow } from "@quipu/backend/shared/dates";
-import { useForm, useSelector } from "@tanstack/react-form";
+import { addDays, formatDay, monthName } from "@quipu/backend/shared/dates";
+import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
 import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
@@ -34,41 +33,38 @@ import { positiveMoney } from "#/lib/money-schema";
 import type { Draft, Kind } from "./movement-draft";
 import { useMovementActions } from "./use-movement-actions";
 
-type Extra = NonNullable<FunctionArgs<typeof api.transactions.addIncome>["extra"]>;
-type Envelope = "needs" | "wants";
-type IncomeType = "cycle" | "extra";
-type Destination = "envelopes" | "savings";
+const registerSchema = z.object({
+	kind: z.enum(["expense", "income"]),
+	amount: positiveMoney("Escribe un monto."),
+	note: z.string(),
+	envelope: z.enum(["needs", "wants"]),
+	incomeType: z.enum(["cycle", "extra"]),
+	extraType: z.enum(["gratification", "bonus", "repayment", "other"]),
+	destination: z.enum(["envelopes", "savings"]),
+	cycleChoice: z.enum(["current", "next"]),
+});
 
-type RegisterValues = {
-	kind: Kind;
-	amount: string;
-	note: string;
-	envelope: Envelope;
-	incomeType: IncomeType;
-	extraType: Extra["type"];
-	destination: Destination;
-};
-
-const registerSchema = z.object({ amount: positiveMoney("Escribe un monto.") });
+type RegisterValues = z.infer<typeof registerSchema>;
+type Envelope = RegisterValues["envelope"];
 
 const KINDS: { value: Kind; label: string }[] = [
 	{ value: "expense", label: "Gasto" },
 	{ value: "income", label: "Ingreso" },
 ];
 
-const INCOME_TYPES: { value: IncomeType; label: string }[] = [
+const INCOME_TYPES: { value: RegisterValues["incomeType"]; label: string }[] = [
 	{ value: "cycle", label: "Para este ciclo" },
 	{ value: "extra", label: "Extra" },
 ];
 
-const EXTRA_TYPES: { value: Extra["type"]; label: string }[] = [
+const EXTRA_TYPES: { value: RegisterValues["extraType"]; label: string }[] = [
 	{ value: "gratification", label: "Gratificación" },
 	{ value: "bonus", label: "Bono" },
 	{ value: "repayment", label: "Deuda que te devolvieron" },
 	{ value: "other", label: "Otro" },
 ];
 
-const DESTINATIONS: { value: Destination; label: string }[] = [
+const DESTINATIONS: { value: RegisterValues["destination"]; label: string }[] = [
 	{ value: "envelopes", label: "Sumar a mis sobres" },
 	{ value: "savings", label: "Directo a Ahorro" },
 ];
@@ -119,7 +115,11 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		? { space, today }
 		: "skip";
 	const home = useQuery(convexQuery(api.balances.getHome, homeArgs)).data;
-	const { save, remove, pending, error } = useMovementActions(space, onDone);
+	const [confirmation, setConfirmation] = useState<string | null>(null);
+	const [saved, setSaved] = useState(false);
+	const { save, remove, pending, error } = useMovementActions(space, () =>
+		confirmation ? setSaved(true) : onDone(),
+	);
 
 	const editId = draft.id;
 	const defaultValues: RegisterValues = {
@@ -130,12 +130,24 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		incomeType: "cycle",
 		extraType: "other",
 		destination: "envelopes",
+		cycleChoice: "next",
 	};
+	const nextStart = home ? addDays(home.endDate, 1) : "";
 	const form = useForm({
 		defaultValues,
+		validationLogic: revalidateLogic(),
+		validators: { onDynamic: registerSchema },
 		onSubmit: ({ value }) => {
 			const amountCents = toCents(value.amount);
 			const note = value.note.trim() || undefined;
+			const asksCycle =
+				!editId && value.kind === "income" && value.incomeType === "cycle" && home?.earlyWindow;
+			const toNext = asksCycle && value.cycleChoice === "next";
+			setConfirmation(
+				toNext
+					? `Listo. Sueldo de S/ ${formatCents(amountCents)} para ${monthName(nextStart)}. Empieza el ${formatDay(nextStart)}.`
+					: null,
+			);
 			save(
 				value.kind === "expense"
 					? { kind: value.kind, id: editId, amountCents, envelope: value.envelope, note }
@@ -148,19 +160,39 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 								value.incomeType === "extra"
 									? { type: value.extraType, toSavings: value.destination === "savings" }
 									: undefined,
+							forNextCycle: asksCycle ? toNext : undefined,
 						},
 			);
 		},
 	});
-	const { kind, amount, envelope, incomeType, destination } = useSelector(
+	const { kind, amount, envelope, incomeType, destination, cycleChoice } = useSelector(
 		form.store,
 		(state) => state.values,
 	);
 
+	if (saved) {
+		return (
+			<DialogPopup>
+				<DialogHeader>
+					<DialogTitle>Registrar</DialogTitle>
+				</DialogHeader>
+				<DialogPanel>
+					<p role="status">{confirmation}</p>
+				</DialogPanel>
+				<DialogFooter>
+					<Button type="button" onClick={onDone}>
+						Cerrar
+					</Button>
+				</DialogFooter>
+			</DialogPopup>
+		);
+	}
+
 	const amountCents = toCents(amount);
-	const valid = registerSchema.safeParse({ amount }).success;
 	const originalCents = editId ? toCents(draft.amount) : 0;
 	const isExpense = kind === "expense";
+	const asksCycle = Boolean(home?.earlyWindow) && !isExpense && !editId && incomeType === "cycle";
+	const toNext = asksCycle && cycleChoice === "next";
 
 	const envelopeOptions = ENVELOPES.map((value) => ({
 		value,
@@ -168,6 +200,15 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 			? `${ENVELOPE_LABELS[value]} · S/ ${formatCents(home[AMOUNT_KEYS[value]])}`
 			: ENVELOPE_LABELS[value],
 	}));
+	const cycleOptions = home
+		? [
+				{ value: "current" as const, label: `Para lo que queda de ${monthName(home.endDate)}` },
+				{
+					value: "next" as const,
+					label: `Para ${monthName(nextStart)}, desde el ${formatDay(nextStart)}`,
+				},
+			]
+		: [];
 	// Editing an expense gives its own amount back to the envelope it came from.
 	const room = home
 		? home[AMOUNT_KEYS[envelope]] + (envelope === draft.envelope ? originalCents : 0)
@@ -178,14 +219,6 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 				home.daysLeft,
 			)
 		: 0;
-	const incomeNote =
-		incomeType === "extra"
-			? destination === "savings"
-				? "Tu número de hoy no cambia."
-				: null
-			: home && isEarlyIncomeWindow(today, home.endDate)
-				? `Para el ciclo que empieza el ${formatDay(addDays(home.endDate, 1))}. Tu número de hoy no cambia.`
-				: null;
 
 	return (
 		<DialogPopup>
@@ -217,23 +250,34 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 						</form.Field>
 					)}
 
-					<div className="flex items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground">
-						<span className="text-2xl text-muted-foreground">S/</span>
-						<form.Field name="amount">
-							{(field) => (
-								<Input
-									inputMode="decimal"
-									autoComplete="off"
-									aria-label="Monto"
-									placeholder="0.00"
-									value={field.state.value}
-									onChange={(event) => field.handleChange(event.target.value)}
-									unstyled
-									className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-4xl [&_[data-slot=input]]:tabular-nums"
-								/>
-							)}
-						</form.Field>
-					</div>
+					<form.Field name="amount">
+						{(field) => {
+							const message = field.state.meta.errors[0]?.message;
+							return (
+								<div>
+									<div className="flex items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground">
+										<span className="text-2xl text-muted-foreground">S/</span>
+										<Input
+											inputMode="decimal"
+											autoComplete="off"
+											aria-label="Monto"
+											aria-invalid={message ? true : undefined}
+											placeholder="0.00"
+											value={field.state.value}
+											onChange={(event) => field.handleChange(event.target.value)}
+											unstyled
+											className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-4xl [&_[data-slot=input]]:tabular-nums"
+										/>
+									</div>
+									{message ? (
+										<p role="alert" className="mt-1.5 text-xs text-warning-foreground">
+											{message}
+										</p>
+									) : null}
+								</div>
+							);
+						}}
+					</form.Field>
 
 					{isExpense ? (
 						<>
@@ -258,7 +302,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 									</p>
 								) : null}
 							</div>
-							{home && valid ? (
+							{home && amountCents > 0 ? (
 								<p className="text-sm text-muted-foreground">
 									Disponible hoy: S/ {formatCents(home.dailyCents)} → S/ {formatCents(dailyAfter)}
 								</p>
@@ -300,9 +344,28 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 											/>
 										)}
 									</form.Field>
+									{destination === "savings" ? (
+										<p className="text-sm text-muted-foreground">Tu número de hoy no cambia.</p>
+									) : null}
 								</>
 							) : null}
-							{incomeNote ? <p className="text-sm text-muted-foreground">{incomeNote}</p> : null}
+							{asksCycle && home ? (
+								<div className="flex flex-col gap-2">
+									<p className="text-sm text-muted-foreground">
+										Tu ciclo termina el {formatDay(home.endDate)}. ¿Para qué ciclo es este ingreso?
+									</p>
+									<form.Field name="cycleChoice">
+										{(field) => (
+											<ChoiceChips
+												label="Ciclo del ingreso"
+												options={cycleOptions}
+												value={field.state.value}
+												onChange={field.handleChange}
+											/>
+										)}
+									</form.Field>
+								</div>
+							) : null}
 						</>
 					) : null}
 
@@ -341,8 +404,14 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 							onDelete={() => remove(draft.kind, editId)}
 						/>
 					) : null}
-					<Button type="submit" loading={pending} disabled={!valid || pending}>
-						{editId ? "Guardar" : isExpense ? "Guardar gasto" : "Guardar ingreso"}
+					<Button type="submit" loading={pending} disabled={pending}>
+						{editId
+							? "Guardar"
+							: isExpense
+								? "Guardar gasto"
+								: toNext
+									? `Guardar para ${monthName(nextStart)}`
+									: "Guardar ingreso"}
 					</Button>
 				</DialogFooter>
 			</form>
