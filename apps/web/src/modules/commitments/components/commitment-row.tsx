@@ -1,11 +1,14 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS, type Envelope, formatCents, toCents } from "@quipu/backend/shared/budget";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "cn";
 import { useState } from "react";
+import * as z from "zod/mini";
 import { Button } from "#/components/ui/button";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
+import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
 import { ACTION } from "#/lib/typography";
 import {
@@ -22,7 +25,7 @@ const BADGE = {
 	upcoming: { text: "Próximo", className: "bg-warning/15 text-warning-foreground" },
 } as const;
 
-const AMOUNT_ERROR = "Escribe un monto.";
+const paySchema = z.object({ amount: positiveMoney("Escribe un monto.") });
 
 function PayInline({
 	item,
@@ -34,35 +37,44 @@ function PayInline({
 	onClose: () => void;
 }) {
 	const markPaid = useConvexMutation(api.commitments.markPaid);
-	const [amount, setAmount] = useState((item.amountCents / 100).toFixed(2));
-	const [tried, setTried] = useState(false);
-	const amountCents = toCents(amount);
 	const pay = useMutation({
-		mutationFn: () => markPaid({ space, id: item.id, amountCents }),
+		mutationFn: (amountCents: number) => markPaid({ space, id: item.id, amountCents }),
 		onSuccess: onClose,
 	});
-
-	function confirm() {
-		setTried(true);
-		if (amountCents > 0) pay.mutate();
-	}
+	const form = useForm({
+		defaultValues: { amount: (item.amountCents / 100).toFixed(2) },
+		validationLogic: revalidateLogic(),
+		validators: { onDynamic: paySchema },
+		onSubmit: ({ value }) => pay.mutate(toCents(value.amount)),
+	});
 
 	return (
-		<div className="mb-3 rounded-xl bg-muted/60 p-4">
+		<form
+			noValidate
+			className="mb-3 rounded-xl bg-muted/60 p-4"
+			onSubmit={(event) => {
+				event.preventDefault();
+				void form.handleSubmit();
+			}}
+		>
 			<p className="text-sm text-muted-foreground">Pagar {item.name}</p>
 			<div className="mt-2 flex flex-wrap items-start gap-3">
 				<div className="min-w-40 flex-1">
-					<AmountField
-						label={`Monto a pagar de ${item.name}`}
-						value={amount}
-						onChange={setAmount}
-						error={tried && amountCents === 0 ? AMOUNT_ERROR : undefined}
-					/>
+					<form.Field name="amount">
+						{(field) => (
+							<AmountField
+								label={`Monto a pagar de ${item.name}`}
+								value={field.state.value}
+								onChange={field.handleChange}
+								error={field.state.meta.errors[0]?.message}
+							/>
+						)}
+					</form.Field>
 				</div>
 				<span className="rounded-full bg-foreground px-3 py-1.5 text-sm font-semibold text-background">
 					{ENVELOPE_LABELS[item.envelope]}
 				</span>
-				<Button loading={pay.isPending} onClick={confirm}>
+				<Button type="submit" loading={pay.isPending}>
 					Confirmar pago
 				</Button>
 			</div>
@@ -71,7 +83,7 @@ function PayInline({
 					{readError(pay.error)}
 				</p>
 			) : null}
-		</div>
+		</form>
 	);
 }
 

@@ -1,4 +1,5 @@
 import { cn } from "cn";
+import { Label } from "#/components/ui/label";
 
 export function ChoiceChips<T extends string>({
 	label,
@@ -15,10 +16,10 @@ export function ChoiceChips<T extends string>({
 		<fieldset className="flex min-w-0 flex-wrap gap-2 border-0 p-0">
 			<legend className="sr-only">{label}</legend>
 			{options.map((option) => (
-				<label
+				<Label
 					key={option.value}
 					className={cn(
-						"inline-flex min-h-11 items-center rounded-full px-3 py-1.5 text-sm font-semibold has-focus-visible:ring-2 has-focus-visible:ring-ring",
+						"inline-flex min-h-11 items-center rounded-full px-3 py-1.5 text-sm sm:text-sm font-semibold has-focus-visible:ring-2 has-focus-visible:ring-ring",
 						value === option.value
 							? "bg-foreground text-background"
 							: "bg-muted text-muted-foreground",
@@ -33,7 +34,7 @@ export function ChoiceChips<T extends string>({
 						className="sr-only"
 					/>
 					{option.label}
-				</label>
+				</Label>
 			))}
 		</fieldset>
 	);

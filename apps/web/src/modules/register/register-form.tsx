@@ -9,10 +9,12 @@ import {
 	toCents,
 } from "@quipu/backend/shared/budget";
 import { addDays, formatDay, isEarlyIncomeWindow } from "@quipu/backend/shared/dates";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
+import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "#/components/ui/collapsible";
@@ -28,6 +30,7 @@ import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { positiveMoney } from "#/lib/money-schema";
 import type { Draft, Kind } from "./movement-draft";
 import { useMovementActions } from "./use-movement-actions";
 
@@ -35,6 +38,18 @@ type Extra = NonNullable<FunctionArgs<typeof api.transactions.addIncome>["extra"
 type Envelope = "needs" | "wants";
 type IncomeType = "cycle" | "extra";
 type Destination = "envelopes" | "savings";
+
+type RegisterValues = {
+	kind: Kind;
+	amount: string;
+	note: string;
+	envelope: Envelope;
+	incomeType: IncomeType;
+	extraType: Extra["type"];
+	destination: Destination;
+};
+
+const registerSchema = z.object({ amount: positiveMoney("Escribe un monto.") });
 
 const KINDS: { value: Kind; label: string }[] = [
 	{ value: "expense", label: "Gasto" },
@@ -79,10 +94,10 @@ function DeleteButton({
 		return (
 			<>
 				<p className="mr-auto text-sm text-muted-foreground">{prompt}</p>
-				<Button variant="ghost" disabled={disabled} onClick={onDelete}>
+				<Button type="button" variant="ghost" disabled={disabled} onClick={onDelete}>
 					Eliminar
 				</Button>
-				<Button variant="ghost" disabled={disabled} onClick={() => setConfirm(false)}>
+				<Button type="button" variant="ghost" disabled={disabled} onClick={() => setConfirm(false)}>
 					Cancelar
 				</Button>
 			</>
@@ -90,7 +105,7 @@ function DeleteButton({
 	}
 
 	return (
-		<Button variant="ghost" disabled={disabled} onClick={() => setConfirm(true)}>
+		<Button type="button" variant="ghost" disabled={disabled} onClick={() => setConfirm(true)}>
 			Eliminar
 		</Button>
 	);
@@ -106,18 +121,45 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 	const home = useQuery(convexQuery(api.balances.getHome, homeArgs)).data;
 	const { save, remove, pending, error } = useMovementActions(space, onDone);
 
-	const [kind, setKind] = useState(draft.kind);
-	const [amount, setAmount] = useState(draft.amount);
-	const [note, setNote] = useState(draft.note ?? "");
-	const [envelope, setEnvelope] = useState<Envelope>(draft.envelope ?? "needs");
-	const [incomeType, setIncomeType] = useState<IncomeType>("cycle");
-	const [extraType, setExtraType] = useState<Extra["type"]>("other");
-	const [destination, setDestination] = useState<Destination>("envelopes");
-
 	const editId = draft.id;
+	const defaultValues: RegisterValues = {
+		kind: draft.kind,
+		amount: draft.amount,
+		note: draft.note ?? "",
+		envelope: draft.envelope ?? "needs",
+		incomeType: "cycle",
+		extraType: "other",
+		destination: "envelopes",
+	};
+	const form = useForm({
+		defaultValues,
+		onSubmit: ({ value }) => {
+			const amountCents = toCents(value.amount);
+			const note = value.note.trim() || undefined;
+			save(
+				value.kind === "expense"
+					? { kind: value.kind, id: editId, amountCents, envelope: value.envelope, note }
+					: {
+							kind: value.kind,
+							id: editId,
+							amountCents,
+							note,
+							extra:
+								value.incomeType === "extra"
+									? { type: value.extraType, toSavings: value.destination === "savings" }
+									: undefined,
+						},
+			);
+		},
+	});
+	const { kind, amount, envelope, incomeType, destination } = useSelector(
+		form.store,
+		(state) => state.values,
+	);
+
 	const amountCents = toCents(amount);
+	const valid = registerSchema.safeParse({ amount }).success;
 	const originalCents = editId ? toCents(draft.amount) : 0;
-	const noteValue = note.trim() || undefined;
 	const isExpense = kind === "expense";
 
 	const envelopeOptions = ENVELOPES.map((value) => ({
@@ -147,143 +189,163 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 
 	return (
 		<DialogPopup>
-			<DialogHeader>
-				<DialogTitle>Registrar</DialogTitle>
-				<DialogDescription>
-					En {space === "household" ? "Nuestro espacio" : "Personal"}
-				</DialogDescription>
-			</DialogHeader>
-			<DialogPanel className="flex flex-col gap-5">
-				{editId ? null : (
-					<ChoiceChips label="Tipo" options={KINDS} value={kind} onChange={setKind} />
-				)}
+			<form
+				noValidate
+				className="contents"
+				onSubmit={(event) => {
+					event.preventDefault();
+					void form.handleSubmit();
+				}}
+			>
+				<DialogHeader>
+					<DialogTitle>Registrar</DialogTitle>
+					<DialogDescription>
+						En {space === "household" ? "Nuestro espacio" : "Personal"}
+					</DialogDescription>
+				</DialogHeader>
+				<DialogPanel className="flex flex-col gap-5">
+					{editId ? null : (
+						<form.Field name="kind">
+							{(field) => (
+								<ChoiceChips
+									label="Tipo"
+									options={KINDS}
+									value={field.state.value}
+									onChange={field.handleChange}
+								/>
+							)}
+						</form.Field>
+					)}
 
-				<div className="flex items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground">
-					<span className="text-2xl text-muted-foreground">S/</span>
-					<Input
-						inputMode="decimal"
-						autoComplete="off"
-						aria-label="Monto"
-						placeholder="0.00"
-						value={amount}
-						onChange={(event) => setAmount(event.target.value)}
-						unstyled
-						className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-4xl [&_[data-slot=input]]:tabular-nums"
-					/>
-				</div>
+					<div className="flex items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground">
+						<span className="text-2xl text-muted-foreground">S/</span>
+						<form.Field name="amount">
+							{(field) => (
+								<Input
+									inputMode="decimal"
+									autoComplete="off"
+									aria-label="Monto"
+									placeholder="0.00"
+									value={field.state.value}
+									onChange={(event) => field.handleChange(event.target.value)}
+									unstyled
+									className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-4xl [&_[data-slot=input]]:tabular-nums"
+								/>
+							)}
+						</form.Field>
+					</div>
 
-				{isExpense ? (
-					<>
-						<div className="flex flex-col gap-2">
-							<p aria-hidden className="text-sm text-muted-foreground">
-								Sale de
-							</p>
-							<ChoiceChips
-								label="Sale de"
-								options={envelopeOptions}
-								value={envelope}
-								onChange={setEnvelope}
-							/>
-							{home && amountCents > room ? (
-								<p role="status" className="text-xs text-warning-foreground">
-									Supera lo que queda en {ENVELOPE_LABELS[envelope]} (S/{" "}
-									{formatCents(Math.max(0, room))})
+					{isExpense ? (
+						<>
+							<div className="flex flex-col gap-2">
+								<p aria-hidden className="text-sm text-muted-foreground">
+									Sale de
+								</p>
+								<form.Field name="envelope">
+									{(field) => (
+										<ChoiceChips
+											label="Sale de"
+											options={envelopeOptions}
+											value={field.state.value}
+											onChange={field.handleChange}
+										/>
+									)}
+								</form.Field>
+								{home && amountCents > room ? (
+									<p role="status" className="text-xs text-warning-foreground">
+										Supera lo que queda en {ENVELOPE_LABELS[envelope]} (S/{" "}
+										{formatCents(Math.max(0, room))})
+									</p>
+								) : null}
+							</div>
+							{home && valid ? (
+								<p className="text-sm text-muted-foreground">
+									Disponible hoy: S/ {formatCents(home.dailyCents)} → S/ {formatCents(dailyAfter)}
 								</p>
 							) : null}
-						</div>
-						{home && amountCents > 0 ? (
-							<p className="text-sm text-muted-foreground">
-								Disponible hoy: S/ {formatCents(home.dailyCents)} → S/ {formatCents(dailyAfter)}
-							</p>
-						) : null}
-					</>
-				) : null}
+						</>
+					) : null}
 
-				{!isExpense && !editId ? (
-					<>
-						<ChoiceChips
-							label="Tipo de ingreso"
-							options={INCOME_TYPES}
-							value={incomeType}
-							onChange={setIncomeType}
+					{!isExpense && !editId ? (
+						<>
+							<form.Field name="incomeType">
+								{(field) => (
+									<ChoiceChips
+										label="Tipo de ingreso"
+										options={INCOME_TYPES}
+										value={field.state.value}
+										onChange={field.handleChange}
+									/>
+								)}
+							</form.Field>
+							{incomeType === "extra" ? (
+								<>
+									<form.Field name="extraType">
+										{(field) => (
+											<ChoiceChips
+												label="Tipo de extra"
+												options={EXTRA_TYPES}
+												value={field.state.value}
+												onChange={field.handleChange}
+											/>
+										)}
+									</form.Field>
+									<form.Field name="destination">
+										{(field) => (
+											<ChoiceChips
+												label="Destino del extra"
+												options={DESTINATIONS}
+												value={field.state.value}
+												onChange={field.handleChange}
+											/>
+										)}
+									</form.Field>
+								</>
+							) : null}
+							{incomeNote ? <p className="text-sm text-muted-foreground">{incomeNote}</p> : null}
+						</>
+					) : null}
+
+					<Collapsible defaultOpen={Boolean(draft.note)}>
+						<CollapsibleTrigger className="min-h-11 text-sm font-semibold text-muted-foreground">
+							Más detalles
+						</CollapsibleTrigger>
+						<CollapsiblePanel>
+							<form.Field name="note">
+								{(field) => (
+									<Label className="mt-2 flex flex-col items-stretch gap-1.5 text-sm sm:text-sm font-normal">
+										<span className="text-muted-foreground">Concepto · opcional</span>
+										<Input
+											placeholder={isExpense ? "Ej. almuerzo" : "Ej. pago de cliente"}
+											maxLength={NOTE_MAX_LENGTH}
+											value={field.state.value}
+											onChange={(event) => field.handleChange(event.target.value)}
+										/>
+									</Label>
+								)}
+							</form.Field>
+						</CollapsiblePanel>
+					</Collapsible>
+
+					{error ? (
+						<p role="alert" className="text-xs text-warning-foreground">
+							{error}
+						</p>
+					) : null}
+				</DialogPanel>
+				<DialogFooter>
+					{editId ? (
+						<DeleteButton
+							kind={draft.kind}
+							disabled={pending}
+							onDelete={() => remove(draft.kind, editId)}
 						/>
-						{incomeType === "extra" ? (
-							<>
-								<ChoiceChips
-									label="Tipo de extra"
-									options={EXTRA_TYPES}
-									value={extraType}
-									onChange={setExtraType}
-								/>
-								<ChoiceChips
-									label="Destino del extra"
-									options={DESTINATIONS}
-									value={destination}
-									onChange={setDestination}
-								/>
-							</>
-						) : null}
-						{incomeNote ? <p className="text-sm text-muted-foreground">{incomeNote}</p> : null}
-					</>
-				) : null}
-
-				<Collapsible defaultOpen={Boolean(draft.note)}>
-					<CollapsibleTrigger className="min-h-11 text-sm font-semibold text-muted-foreground">
-						Más detalles
-					</CollapsibleTrigger>
-					<CollapsiblePanel>
-						<Label className="mt-2 flex flex-col gap-1.5 text-sm">
-							<span className="text-muted-foreground">Concepto · opcional</span>
-							<Input
-								placeholder={isExpense ? "Ej. almuerzo" : "Ej. pago de cliente"}
-								maxLength={NOTE_MAX_LENGTH}
-								value={note}
-								onChange={(event) => setNote(event.target.value)}
-							/>
-						</Label>
-					</CollapsiblePanel>
-				</Collapsible>
-
-				{error ? (
-					<p role="alert" className="text-xs text-warning-foreground">
-						{error}
-					</p>
-				) : null}
-			</DialogPanel>
-			<DialogFooter>
-				{editId ? (
-					<DeleteButton
-						kind={draft.kind}
-						disabled={pending}
-						onDelete={() => remove(draft.kind, editId)}
-					/>
-				) : null}
-				<Button
-					loading={pending}
-					disabled={amountCents <= 0 || pending}
-					onClick={() =>
-						save(
-							isExpense
-								? { kind, id: editId, amountCents, envelope, note: noteValue }
-								: {
-										kind,
-										id: editId,
-										amountCents,
-										note: noteValue,
-										extra:
-											incomeType === "extra"
-												? {
-														type: extraType,
-														toSavings: destination === "savings",
-													}
-												: undefined,
-									},
-						)
-					}
-				>
-					{editId ? "Guardar" : isExpense ? "Guardar gasto" : "Guardar ingreso"}
-				</Button>
-			</DialogFooter>
+					) : null}
+					<Button type="submit" loading={pending} disabled={!valid || pending}>
+						{editId ? "Guardar" : isExpense ? "Guardar gasto" : "Guardar ingreso"}
+					</Button>
+				</DialogFooter>
+			</form>
 		</DialogPopup>
 	);
 }
