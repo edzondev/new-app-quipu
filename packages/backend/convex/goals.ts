@@ -80,23 +80,29 @@ export const fund = query({
 	returns: v.object({
 		fundCents: v.number(),
 		fundGoalCents: v.union(v.number(), v.null()),
+		isOwner: v.boolean(),
 	}),
 	handler: async (ctx, { space: kind }) => {
-		const { space } = await requireSpace(ctx, kind);
-		return { fundCents: space.fundCents, fundGoalCents: space.fundGoalCents ?? null };
+		const { userId, space } = await requireSpace(ctx, kind);
+		return {
+			fundCents: space.fundCents,
+			fundGoalCents: space.fundGoalCents ?? null,
+			isOwner: space.ownerId === userId,
+		};
 	},
 });
 
+/** `null` removes the fund goal; the money in the fund stays. */
 export const setFundGoal = mutation({
-	args: { space: spaceKind, targetCents: v.number() },
+	args: { space: spaceKind, targetCents: v.union(v.number(), v.null()) },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, targetCents }) => {
 		const { userId, space } = await requireSpace(ctx, kind);
-		if (!isValidCents(targetCents)) throw new ConvexError(BAD_INPUT);
+		if (targetCents !== null && !isValidCents(targetCents)) throw new ConvexError(BAD_INPUT);
 		if (space.ownerId !== userId) {
 			throw new ConvexError("Solo quien creó el hogar define la meta del fondo.");
 		}
-		await ctx.db.patch("spaces", space._id, { fundGoalCents: targetCents });
+		await ctx.db.patch("spaces", space._id, { fundGoalCents: targetCents ?? undefined });
 		return null;
 	},
 });
@@ -144,11 +150,7 @@ export const update = mutation({
 		if (!isValidCents(targetCents) || !isValidTargetMonth(targetMonth)) {
 			throw new ConvexError(BAD_INPUT);
 		}
-		await ctx.db.patch("goals", row._id, {
-			name: cleanName(name),
-			targetCents,
-			...(targetMonth !== undefined ? { targetMonth } : {}),
-		});
+		await ctx.db.patch("goals", row._id, { name: cleanName(name), targetCents, targetMonth });
 		return null;
 	},
 });
