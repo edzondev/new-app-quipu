@@ -11,9 +11,15 @@ import { useLimaDate } from "#/hooks/use-lima-date";
 import { ContributeDialog } from "./contribute-dialog";
 import { FundCard } from "./fund-card";
 import { FundGoalDialog } from "./fund-goal-dialog";
+import type { Goal } from "./goal-card";
+import { GoalFormDialog } from "./goal-form-dialog";
+import { GoalsSection } from "./goals-section";
 import { WithdrawDialog } from "./withdraw-dialog";
 
-type Panel = "contribute" | "withdraw" | "fundGoal" | null;
+type Panel =
+	| { kind: "contribute" | "withdraw" | "fundGoal" | "newGoal" }
+	| { kind: "contributeGoal" | "editGoal"; id: Goal["id"] }
+	| null;
 
 export function SavingsPage() {
 	const today = useLimaDate();
@@ -38,9 +44,10 @@ function Savings({
 	const balances = useQuery(
 		convexQuery(api.balances.getBalances, ensureOpen.isSuccess ? { space } : "skip"),
 	);
+	const goals = useQuery(convexQuery(api.goals.list, ensureOpen.isSuccess ? { space } : "skip"));
 	const close = () => setPanel(null);
 
-	if (ensureOpen.isError || fund.isError || balances.isError) {
+	if (ensureOpen.isError || fund.isError || balances.isError || goals.isError) {
 		return (
 			<div role="alert" className="pt-6">
 				<p className="text-sm text-warning-foreground">No pudimos cargar tus ahorros.</p>
@@ -57,7 +64,7 @@ function Savings({
 		);
 	}
 
-	if (!fund.data || !balances.data) {
+	if (!fund.data || !balances.data || !goals.data) {
 		return (
 			<div role="status" className="space-y-6 pt-6" aria-busy="true" aria-label="Cargando">
 				<Skeleton className="h-10 w-40" />
@@ -68,6 +75,7 @@ function Savings({
 	}
 
 	const { savingsCents } = balances.data;
+	const goal = panel && "id" in panel ? goals.data.find((item) => item.id === panel.id) : undefined;
 	return (
 		<>
 			<header>
@@ -79,27 +87,41 @@ function Savings({
 
 			<FundCard
 				fund={fund.data}
-				onContribute={() => setPanel("contribute")}
-				onWithdraw={() => setPanel("withdraw")}
-				onEditGoal={() => setPanel("fundGoal")}
+				onContribute={() => setPanel({ kind: "contribute" })}
+				onWithdraw={() => setPanel({ kind: "withdraw" })}
+				onEditGoal={() => setPanel({ kind: "fundGoal" })}
+			/>
+
+			<GoalsSection
+				goals={goals.data}
+				onNew={() => setPanel({ kind: "newGoal" })}
+				onContribute={(id) => setPanel({ kind: "contributeGoal", id })}
+				onEdit={(id) => setPanel({ kind: "editGoal", id })}
 			/>
 
 			<ContributeDialog
-				open={panel === "contribute"}
+				open={panel?.kind === "contribute" || (panel?.kind === "contributeGoal" && !!goal)}
 				space={space}
 				savingsCents={savingsCents}
-				fundCents={fund.data.fundCents}
-				fundGoalCents={fund.data.fundGoalCents}
+				savedCents={goal?.savedCents ?? fund.data.fundCents}
+				targetCents={goal?.targetCents ?? fund.data.fundGoalCents}
+				goal={goal}
+				onClose={close}
+			/>
+			<GoalFormDialog
+				open={panel?.kind === "newGoal" || (panel?.kind === "editGoal" && !!goal)}
+				space={space}
+				goal={goal}
 				onClose={close}
 			/>
 			<WithdrawDialog
-				open={panel === "withdraw"}
+				open={panel?.kind === "withdraw"}
 				space={space}
 				fundCents={fund.data.fundCents}
 				onClose={close}
 			/>
 			<FundGoalDialog
-				open={panel === "fundGoal"}
+				open={panel?.kind === "fundGoal"}
 				space={space}
 				fundGoalCents={fund.data.fundGoalCents}
 				suggestedCents={fund.data.suggestedFundGoalCents}

@@ -4,6 +4,7 @@ import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { Button } from "#/components/ui/button";
 import { ACTION, EYEBROW } from "#/lib/typography";
+import { progressPercent } from "../progress";
 
 type Fund = FunctionReturnType<typeof api.goals.fund>;
 
@@ -20,7 +21,7 @@ export function FundCard({
 }) {
 	const { fundCents, fundGoalCents, isOwner } = fund;
 	const [whole, decimals] = formatCents(fundCents).split(".");
-	const percent = fundGoalCents ? Math.min(100, Math.floor((fundCents / fundGoalCents) * 100)) : 0;
+	const percent = fundGoalCents ? progressPercent(fundCents, fundGoalCents) : 0;
 
 	return (
 		<section className="mt-9 rounded-3xl bg-muted p-6 sm:p-9">
