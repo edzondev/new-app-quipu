@@ -86,12 +86,16 @@ export function subtractAmounts(base: EnvelopeAmounts, delta: EnvelopeAmounts): 
 }
 
 // A new income adds only its own share under the current split; free money already there stays.
+// An Extra sent straight to Ahorro adds only to Ahorro, so the number of the day does not move.
 export function applyIncome(
 	envelopes: EnvelopeAmounts,
 	amountCents: number,
 	split: Split,
+	toSavings = false,
 ): { envelopes: EnvelopeAmounts; allocation: EnvelopeAmounts } {
-	const allocation = splitIncome(amountCents, split);
+	const allocation = toSavings
+		? { ...ZERO_AMOUNTS, savingsCents: amountCents }
+		: splitIncome(amountCents, split);
 	return { envelopes: addAmounts(envelopes, allocation), allocation };
 }
 

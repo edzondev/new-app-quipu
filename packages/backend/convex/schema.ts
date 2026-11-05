@@ -120,6 +120,9 @@ export default defineSchema({
 				...movement,
 				kind: v.literal("income"),
 				extraType: v.optional(extraType),
+				toSavings: v.optional(v.boolean()),
+				// Registered in the last 3 days of the cycle: counts for the next cycle, which gets it at close.
+				forNextCycle: v.optional(v.boolean()),
 				allocation: amounts,
 			}),
 			v.object({

@@ -28,6 +28,13 @@ export function daysBetween(from: string, to: string): number {
 	return Math.round((toUtc(to) - toUtc(from)) / DAY_MS);
 }
 
+const EARLY_INCOME_DAYS = 3;
+
+/** The last 3 days of a cycle, today included. A cycle income registered then is the next cycle's. */
+export function isEarlyIncomeWindow(today: string, endDate: string): boolean {
+	return daysBetween(today, endDate) < EARLY_INCOME_DAYS;
+}
+
 // month is 0-based and may overflow (-1, 12); Date.UTC rolls the year.
 export function dayInMonth(year: number, month: number, day: number | "last"): string {
 	const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();

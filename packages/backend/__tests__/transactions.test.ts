@@ -609,3 +609,186 @@ test("a note counts its length after trimming: 40 characters save, 41 fail", asy
 	});
 	expect(rows.filter((row) => row.kind === "expense").map((row) => row.note)).toEqual([note]);
 });
+
+test("an Extra Bono of S/ 200 straight to Ahorro leaves the number of the day unchanged", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 20_000,
+		extra: { type: "bonus", toSavings: true },
+	});
+
+	const after = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(after).toEqual({ ...before, savingsCents: before.savingsCents + 20_000 });
+});
+
+test("an Extra Bono of S/ 200 to the envelopes splits 50/30/20 and raises the number of the day", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 20_000,
+		extra: { type: "bonus", toSavings: false },
+	});
+
+	const after = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(after).toMatchObject({
+		needsCents: before.needsCents + 10_000,
+		wantsCents: before.wantsCents + 6_000,
+		savingsCents: before.savingsCents + 4_000,
+	});
+	expect(after.dailyCents).toBeGreaterThan(before.dailyCents);
+});
+
+test("list marks an Extra and leaves a cycle income unmarked", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 20_000,
+		extra: { type: "repayment", toSavings: false },
+	});
+
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-20",
+	});
+	expect(rows.map((row) => [row.amountCents, row.extra, row.startsOn])).toEqual([
+		[20_000, true, null],
+		[50_000, false, null],
+	]);
+});
+
+test("a cycle income on 30 Oct waits for the cycle that starts on 1 Nov and leaves today's number alone", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toEqual(before);
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+	expect(rows[0]).toMatchObject({ amountCents: 100_000, startsOn: "2026-11-01", extra: false });
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: before.needsCents + 50_000,
+		wantsCents: before.wantsCents + 30_000,
+		savingsCents: 20_000,
+	});
+});
+
+test("an Extra on 30 Oct stays in October", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 100_000,
+		extra: { type: "gratification", toSavings: false },
+	});
+
+	const after = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(after.needsCents).toBe(before.needsCents + 50_000);
+});
+
+test("28 Oct income stays in this cycle; 29 Oct, the third day from the end, waits for November", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-28T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 10_000 });
+	vi.setSystemTime(new Date("2026-10-29T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 20_000 });
+
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-29",
+	});
+	expect(rows.map((row) => [row.amountCents, row.startsOn])).toEqual([
+		[20_000, "2026-11-01"],
+		[10_000, null],
+		[50_000, null],
+	]);
+});
+
+test("editing an early income to S/ 2,000 changes what November starts with", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+
+	await ana.as.mutation(api.transactions.updateIncome, {
+		space: "personal",
+		id: rows[0].id,
+		amountCents: 200_000,
+	});
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: 25_000 + 100_000,
+		wantsCents: 15_000 + 60_000,
+		savingsCents: 40_000,
+	});
+});
+
+test("deleting an early income leaves November with only what carried over", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+
+	await ana.as.mutation(api.transactions.deleteIncome, { space: "personal", id: rows[0].id });
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: 25_000,
+		wantsCents: 15_000,
+		savingsCents: 0,
+	});
+});
+
+test("editing a Bono that went straight to Ahorro keeps it in Ahorro", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 20_000,
+		extra: { type: "bonus", toSavings: true },
+	});
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-20",
+	});
+
+	await ana.as.mutation(api.transactions.updateIncome, {
+		space: "personal",
+		id: rows[0].id,
+		amountCents: 30_000,
+	});
+
+	const after = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	expect(after).toEqual({ ...before, savingsCents: before.savingsCents + 10_000 });
+});
