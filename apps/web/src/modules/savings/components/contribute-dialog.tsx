@@ -18,22 +18,26 @@ import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { readError } from "#/lib/read-error";
 import { CHIP } from "#/lib/typography";
 import { AmountField } from "#/modules/commitments/components/amount-field";
+import type { Goal } from "./goal-card";
 
 const QUICK_CENTS = 10_000;
 
+/** Without `goal` the money goes to the emergency fund. */
 type ContributeProps = {
 	space: FunctionArgs<typeof api.transactions.addSaving>["space"];
 	savingsCents: number;
-	fundCents: number;
-	fundGoalCents: number | null;
+	savedCents: number;
+	targetCents: number | null;
+	goal?: Pick<Goal, "id" | "name">;
 	onClose: () => void;
 };
 
 function ContributeForm({
 	space,
 	savingsCents,
-	fundCents,
-	fundGoalCents,
+	savedCents,
+	targetCents,
+	goal,
 	onClose,
 }: ContributeProps) {
 	const add = useConvexMutation(api.transactions.addSaving);
@@ -41,9 +45,12 @@ function ContributeForm({
 	const amountCents = toCents(amount);
 	const available = Math.max(0, savingsCents);
 	const over = amountCents > available;
+	const shortcut = goal
+		? { label: "Lo que falta", cents: Math.max(0, (targetCents ?? 0) - savedCents) }
+		: { label: "Todo el Ahorro", cents: available };
 
 	const save = useMutation({
-		mutationFn: () => add({ space, amountCents }),
+		mutationFn: () => add({ space, amountCents, ...(goal ? { goalId: goal.id } : {}) }),
 		onSuccess: onClose,
 	});
 	const canSave = amountCents > 0 && !over && !save.isPending;
@@ -53,10 +60,10 @@ function ContributeForm({
 	return (
 		<DialogPopup>
 			<DialogHeader>
-				<DialogTitle>Aportar al fondo</DialogTitle>
+				<DialogTitle>{goal ? `Aportar a ${goal.name}` : "Aportar al fondo"}</DialogTitle>
 				<p className="text-sm text-muted-foreground tabular-nums">
-					S/ {formatCents(fundCents)}
-					{fundGoalCents ? ` de S/ ${formatCents(fundGoalCents)}` : ""}
+					S/ {formatCents(savedCents)}
+					{targetCents ? ` de S/ ${formatCents(targetCents)}` : ""}
 				</p>
 			</DialogHeader>
 			<DialogPanel className="flex flex-col gap-4">
@@ -75,13 +82,13 @@ function ContributeForm({
 					>
 						S/ 100
 					</button>
-					{available > 0 ? (
+					{shortcut.cents > 0 ? (
 						<button
 							type="button"
 							className={CHIP}
-							onClick={() => setAmount(formatCents(available))}
+							onClick={() => setAmount(formatCents(shortcut.cents))}
 						>
-							Todo el Ahorro · S/ {formatCents(available)}
+							{shortcut.label} · S/ {formatCents(shortcut.cents)}
 						</button>
 					) : null}
 				</div>

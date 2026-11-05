@@ -3,10 +3,10 @@ import { reallocateFree, ZERO_AMOUNTS } from "../shared/budget";
 import { isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation } from "./_generated/server";
 import { requireOpenCycle } from "./model/cycles";
+import { BAD_INPUT } from "./model/input";
 import { requireUser } from "./model/spaces";
 import { plan, spaceKind, split } from "./schema";
 
-const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
 const NO_PROFILE = "No encontramos tu perfil.";
 const NO_PLAN = "Termina tus primeros pasos.";
 

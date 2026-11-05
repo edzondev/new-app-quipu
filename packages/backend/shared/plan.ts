@@ -1,6 +1,7 @@
 import type { Infer } from "convex/values";
+import * as z from "zod/mini";
 import type { plan, split } from "../convex/schema";
-import { isValidCents } from "./budget";
+import { centsSchema } from "./budget";
 
 export type Plan = Infer<typeof plan>;
 export type Split = Infer<typeof split>;
@@ -15,14 +16,12 @@ export function parseStartDay(raw: string): CycleStartDay {
 	return raw === "last" ? "last" : Number(raw);
 }
 
-export function isValidMonthDay(day: number): boolean {
-	return Number.isInteger(day) && day >= 1 && day <= MAX_MONTH_DAY;
-}
+export const monthDaySchema = z.int().check(z.minimum(1), z.maximum(MAX_MONTH_DAY));
+const weekdaySchema = z.int().check(z.minimum(0), z.maximum(6));
 
 export function isValidStartDay(cadence: Cadence, day: CycleStartDay): boolean {
 	if (day === "last") return cadence !== "weekly";
-	if (cadence === "weekly") return Number.isInteger(day) && day >= 0 && day <= 6;
-	return isValidMonthDay(day);
+	return (cadence === "weekly" ? weekdaySchema : monthDaySchema).safeParse(day).success;
 }
 
 const MONTH_FACTOR: Record<Cadence, { times: number; per: number }> = {
@@ -46,5 +45,5 @@ export function isValidSplit({ needs, wants, savings }: Split): boolean {
 }
 
 export function isValidPlan({ cadence, cycleStartDay, incomeCents }: Plan): boolean {
-	return isValidCents(incomeCents) && isValidStartDay(cadence, cycleStartDay);
+	return centsSchema.safeParse(incomeCents).success && isValidStartDay(cadence, cycleStartDay);
 }

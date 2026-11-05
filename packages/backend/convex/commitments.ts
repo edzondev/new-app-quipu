@@ -1,13 +1,13 @@
 import { ConvexError, type Infer, v } from "convex/values";
-import { AMOUNT_KEYS, isValidCents } from "../shared/budget";
-import { isIsoDate } from "../shared/dates";
+import { AMOUNT_KEYS, centsSchema, nameSchema } from "../shared/budget";
 import {
 	type CommitmentStatus,
 	getNextDueDate,
 	isReserved,
 	type Occurrence,
 } from "../shared/commitments";
-import { isValidMonthDay } from "../shared/plan";
+import { isoDateSchema } from "../shared/dates";
+import { monthDaySchema } from "../shared/plan";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import {
@@ -16,13 +16,12 @@ import {
 	getCommitmentStates,
 } from "./model/commitments";
 import { requireOpenCycle } from "./model/cycles";
+import { parseInput } from "./model/input";
 import { requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind, spendable } from "./schema";
 
-const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
 const NOT_FOUND = "No encontramos este dato.";
 const ALREADY_PAID = "Este compromiso ya está pagado en este ciclo.";
-const NAME_MAX = 40;
 const COMMITMENTS_CAP = 100;
 
 const schedule = v.union(
@@ -36,12 +35,6 @@ const schedule = v.union(
 	}),
 );
 type Schedule = Infer<typeof schedule>;
-
-function cleanName(name: string) {
-	const trimmed = name.trim();
-	if (trimmed.length === 0 || trimmed.length > NAME_MAX) throw new ConvexError(BAD_INPUT);
-	return trimmed;
-}
 
 async function requireOwnCommitment(ctx: MutationCtx, kind: SpaceKind, id: Id<"commitments">) {
 	const { userId, space } = await requireSpace(ctx, kind);
@@ -58,7 +51,7 @@ function buildRow(
 	when: Schedule,
 ) {
 	if (when.frequency === "monthly") {
-		if (!isValidMonthDay(when.dueDay)) throw new ConvexError(BAD_INPUT);
+		parseInput(monthDaySchema, when.dueDay);
 		return {
 			spaceId,
 			name,
@@ -68,7 +61,7 @@ function buildRow(
 			dueDay: when.dueDay,
 		};
 	}
-	if (!isIsoDate(when.dueDate)) throw new ConvexError(BAD_INPUT);
+	parseInput(isoDateSchema, when.dueDate);
 	return {
 		spaceId,
 		name,
@@ -90,10 +83,10 @@ export const add = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, name, amountCents, envelope, schedule: when }) => {
 		const { space } = await requireSpace(ctx, kind);
-		if (!isValidCents(amountCents)) throw new ConvexError(BAD_INPUT);
+		parseInput(centsSchema, amountCents);
 		await ctx.db.insert(
 			"commitments",
-			buildRow(space._id, cleanName(name), amountCents, envelope, when),
+			buildRow(space._id, parseInput(nameSchema, name), amountCents, envelope, when),
 		);
 		return null;
 	},
@@ -111,11 +104,11 @@ export const update = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, name, amountCents, envelope, schedule: when }) => {
 		const { row } = await requireOwnCommitment(ctx, kind, id);
-		if (!isValidCents(amountCents)) throw new ConvexError(BAD_INPUT);
+		parseInput(centsSchema, amountCents);
 		await ctx.db.replace(
 			"commitments",
 			row._id,
-			buildRow(row.spaceId, cleanName(name), amountCents, envelope, when),
+			buildRow(row.spaceId, parseInput(nameSchema, name), amountCents, envelope, when),
 		);
 		return null;
 	},
@@ -180,7 +173,11 @@ export const list = query({
 		items: v.array(
 			v.union(
 				// A paid row shows what was paid, so `amountCents` here is the payment's.
-				v.object({ ...listItem, status: v.literal("paid"), paidOn: v.string() }),
+				v.object({
+					...listItem,
+					status: v.literal("paid"),
+					paidOn: v.string(),
+				}),
 				v.object({
 					...listItem,
 					status: v.union(
@@ -205,7 +202,7 @@ export const list = query({
 		),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
-		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
+		parseInput(isoDateSchema, today);
 		const { space, cycle } = await requireOpenCycle(ctx, kind, today);
 		const rows = await ctx.db
 			.query("commitments")
@@ -271,7 +268,11 @@ export const list = query({
 });
 
 export const markPaid = mutation({
-	args: { space: spaceKind, id: v.id("commitments"), amountCents: v.optional(v.number()) },
+	args: {
+		space: spaceKind,
+		id: v.id("commitments"),
+		amountCents: v.optional(v.number()),
+	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, amountCents }) => {
 		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
@@ -282,7 +283,7 @@ export const markPaid = mutation({
 		if (occurrences.every(({ status }) => status === "paid")) throw new ConvexError(ALREADY_PAID);
 
 		const paidCents = amountCents ?? row.amountCents;
-		if (!isValidCents(paidCents)) throw new ConvexError(BAD_INPUT);
+		parseInput(centsSchema, paidCents);
 
 		const key = AMOUNT_KEYS[row.envelope];
 		await ctx.db.insert("transactions", {
@@ -296,7 +297,10 @@ export const markPaid = mutation({
 			commitmentId: id,
 		});
 		await ctx.db.patch("cycles", cycle._id, {
-			envelopes: { ...cycle.envelopes, [key]: cycle.envelopes[key] - paidCents },
+			envelopes: {
+				...cycle.envelopes,
+				[key]: cycle.envelopes[key] - paidCents,
+			},
 		});
 		return null;
 	},
