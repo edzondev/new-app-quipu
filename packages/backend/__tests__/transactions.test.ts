@@ -792,3 +792,169 @@ test("editing a Bono that went straight to Ahorro keeps it in Ahorro", async () 
 	const after = await ana.as.query(api.balances.getBalances, { space: "personal" });
 	expect(after).toEqual({ ...before, savingsCents: before.savingsCents + 10_000 });
 });
+
+test("an early income is not assigned money until the November cycle starts", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	const before = await ana.as.query(api.balances.getHome, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+
+	const during = await ana.as.query(api.balances.getHome, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+	expect(during.assigned).toEqual(before.assigned);
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	const november = await ana.as.query(api.balances.getHome, {
+		space: "personal",
+		today: "2026-11-01",
+	});
+	expect(november.assigned).toEqual({
+		needsCents: 75_000,
+		wantsCents: 45_000,
+		savingsCents: 20_000,
+	});
+});
+
+test("an early income does not take away the empty state of a cycle with no money", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.as.mutation(api.profiles.completeOnboarding, { ...onboard, todayCents: 0 });
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+
+	const home = await ana.as.query(api.balances.getHome, { space: "personal", today: "2026-10-30" });
+	expect(home.empty).toBe(true);
+});
+
+test("lowering an early income works even after the current Ahorro went to the fund", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 10_000 });
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-10-30",
+	});
+	const early = rows.find((row) => row.startsOn !== null);
+	if (!early) throw new Error("missing early income");
+
+	await ana.as.mutation(api.transactions.updateIncome, {
+		space: "personal",
+		id: early.id,
+		amountCents: 50_000,
+	});
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		savingsCents: 10_000,
+	});
+});
+
+test("an income on the last day of the cycle, 31 Oct, starts November", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-31T17:00:00.000Z"));
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toEqual(before);
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: 25_000 + 50_000,
+		wantsCents: 15_000 + 30_000,
+		savingsCents: 20_000,
+	});
+});
+
+test("an Extra registered with an early income does not start November as income", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 100_000,
+		extra: { type: "bonus", toSavings: false },
+	});
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-11-01",
+	});
+	expect(rows.map((row) => [row.amountCents, row.extra, row.startsOn])).toEqual([
+		[100_000, false, null],
+	]);
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: 25_000 + 50_000 + 50_000,
+		wantsCents: 15_000 + 30_000 + 30_000,
+		savingsCents: 20_000,
+	});
+});
+
+test("opening November twice does not duplicate the early income", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	const first = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toEqual(first);
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: "personal",
+		today: "2026-11-01",
+	});
+	expect(rows.map((row) => row.amountCents)).toEqual([100_000]);
+});
+
+test("an early income still starts November in a cycle with more than 500 movements", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await t.run(async (ctx) => {
+		const cycle = (await ctx.db.query("cycles").take(1))[0];
+		const first = (await ctx.db.query("transactions").take(1))[0];
+		for (let i = 0; i < 510; i++) {
+			await ctx.db.insert("transactions", {
+				kind: "expense",
+				spaceId: first.spaceId,
+				cycleId: cycle._id,
+				userId: first.userId,
+				amountCents: 1,
+				date: "2026-10-25",
+				envelope: "needs",
+			});
+		}
+	});
+	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
+	const before = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
+
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+
+	expect(await ana.as.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: before.needsCents + 50_000,
+		wantsCents: before.wantsCents + 30_000,
+		savingsCents: 20_000,
+	});
+});

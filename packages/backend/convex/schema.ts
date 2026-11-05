@@ -121,7 +121,6 @@ export default defineSchema({
 				kind: v.literal("income"),
 				extraType: v.optional(extraType),
 				toSavings: v.optional(v.boolean()),
-				// Registered in the last 3 days of the cycle: counts for the next cycle, which gets it at close.
 				forNextCycle: v.optional(v.boolean()),
 				allocation: amounts,
 			}),
@@ -145,6 +144,7 @@ export default defineSchema({
 		),
 	)
 		.index("by_cycleId", ["cycleId"])
+		.index("by_forNextCycle_cycleId", ["forNextCycle", "cycleId"])
 		.index("by_toCycleId", ["toCycleId"])
 		.index("by_spaceId_kind", ["spaceId", "kind"])
 		.index("by_commitmentId", ["commitmentId"]),

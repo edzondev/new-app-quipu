@@ -1,5 +1,5 @@
 import { ConvexError } from "convex/values";
-import { addAmounts, type EnvelopeAmounts, ZERO_AMOUNTS } from "../../shared/budget";
+import { addAmounts, ZERO_AMOUNTS } from "../../shared/budget";
 import { addDays, getCycleRange, getFirstCycleRange, getLimaDate } from "../../shared/dates";
 import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -84,24 +84,18 @@ export async function getOrCreateNextCycle(
 	return next;
 }
 
-/** Early incomes move to the next cycle at close. Returns `start` plus their allocation. */
-async function moveEarlyIncomes(
-	ctx: MutationCtx,
-	fromId: Id<"cycles">,
-	toId: Id<"cycles">,
-	start: EnvelopeAmounts,
-) {
-	const rows = await ctx.db
-		.query("transactions")
-		.withIndex("by_cycleId", (q) => q.eq("cycleId", fromId))
-		.take(500);
-	let envelopes = start;
-	for (const row of rows) {
-		if (row.kind !== "income" || !row.forNextCycle) continue;
-		envelopes = addAmounts(envelopes, row.allocation);
+async function moveEarlyIncomes(ctx: MutationCtx, fromId: Id<"cycles">, toId: Id<"cycles">) {
+	const nextEarly = () =>
+		ctx.db
+			.query("transactions")
+			.withIndex("by_forNextCycle_cycleId", (q) => q.eq("forNextCycle", true).eq("cycleId", fromId))
+			.first();
+	let moved = ZERO_AMOUNTS;
+	for (let row = await nextEarly(); row?.kind === "income"; row = await nextEarly()) {
+		moved = addAmounts(moved, row.allocation);
 		await ctx.db.patch("transactions", row._id, { cycleId: toId, forNextCycle: undefined });
 	}
-	return envelopes;
+	return moved;
 }
 
 /** Closes `cycle` and returns the next one. Idempotent if `closedAt` is already set. */
@@ -143,10 +137,10 @@ export async function closeCycle(
 
 	await ctx.db.patch("cycles", next._id, {
 		carryIn,
-		envelopes: await moveEarlyIncomes(ctx, cycle._id, next._id, {
-			...carryIn,
-			savingsCents: 0,
-		}),
+		envelopes: addAmounts(
+			{ ...carryIn, savingsCents: 0 },
+			await moveEarlyIncomes(ctx, cycle._id, next._id),
+		),
 	});
 	await ctx.db.patch("cycles", cycle._id, { closedAt: Date.now() });
 	const closedNext = await ctx.db.get("cycles", next._id);

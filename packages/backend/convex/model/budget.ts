@@ -24,7 +24,6 @@ export async function getDayBudget(
 			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
 			.take(500),
 	]);
-	// An early income counts for the next cycle: it feeds neither today's number nor "assigned".
 	const hasIncome = cycleTx.some((tx) => tx.kind === "income" && !tx.forNextCycle);
 	const reserved = await Promise.all(
 		commitmentRows.map(async (row) => {
