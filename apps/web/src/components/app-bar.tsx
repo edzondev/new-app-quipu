@@ -69,6 +69,14 @@ export function AppBar() {
 						Movimientos
 					</Link>
 					<Link
+						to="/savings"
+						activeProps={{ className: "bg-muted text-foreground" }}
+						inactiveProps={{ className: "text-muted-foreground" }}
+						className={navLink}
+					>
+						Ahorros
+					</Link>
+					<Link
 						to="/commitments"
 						activeProps={{ className: "bg-muted text-foreground" }}
 						inactiveProps={{ className: "text-muted-foreground" }}

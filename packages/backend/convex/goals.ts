@@ -1,9 +1,12 @@
 import { ConvexError, v } from "convex/values";
 import { isValidCents } from "../shared/budget";
+import { isIsoDate } from "../shared/dates";
+import { suggestFundGoalCents } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
+import { getCycleAt } from "./model/cycles";
 import { requirePlus } from "./model/plus";
-import { requireSpace, type SpaceKind } from "./model/spaces";
+import { requirePlan, requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind } from "./schema";
 
 const BAD_INPUT = "Revisa los datos e inténtalo otra vez.";
@@ -75,18 +78,27 @@ export const list = query({
 	},
 });
 
+/** `suggestedFundGoalCents` is null when there is no open cycle for `today`. */
 export const fund = query({
-	args: { space: spaceKind },
+	args: { space: spaceKind, today: v.string() },
 	returns: v.object({
 		fundCents: v.number(),
 		fundGoalCents: v.union(v.number(), v.null()),
+		suggestedFundGoalCents: v.union(v.number(), v.null()),
 		isOwner: v.boolean(),
 	}),
-	handler: async (ctx, { space: kind }) => {
+	handler: async (ctx, { space: kind, today }) => {
+		if (!isIsoDate(today)) throw new ConvexError(BAD_INPUT);
 		const { userId, space } = await requireSpace(ctx, kind);
+		const cycle = await getCycleAt(ctx, space._id, today);
+		const suggested =
+			cycle && cycle.endDate >= today
+				? suggestFundGoalCents(await requirePlan(ctx, space), cycle.split)
+				: null;
 		return {
 			fundCents: space.fundCents,
 			fundGoalCents: space.fundGoalCents ?? null,
+			suggestedFundGoalCents: suggested,
 			isOwner: space.ownerId === userId,
 		};
 	},

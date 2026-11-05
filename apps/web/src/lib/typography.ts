@@ -5,3 +5,7 @@ export const EYEBROW =
 /** W-* `.wact`: small bordered pill for actions, 34 px tall. */
 export const ACTION =
 	"relative inline-flex h-[34px] flex-none cursor-pointer items-center justify-center gap-1.5 rounded-full bg-background px-3.5 text-[13px] leading-none font-semibold whitespace-nowrap text-foreground ring-1 ring-input ring-inset after:absolute after:-inset-y-[5px] after:inset-x-0 after:content-['']";
+
+/** W-* `.chip`: shortcut pill, 44 px tall to tap. Same look as an unselected `ChoiceChips` option. */
+export const CHIP =
+	"inline-flex min-h-11 cursor-pointer items-center rounded-full bg-muted px-3 py-1.5 text-sm font-semibold text-muted-foreground";

@@ -59,6 +59,8 @@ async function signIn(t: ReturnType<typeof harness>, email: string, name: string
 	return t.withIdentity({ subject: user._id, sessionId: session._id });
 }
 
+const TODAY = "2026-10-20";
+
 const onboard = {
 	cadence: "monthly" as const,
 	cycleStartDay: 1,
@@ -123,9 +125,10 @@ test("saving S/ 50 and setting the goal to S/ 4,200 shows the fund and its goal"
 	await ana.mutation(api.transactions.addSaving, { space: "personal", amountCents: 5_000 });
 	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 420_000 });
 
-	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
+	expect(await ana.query(api.goals.fund, { space: "personal", today: TODAY })).toEqual({
 		fundCents: 5_000,
 		fundGoalCents: 420_000,
+		suggestedFundGoalCents: 225_000,
 		isOwner: true,
 	});
 });
@@ -134,9 +137,10 @@ test("without a fund goal, fund reads fundGoalCents as null", async () => {
 	const t = harness();
 	const ana = await anaOnOct20(t);
 
-	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
+	expect(await ana.query(api.goals.fund, { space: "personal", today: TODAY })).toEqual({
 		fundCents: 0,
 		fundGoalCents: null,
+		suggestedFundGoalCents: 225_000,
 		isOwner: true,
 	});
 });
@@ -149,9 +153,10 @@ test("removing the fund goal keeps the money in the fund", async () => {
 
 	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: null });
 
-	expect(await ana.query(api.goals.fund, { space: "personal" })).toEqual({
+	expect(await ana.query(api.goals.fund, { space: "personal", today: TODAY })).toEqual({
 		fundCents: 5_000,
 		fundGoalCents: null,
+		suggestedFundGoalCents: 225_000,
 		isOwner: true,
 	});
 });
@@ -163,7 +168,7 @@ test("after removing the fund goal, a new one can be set", async () => {
 	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: null });
 	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 600_000 });
 
-	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal" });
+	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal", today: TODAY });
 	expect(fundGoalCents).toBe(600_000);
 });
 
@@ -173,7 +178,7 @@ test("setting the fund goal again replaces it", async () => {
 	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 420_000 });
 	await ana.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 600_000 });
 
-	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal" });
+	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal", today: TODAY });
 	expect(fundGoalCents).toBe(600_000);
 });
 
@@ -188,7 +193,7 @@ test("a fund goal of 0, negative or with decimals fails and keeps the old one", 
 		).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
 	}
 
-	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal" });
+	const { fundGoalCents } = await ana.query(api.goals.fund, { space: "personal", today: TODAY });
 	expect(fundGoalCents).toBe(420_000);
 });
 
@@ -207,7 +212,10 @@ test("in a household only who created it sets the fund goal; both read it", asyn
 	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 });
 
 	for (const member of [ana, luis]) {
-		const { fundGoalCents } = await member.query(api.goals.fund, { space: "household" });
+		const { fundGoalCents } = await member.query(api.goals.fund, {
+			space: "household",
+			today: TODAY,
+		});
 		expect(fundGoalCents).toBe(420_000);
 	}
 });
@@ -222,17 +230,25 @@ test("in a household only who created it sees isOwner and can remove the fund go
 	await luis.mutation(api.household.joinHousehold, { code });
 	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 });
 
-	expect((await ana.query(api.goals.fund, { space: "household" })).isOwner).toBe(true);
-	expect((await luis.query(api.goals.fund, { space: "household" })).isOwner).toBe(false);
+	expect((await ana.query(api.goals.fund, { space: "household", today: TODAY })).isOwner).toBe(
+		true,
+	);
+	expect((await luis.query(api.goals.fund, { space: "household", today: TODAY })).isOwner).toBe(
+		false,
+	);
 
 	await expect(
 		luis.mutation(api.goals.setFundGoal, { space: "household", targetCents: null }),
 	).rejects.toThrow("Solo quien creó el hogar define la meta del fondo.");
-	expect((await luis.query(api.goals.fund, { space: "household" })).fundGoalCents).toBe(420_000);
+	expect(
+		(await luis.query(api.goals.fund, { space: "household", today: TODAY })).fundGoalCents,
+	).toBe(420_000);
 
 	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: null });
 	for (const member of [ana, luis]) {
-		expect((await member.query(api.goals.fund, { space: "household" })).fundGoalCents).toBeNull();
+		expect(
+			(await member.query(api.goals.fund, { space: "household", today: TODAY })).fundGoalCents,
+		).toBeNull();
 	}
 });
 
@@ -266,4 +282,63 @@ test("editing a goal without a month removes its month; with a month sets it", a
 	});
 	const [withMonth] = await ana.query(api.goals.list, { space: "personal" });
 	expect(withMonth.targetMonth).toBe("2027-05");
+});
+
+async function suggestedFor(plan: {
+	cadence?: "monthly" | "biweekly" | "weekly";
+	cycleStartDay?: number;
+	incomeCents?: number;
+}) {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, ...plan });
+	return (await ana.query(api.goals.fund, { space: "personal", today: TODAY }))
+		.suggestedFundGoalCents;
+}
+
+test("monthly S/ 3,600 at 50% Needs suggests 3 months: S/ 5,400", async () => {
+	expect(await suggestedFor({ incomeCents: 360_000 })).toBe(540_000);
+});
+
+test("biweekly income counts twice a month", async () => {
+	expect(await suggestedFor({ cadence: "biweekly", incomeCents: 200_000 })).toBe(600_000);
+});
+
+test("weekly income counts 52/12 a month and rounds down to the cent", async () => {
+	expect(await suggestedFor({ cadence: "weekly", cycleStartDay: 1, incomeCents: 100_001 })).toBe(
+		650_006,
+	);
+});
+
+test("without an open cycle for today there is no suggestion", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+
+	const fund = await ana.query(api.goals.fund, { space: "personal", today: "2026-12-01" });
+	expect(fund.suggestedFundGoalCents).toBeNull();
+});
+
+test("in a household the suggestion uses the household split", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.mutation(api.household.createHousehold, { name: "Casa" });
+	await ana.mutation(api.settings.updateSplit, {
+		space: "household",
+		split: { needs: 60, wants: 20, savings: 20 },
+	});
+
+	const household = await ana.query(api.goals.fund, { space: "household", today: TODAY });
+	const personal = await ana.query(api.goals.fund, { space: "personal", today: TODAY });
+	expect(household.suggestedFundGoalCents).toBe(270_000);
+	expect(personal.suggestedFundGoalCents).toBe(225_000);
+});
+
+test("fund with a date that is not a date fails", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+
+	await expect(ana.query(api.goals.fund, { space: "personal", today: "hoy" })).rejects.toThrow(
+		"Revisa los datos e inténtalo otra vez.",
+	);
 });

@@ -25,6 +25,19 @@ export function isValidStartDay(cadence: Cadence, day: CycleStartDay): boolean {
 	return isValidMonthDay(day);
 }
 
+const MONTH_FACTOR: Record<Cadence, { times: number; per: number }> = {
+	monthly: { times: 1, per: 1 },
+	biweekly: { times: 2, per: 1 },
+	weekly: { times: 52, per: 12 },
+};
+const FUND_GOAL_MONTHS = 3;
+
+/** Plan income x Needs share, taken to one month, times 3. Rounded down to the cent. */
+export function suggestFundGoalCents(plan: Pick<Plan, "cadence" | "incomeCents">, split: Split) {
+	const { times, per } = MONTH_FACTOR[plan.cadence];
+	return Math.floor((plan.incomeCents * split.needs * times * FUND_GOAL_MONTHS) / (100 * per));
+}
+
 export function isValidSplit({ needs, wants, savings }: Split): boolean {
 	return (
 		[needs, wants, savings].every((p) => p >= 0 && p <= 100) &&

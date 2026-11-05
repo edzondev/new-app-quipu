@@ -6,21 +6,28 @@ export function AmountField({
 	value,
 	onChange,
 	error,
+	large,
 }: {
 	label: string;
 	value: string;
 	onChange: (value: string) => void;
 	error?: string;
+	large?: boolean;
 }) {
 	return (
 		<div>
 			<div
 				className={cn(
-					"flex items-baseline gap-3 border-b pb-2",
-					error ? "border-warning" : "border-input has-focus-visible:border-foreground",
+					"flex items-baseline gap-3 pb-2",
+					large ? "border-b-[1.5px]" : "border-b",
+					error
+						? "border-warning"
+						: large
+							? "border-foreground"
+							: "border-input has-focus-visible:border-foreground",
 				)}
 			>
-				<span className="text-lg text-muted-foreground">S/</span>
+				<span className={cn("text-muted-foreground", large ? "text-[22px]" : "text-lg")}>S/</span>
 				<Input
 					inputMode="decimal"
 					autoComplete="off"
@@ -30,7 +37,12 @@ export function AmountField({
 					value={value}
 					onChange={(event) => onChange(event.target.value)}
 					unstyled
-					className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-2xl [&_[data-slot=input]]:tabular-nums"
+					className={cn(
+						"w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:tabular-nums",
+						large
+							? "[&_[data-slot=input]]:text-[44px] [&_[data-slot=input]]:leading-tight"
+							: "[&_[data-slot=input]]:text-2xl",
+					)}
 				/>
 			</div>
 			{error ? (
