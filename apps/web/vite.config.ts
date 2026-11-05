@@ -19,6 +19,9 @@ const config = defineConfig({
 					"react-dom/server",
 					"react/jsx-runtime",
 					"react/jsx-dev-runtime",
+					// Base UI is excluded below, so its CJS dependency must be pre-bundled or workerd fails with "module is not defined".
+					"@base-ui/react > use-sync-external-store/shim",
+					"@base-ui/react > use-sync-external-store/shim/with-selector",
 				],
 				exclude: ["@base-ui/react", "@base-ui/react/merge-props", "@base-ui/react/use-render"],
 			},
