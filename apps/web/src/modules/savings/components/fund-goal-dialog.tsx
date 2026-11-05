@@ -2,6 +2,7 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, toCents } from "@quipu/backend/shared/budget";
 import { useMutation } from "@tanstack/react-query";
+import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
 import {
 	AlertDialog,
@@ -23,10 +24,11 @@ import {
 	DialogTitle,
 } from "#/components/ui/dialog";
 import { readError } from "#/lib/read-error";
+import { CHIP } from "#/lib/typography";
 import { AmountField } from "#/modules/commitments/components/amount-field";
 
 type FundGoalProps = {
-	space: "personal" | "household";
+	space: FunctionArgs<typeof api.goals.setFundGoal>["space"];
 	fundGoalCents: number | null;
 	suggestedCents: number | null;
 	onClose: () => void;
@@ -58,6 +60,7 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 			</DialogHeader>
 			<DialogPanel className="flex flex-col gap-4">
 				<AmountField
+					large
 					label="Meta del fondo"
 					value={amount}
 					onChange={setAmount}
@@ -65,13 +68,13 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 				/>
 				{suggestedCents ? (
 					<div>
-						<Button
-							variant="outline"
-							className="h-11 rounded-full"
+						<button
+							type="button"
+							className={CHIP}
 							onClick={() => setAmount(formatCents(suggestedCents))}
 						>
 							3 meses de Necesidades · S/ {formatCents(suggestedCents)}
-						</Button>
+						</button>
 					</div>
 				) : null}
 				{fundGoalCents ? (
@@ -87,9 +90,9 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 					</div>
 				) : null}
 			</DialogPanel>
-			<DialogFooter>
+			<DialogFooter variant="bare">
 				<Button
-					className="h-11 rounded-full px-6"
+					className="h-11 w-full rounded-full"
 					disabled={amountCents <= 0 || save.isPending}
 					loading={save.isPending && !confirmingRemove}
 					onClick={() => save.mutate(amountCents)}

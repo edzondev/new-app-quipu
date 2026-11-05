@@ -1,8 +1,9 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
+import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { Button } from "#/components/ui/button";
-import { EYEBROW } from "#/lib/typography";
+import { ACTION, EYEBROW } from "#/lib/typography";
 
 type Fund = FunctionReturnType<typeof api.goals.fund>;
 
@@ -22,50 +23,56 @@ export function FundCard({
 	const percent = fundGoalCents ? Math.min(100, Math.floor((fundCents / fundGoalCents) * 100)) : 0;
 
 	return (
-		<section className="mt-9 max-w-xl rounded-2xl border border-border p-6">
-			<p className={EYEBROW}>Fondo de emergencia</p>
-			<p className="mt-2.5 flex flex-wrap items-start gap-1 font-mono text-5xl leading-none tracking-[-0.03em] break-all">
-				<span className="mt-1.5 text-xl tracking-normal text-muted-foreground">S/</span>
-				<span>{whole}</span>
-				<span className="mt-1 text-[0.41em] text-muted-foreground">.{decimals}</span>
-			</p>
+		<section className="mt-9 rounded-3xl bg-muted p-6 sm:p-9">
+			<div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+				<div className="min-w-0">
+					<p className={EYEBROW}>Fondo de emergencia</p>
+					<p className="mt-2.5 flex items-start gap-1 font-mono text-[clamp(44px,12vw,80px)] leading-none tracking-[-0.03em]">
+						<span className="mt-2.5 text-2xl tracking-normal text-muted-foreground">S/</span>
+						<span>{whole}</span>
+						<span className="mt-2 text-[0.41em] text-muted-foreground">.{decimals}</span>
+					</p>
+					{fundGoalCents ? (
+						<p className="mt-2.5 text-sm text-muted-foreground">
+							Meta S/ {formatCents(fundGoalCents)} ·{" "}
+							{percent >= 100 ? "Meta alcanzada" : `${percent}% de tu meta`}
+							{isOwner ? (
+								<button
+									type="button"
+									className={cn(ACTION, "ml-2.5 align-middle")}
+									onClick={onEditGoal}
+								>
+									Editar meta
+								</button>
+							) : null}
+						</p>
+					) : isOwner ? (
+						<button type="button" className={cn(ACTION, "mt-2.5")} onClick={onEditGoal}>
+							Definir meta
+						</button>
+					) : null}
+				</div>
+
+				<div className="flex items-center gap-2.5">
+					<Button className="h-11 rounded-full px-5" onClick={onContribute}>
+						Aportar
+					</Button>
+					{fundCents > 0 ? (
+						<button type="button" className={ACTION} onClick={onWithdraw}>
+							Retirar
+						</button>
+					) : null}
+				</div>
+			</div>
 
 			{fundGoalCents ? (
-				<div className="mt-4">
-					<div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
-						<span>Meta S/ {formatCents(fundGoalCents)}</span>
-						{isOwner ? (
-							<Button variant="link" size="sm" onClick={onEditGoal}>
-								Editar meta
-							</Button>
-						) : null}
-					</div>
-					<div className="mt-1 h-[5px] overflow-hidden rounded-full bg-muted">
-						<div
-							className="h-full rounded-full bg-envelope-savings"
-							style={{ width: `${percent}%` }}
-						/>
-					</div>
-					<p className="mt-1.5 text-sm text-muted-foreground">
-						{percent >= 100 ? "Meta alcanzada" : `${percent}% de tu meta`}
-					</p>
+				<div className="mt-6 h-2.5 overflow-hidden rounded-full bg-background">
+					<div
+						className="h-full rounded-full bg-envelope-savings"
+						style={{ width: `${percent}%` }}
+					/>
 				</div>
-			) : isOwner ? (
-				<Button variant="link" size="sm" className="mt-3 px-0" onClick={onEditGoal}>
-					Definir meta
-				</Button>
 			) : null}
-
-			<div className="mt-6 flex flex-wrap gap-2">
-				<Button className="h-11 rounded-full px-6" onClick={onContribute}>
-					Aportar
-				</Button>
-				{fundCents > 0 ? (
-					<Button variant="outline" className="h-11 rounded-full px-6" onClick={onWithdraw}>
-						Retirar
-					</Button>
-				) : null}
-			</div>
 		</section>
 	);
 }

@@ -2,6 +2,7 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
 import { useMutation } from "@tanstack/react-query";
+import { cn } from "cn";
 import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
 import { ChoiceChips } from "#/components/choice-chips";
@@ -16,7 +17,9 @@ import {
 	DialogTitle,
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
+import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { readError } from "#/lib/read-error";
+import { EYEBROW } from "#/lib/typography";
 import { AmountField } from "#/modules/commitments/components/amount-field";
 
 type Reason = FunctionArgs<typeof api.transactions.withdrawSaving>["reason"];
@@ -29,7 +32,7 @@ const REASONS: { value: Reason; label: string }[] = [
 ];
 
 type WithdrawProps = {
-	space: "personal" | "household";
+	space: FunctionArgs<typeof api.transactions.withdrawSaving>["space"];
 	fundCents: number;
 	onClose: () => void;
 };
@@ -62,6 +65,7 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 			</DialogHeader>
 			<DialogPanel className="flex flex-col gap-5">
 				<AmountField
+					large
 					label="Monto a retirar"
 					value={amount}
 					onChange={setAmount}
@@ -74,7 +78,7 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 					}
 				/>
 				<div className="flex flex-col gap-2">
-					<p aria-hidden className="text-sm text-muted-foreground">
+					<p aria-hidden className={EYEBROW}>
 						Motivo
 					</p>
 					<ChoiceChips label="Motivo" options={REASONS} value={reason} onChange={setReason} />
@@ -88,11 +92,17 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 						onChange={(event) => setNote(event.target.value)}
 					/>
 				) : null}
-				<p className="text-sm text-muted-foreground">Pasa a Necesidades de este ciclo.</p>
+				<p className="flex items-start gap-2 text-sm text-muted-foreground">
+					<span
+						aria-hidden
+						className={cn("mt-1.5 size-2 shrink-0 rounded-full", ENVELOPE_DOT.needs)}
+					/>
+					Pasa a Necesidades de este ciclo.
+				</p>
 			</DialogPanel>
-			<DialogFooter>
+			<DialogFooter variant="bare">
 				<Button
-					className="h-11 rounded-full px-6"
+					className="h-11 w-full rounded-full"
 					disabled={!canSave}
 					loading={save.isPending}
 					onClick={() => save.mutate()}

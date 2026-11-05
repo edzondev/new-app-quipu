@@ -2,6 +2,7 @@ import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
+import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
@@ -21,7 +22,13 @@ export function SavingsPage() {
 	return <Savings key={`${space}-${today}`} space={space} today={today} />;
 }
 
-function Savings({ space, today }: { space: "personal" | "household"; today: string }) {
+function Savings({
+	space,
+	today,
+}: {
+	space: FunctionArgs<typeof api.goals.fund>["space"];
+	today: string;
+}) {
 	const queryClient = useQueryClient();
 	const [panel, setPanel] = useState<Panel>(null);
 	const ensureOpen = useEnsureOpenCycle(space, today);
@@ -55,7 +62,7 @@ function Savings({ space, today }: { space: "personal" | "household"; today: str
 			<div role="status" className="space-y-6 pt-6" aria-busy="true" aria-label="Cargando">
 				<Skeleton className="h-10 w-40" />
 				<Skeleton className="h-3 w-80" />
-				<Skeleton className="mt-8 h-44 max-w-xl" />
+				<Skeleton className="mt-8 h-44" />
 			</div>
 		);
 	}
