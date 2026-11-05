@@ -12,7 +12,7 @@ import { addDays, formatDay, monthName } from "@quipu/backend/shared/dates";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
@@ -116,10 +116,11 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		: "skip";
 	const home = useQuery(convexQuery(api.balances.getHome, homeArgs)).data;
 	const [confirmation, setConfirmation] = useState<string | null>(null);
-	const [saved, setSaved] = useState(false);
-	const { save, remove, pending, error } = useMovementActions(space, () =>
-		confirmation ? setSaved(true) : onDone(),
-	);
+	const pendingConfirmation = useRef<string | null>(null);
+	const { save, remove, pending, error } = useMovementActions(space, () => {
+		if (pendingConfirmation.current) setConfirmation(pendingConfirmation.current);
+		else onDone();
+	});
 
 	const editId = draft.id;
 	const defaultValues: RegisterValues = {
@@ -143,11 +144,9 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 			const asksCycle =
 				!editId && value.kind === "income" && value.incomeType === "cycle" && home?.earlyWindow;
 			const toNext = asksCycle && value.cycleChoice === "next";
-			setConfirmation(
-				toNext
-					? `Listo. Sueldo de S/ ${formatCents(amountCents)} para ${monthName(nextStart)}. Empieza el ${formatDay(nextStart)}.`
-					: null,
-			);
+			pendingConfirmation.current = toNext
+				? `Listo. Sueldo de S/ ${formatCents(amountCents)} para ${monthName(nextStart)}. Empieza el ${formatDay(nextStart)}.`
+				: null;
 			save(
 				value.kind === "expense"
 					? { kind: value.kind, id: editId, amountCents, envelope: value.envelope, note }
@@ -170,7 +169,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		(state) => state.values,
 	);
 
-	if (saved) {
+	if (confirmation) {
 		return (
 			<DialogPopup>
 				<DialogHeader>
