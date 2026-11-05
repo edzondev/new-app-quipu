@@ -1,12 +1,22 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { ENVELOPE_LABELS, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
+import {
+	AMOUNT_KEYS,
+	ENVELOPE_LABELS,
+	formatCents,
+	getDailyCents,
+	NOTE_MAX_LENGTH,
+	toCents,
+} from "@quipu/backend/shared/budget";
+import { addDays, formatDay, monthName } from "@quipu/backend/shared/dates";
+import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import type { FunctionReturnType } from "convex/server";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "#/components/ui/collapsible";
 import {
 	DialogDescription,
 	DialogFooter,
@@ -16,30 +26,57 @@ import {
 	DialogTitle,
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
+import { Label } from "#/components/ui/label";
+import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
+import { useLimaDate } from "#/hooks/use-lima-date";
+import { positiveMoney } from "#/lib/money-schema";
 import type { Draft, Kind } from "./movement-draft";
 import { useMovementActions } from "./use-movement-actions";
 
-type GoalId = FunctionReturnType<typeof api.goals.list>[number]["id"];
-type Envelope = "needs" | "wants";
-type DeletableKind = Exclude<Kind, "saving">;
+const registerSchema = z.object({
+	kind: z.enum(["expense", "income"]),
+	amount: positiveMoney("Escribe un monto."),
+	note: z.string(),
+	envelope: z.enum(["needs", "wants"]),
+	incomeType: z.enum(["cycle", "extra"]),
+	extraType: z.enum(["gratification", "bonus", "repayment", "other"]),
+	destination: z.enum(["envelopes", "savings"]),
+	cycleChoice: z.enum(["current", "next"]),
+});
+
+type RegisterValues = z.infer<typeof registerSchema>;
+type Envelope = RegisterValues["envelope"];
 
 const KINDS: { value: Kind; label: string }[] = [
 	{ value: "expense", label: "Gasto" },
 	{ value: "income", label: "Ingreso" },
-	{ value: "saving", label: "Aporte a una meta" },
 ];
 
-const ENVELOPES: { value: Envelope; label: string }[] = [
-	{ value: "needs", label: ENVELOPE_LABELS.needs },
-	{ value: "wants", label: ENVELOPE_LABELS.wants },
+const INCOME_TYPES: { value: RegisterValues["incomeType"]; label: string }[] = [
+	{ value: "cycle", label: "Para este ciclo" },
+	{ value: "extra", label: "Extra" },
 ];
+
+const EXTRA_TYPES: { value: RegisterValues["extraType"]; label: string }[] = [
+	{ value: "gratification", label: "Gratificación" },
+	{ value: "bonus", label: "Bono" },
+	{ value: "repayment", label: "Deuda que te devolvieron" },
+	{ value: "other", label: "Otro" },
+];
+
+const DESTINATIONS: { value: RegisterValues["destination"]; label: string }[] = [
+	{ value: "envelopes", label: "Sumar a mis sobres" },
+	{ value: "savings", label: "Directo a Ahorro" },
+];
+
+const ENVELOPES: Envelope[] = ["needs", "wants"];
 
 function DeleteButton({
 	kind,
 	disabled,
 	onDelete,
 }: {
-	kind: DeletableKind;
+	kind: Kind;
 	disabled: boolean;
 	onDelete: () => void;
 }) {
@@ -53,10 +90,10 @@ function DeleteButton({
 		return (
 			<>
 				<p className="mr-auto text-sm text-muted-foreground">{prompt}</p>
-				<Button variant="ghost" disabled={disabled} onClick={onDelete}>
+				<Button type="button" variant="ghost" disabled={disabled} onClick={onDelete}>
 					Eliminar
 				</Button>
-				<Button variant="ghost" disabled={disabled} onClick={() => setConfirm(false)}>
+				<Button type="button" variant="ghost" disabled={disabled} onClick={() => setConfirm(false)}>
 					Cancelar
 				</Button>
 			</>
@@ -64,7 +101,7 @@ function DeleteButton({
 	}
 
 	return (
-		<Button variant="ghost" disabled={disabled} onClick={() => setConfirm(true)}>
+		<Button type="button" variant="ghost" disabled={disabled} onClick={() => setConfirm(true)}>
 			Eliminar
 		</Button>
 	);
@@ -72,119 +109,311 @@ function DeleteButton({
 
 export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => void }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
-	const goals = useQuery(convexQuery(api.goals.list, { space })).data ?? [];
-	const { save, remove, pending, error } = useMovementActions(space, onDone);
+	const today = useLimaDate();
+	const ensureOpen = useEnsureOpenCycle(space, today);
+	const homeArgs: { space: "personal" | "household"; today: string } | "skip" = ensureOpen.isSuccess
+		? { space, today }
+		: "skip";
+	const home = useQuery(convexQuery(api.balances.getHome, homeArgs)).data;
+	const [confirmation, setConfirmation] = useState<string | null>(null);
+	const pendingConfirmation = useRef<string | null>(null);
+	const { save, remove, pending, error } = useMovementActions(space, () => {
+		if (pendingConfirmation.current) setConfirmation(pendingConfirmation.current);
+		else onDone();
+	});
 
-	const [kind, setKind] = useState(draft.kind);
-	const [amount, setAmount] = useState(draft.amount);
-	const [note, setNote] = useState(draft.note ?? "");
-	const [envelope, setEnvelope] = useState(draft.envelope ?? "needs");
-	const [pickedGoal, setPickedGoal] = useState<GoalId>();
-
-	const kinds = goals.length > 0 ? KINDS : KINDS.filter((item) => item.value !== "saving");
-	const selected = kinds.some((item) => item.value === kind) ? kind : "expense";
-	const goalId = goals.find((goal) => goal.id === pickedGoal)?.id ?? goals[0]?.id;
-	const amountCents = toCents(amount);
 	const editId = draft.id;
-	const editKind = draft.kind === "saving" ? null : draft.kind;
-	const noteValue = note.trim() || undefined;
-	const canSave = amountCents > 0 && !pending && (selected !== "saving" || goalId !== undefined);
+	const defaultValues: RegisterValues = {
+		kind: draft.kind,
+		amount: draft.amount,
+		note: draft.note ?? "",
+		envelope: draft.envelope ?? "needs",
+		incomeType: "cycle",
+		extraType: "other",
+		destination: "envelopes",
+		cycleChoice: "next",
+	};
+	const nextStart = home ? addDays(home.endDate, 1) : "";
+	const form = useForm({
+		defaultValues,
+		validationLogic: revalidateLogic(),
+		validators: { onDynamic: registerSchema },
+		onSubmit: ({ value }) => {
+			const amountCents = toCents(value.amount);
+			const note = value.note.trim() || undefined;
+			const asksCycle =
+				!editId && value.kind === "income" && value.incomeType === "cycle" && home?.earlyWindow;
+			const toNext = asksCycle && value.cycleChoice === "next";
+			pendingConfirmation.current = toNext
+				? `Listo. Sueldo de S/ ${formatCents(amountCents)} para ${monthName(nextStart)}. Empieza el ${formatDay(nextStart)}.`
+				: null;
+			save(
+				value.kind === "expense"
+					? { kind: value.kind, id: editId, amountCents, envelope: value.envelope, note }
+					: {
+							kind: value.kind,
+							id: editId,
+							amountCents,
+							note,
+							extra:
+								value.incomeType === "extra"
+									? { type: value.extraType, toSavings: value.destination === "savings" }
+									: undefined,
+							forNextCycle: asksCycle ? toNext : undefined,
+						},
+			);
+		},
+	});
+	const { kind, amount, envelope, incomeType, destination, cycleChoice } = useSelector(
+		form.store,
+		(state) => state.values,
+	);
+
+	if (confirmation) {
+		return (
+			<DialogPopup>
+				<DialogHeader>
+					<DialogTitle>Registrar</DialogTitle>
+				</DialogHeader>
+				<DialogPanel>
+					<p role="status">{confirmation}</p>
+				</DialogPanel>
+				<DialogFooter>
+					<Button type="button" onClick={onDone}>
+						Cerrar
+					</Button>
+				</DialogFooter>
+			</DialogPopup>
+		);
+	}
+
+	const amountCents = toCents(amount);
+	const originalCents = editId ? toCents(draft.amount) : 0;
+	const isExpense = kind === "expense";
+	const asksCycle = Boolean(home?.earlyWindow) && !isExpense && !editId && incomeType === "cycle";
+	const toNext = asksCycle && cycleChoice === "next";
+
+	const envelopeOptions = ENVELOPES.map((value) => ({
+		value,
+		label: home
+			? `${ENVELOPE_LABELS[value]} · S/ ${formatCents(home[AMOUNT_KEYS[value]])}`
+			: ENVELOPE_LABELS[value],
+	}));
+	const cycleOptions = home
+		? [
+				{ value: "current" as const, label: `Para lo que queda de ${monthName(home.endDate)}` },
+				{
+					value: "next" as const,
+					label: `Para ${monthName(nextStart)}, desde el ${formatDay(nextStart)}`,
+				},
+			]
+		: [];
+	// Editing an expense gives its own amount back to the envelope it came from.
+	const room = home
+		? home[AMOUNT_KEYS[envelope]] + (envelope === draft.envelope ? originalCents : 0)
+		: 0;
+	const dailyAfter = home
+		? getDailyCents(
+				home.needsCents + home.wantsCents - home.pendingCents - (amountCents - originalCents),
+				home.daysLeft,
+			)
+		: 0;
 
 	return (
 		<DialogPopup>
-			<DialogHeader>
-				<DialogTitle>Registrar</DialogTitle>
-				<DialogDescription>Queda en el ciclo de hoy.</DialogDescription>
-			</DialogHeader>
-			<DialogPanel className="flex flex-col gap-5">
-				{editId ? null : (
-					<ChoiceChips label="Tipo" options={kinds} value={selected} onChange={setKind} />
-				)}
+			<form
+				noValidate
+				className="contents"
+				onSubmit={(event) => {
+					event.preventDefault();
+					void form.handleSubmit();
+				}}
+			>
+				<DialogHeader>
+					<DialogTitle>Registrar</DialogTitle>
+					<DialogDescription>
+						En {space === "household" ? "Nuestro espacio" : "Personal"}
+					</DialogDescription>
+				</DialogHeader>
+				<DialogPanel className="flex flex-col gap-5">
+					{editId ? null : (
+						<form.Field name="kind">
+							{(field) => (
+								<ChoiceChips
+									label="Tipo"
+									options={KINDS}
+									value={field.state.value}
+									onChange={field.handleChange}
+								/>
+							)}
+						</form.Field>
+					)}
 
-				<div className="flex items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground">
-					<span className="text-2xl text-muted-foreground">S/</span>
-					<Input
-						inputMode="decimal"
-						autoComplete="off"
-						aria-label="Monto"
-						placeholder="0.00"
-						value={amount}
-						onChange={(event) => setAmount(event.target.value)}
-						unstyled
-						className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-4xl [&_[data-slot=input]]:tabular-nums"
-					/>
-				</div>
+					<form.Field name="amount">
+						{(field) => {
+							const message = field.state.meta.errors[0]?.message;
+							return (
+								<div>
+									<div className="flex items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground">
+										<span className="text-2xl text-muted-foreground">S/</span>
+										<Input
+											inputMode="decimal"
+											autoComplete="off"
+											aria-label="Monto"
+											aria-invalid={message ? true : undefined}
+											placeholder="0.00"
+											value={field.state.value}
+											onChange={(event) => field.handleChange(event.target.value)}
+											unstyled
+											className="w-full border-0 bg-transparent [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:text-4xl [&_[data-slot=input]]:tabular-nums"
+										/>
+									</div>
+									{message ? (
+										<p role="alert" className="mt-1.5 text-xs text-warning-foreground">
+											{message}
+										</p>
+									) : null}
+								</div>
+							);
+						}}
+					</form.Field>
 
-				{selected === "expense" ? (
-					<ChoiceChips label="Sobre" options={ENVELOPES} value={envelope} onChange={setEnvelope} />
-				) : null}
+					{isExpense ? (
+						<>
+							<div className="flex flex-col gap-2">
+								<p aria-hidden className="text-sm text-muted-foreground">
+									Sale de
+								</p>
+								<form.Field name="envelope">
+									{(field) => (
+										<ChoiceChips
+											label="Sale de"
+											options={envelopeOptions}
+											value={field.state.value}
+											onChange={field.handleChange}
+										/>
+									)}
+								</form.Field>
+								{home && amountCents > room ? (
+									<p role="status" className="text-xs text-warning-foreground">
+										Supera lo que queda en {ENVELOPE_LABELS[envelope]} (S/{" "}
+										{formatCents(Math.max(0, room))})
+									</p>
+								) : null}
+							</div>
+							{home && amountCents > 0 ? (
+								<p className="text-sm text-muted-foreground">
+									Disponible hoy: S/ {formatCents(home.dailyCents)} → S/ {formatCents(dailyAfter)}
+								</p>
+							) : null}
+						</>
+					) : null}
 
-				{selected === "saving" ? (
-					<label className="flex flex-col gap-1.5 text-sm">
-						<span className="text-muted-foreground">Meta</span>
-						<select
-							value={goalId}
-							onChange={(event) =>
-								setPickedGoal(goals.find((goal) => goal.id === event.target.value)?.id)
-							}
-							className="h-9 rounded-lg border border-input bg-background px-3"
-						>
-							{goals.map((goal) => (
-								<option key={goal.id} value={goal.id}>
-									{goal.name}
-								</option>
-							))}
-						</select>
-					</label>
-				) : null}
+					{!isExpense && !editId ? (
+						<>
+							<form.Field name="incomeType">
+								{(field) => (
+									<ChoiceChips
+										label="Tipo de ingreso"
+										options={INCOME_TYPES}
+										value={field.state.value}
+										onChange={field.handleChange}
+									/>
+								)}
+							</form.Field>
+							{incomeType === "extra" ? (
+								<>
+									<form.Field name="extraType">
+										{(field) => (
+											<ChoiceChips
+												label="Tipo de extra"
+												options={EXTRA_TYPES}
+												value={field.state.value}
+												onChange={field.handleChange}
+											/>
+										)}
+									</form.Field>
+									<form.Field name="destination">
+										{(field) => (
+											<ChoiceChips
+												label="Destino del extra"
+												options={DESTINATIONS}
+												value={field.state.value}
+												onChange={field.handleChange}
+											/>
+										)}
+									</form.Field>
+									{destination === "savings" ? (
+										<p className="text-sm text-muted-foreground">Tu número de hoy no cambia.</p>
+									) : null}
+								</>
+							) : null}
+							{asksCycle && home ? (
+								<div className="flex flex-col gap-2">
+									<p className="text-sm text-muted-foreground">
+										Tu ciclo termina el {formatDay(home.endDate)}. ¿Para qué ciclo es este ingreso?
+									</p>
+									<form.Field name="cycleChoice">
+										{(field) => (
+											<ChoiceChips
+												label="Ciclo del ingreso"
+												options={cycleOptions}
+												value={field.state.value}
+												onChange={field.handleChange}
+											/>
+										)}
+									</form.Field>
+								</div>
+							) : null}
+						</>
+					) : null}
 
-				<Input
-					aria-label="Nota"
-					placeholder="Nota (opcional)"
-					maxLength={NOTE_MAX_LENGTH}
-					value={note}
-					onChange={(event) => setNote(event.target.value)}
-				/>
+					<Collapsible defaultOpen={Boolean(draft.note)}>
+						<CollapsibleTrigger className="min-h-11 text-sm font-semibold text-muted-foreground">
+							Más detalles
+						</CollapsibleTrigger>
+						<CollapsiblePanel>
+							<form.Field name="note">
+								{(field) => (
+									<Label className="mt-2 flex flex-col items-stretch gap-1.5 text-sm sm:text-sm font-normal">
+										<span className="text-muted-foreground">Concepto · opcional</span>
+										<Input
+											placeholder={isExpense ? "Ej. almuerzo" : "Ej. pago de cliente"}
+											maxLength={NOTE_MAX_LENGTH}
+											value={field.state.value}
+											onChange={(event) => field.handleChange(event.target.value)}
+										/>
+									</Label>
+								)}
+							</form.Field>
+						</CollapsiblePanel>
+					</Collapsible>
 
-				{error ? (
-					<p role="alert" className="text-xs text-warning-foreground">
-						{error}
-					</p>
-				) : null}
-			</DialogPanel>
-			<DialogFooter>
-				{editId && editKind ? (
-					<DeleteButton
-						kind={editKind}
-						disabled={pending}
-						onDelete={() => remove(editKind, editId)}
-					/>
-				) : null}
-				<Button
-					loading={pending}
-					disabled={!canSave}
-					onClick={() => {
-						if (selected === "saving") {
-							if (!goalId) return;
-							save({ kind: "saving", amountCents, note: noteValue, goalId });
-							return;
-						}
-						if (selected === "expense") {
-							save({
-								kind: "expense",
-								id: draft.id,
-								amountCents,
-								envelope,
-								note: noteValue,
-							});
-							return;
-						}
-						save({ kind: "income", id: draft.id, amountCents, note: noteValue });
-					}}
-				>
-					Guardar
-				</Button>
-			</DialogFooter>
+					{error ? (
+						<p role="alert" className="text-xs text-warning-foreground">
+							{error}
+						</p>
+					) : null}
+				</DialogPanel>
+				<DialogFooter>
+					{editId ? (
+						<DeleteButton
+							kind={draft.kind}
+							disabled={pending}
+							onDelete={() => remove(draft.kind, editId)}
+						/>
+					) : null}
+					<Button type="submit" loading={pending} disabled={pending}>
+						{editId
+							? "Guardar"
+							: isExpense
+								? "Guardar gasto"
+								: toNext
+									? `Guardar para ${monthName(nextStart)}`
+									: "Guardar ingreso"}
+					</Button>
+				</DialogFooter>
+			</form>
 		</DialogPopup>
 	);
 }

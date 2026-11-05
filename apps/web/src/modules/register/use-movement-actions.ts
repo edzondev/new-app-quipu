@@ -1,11 +1,9 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useMutation } from "@tanstack/react-query";
-import type { FunctionReturnType } from "convex/server";
+import type { FunctionArgs } from "convex/server";
 import { readError } from "#/lib/read-error";
 import type { Kind, Movement } from "./movement-draft";
-
-type GoalId = FunctionReturnType<typeof api.goals.list>[number]["id"];
 
 export type SaveValues =
 	| {
@@ -20,15 +18,11 @@ export type SaveValues =
 			id?: Movement["id"];
 			amountCents: number;
 			note?: string;
-	  }
-	| {
-			kind: "saving";
-			amountCents: number;
-			note?: string;
-			goalId: GoalId;
+			extra?: FunctionArgs<typeof api.transactions.addIncome>["extra"];
+			forNextCycle?: boolean;
 	  };
 
-type Command = SaveValues | { kind: "delete"; entity: Exclude<Kind, "saving">; id: Movement["id"] };
+type Command = SaveValues | { kind: "delete"; entity: Kind; id: Movement["id"] };
 
 export function useMovementActions(space: "personal" | "household", onDone: () => void) {
 	const addExpense = useConvexMutation(api.transactions.addExpense);
@@ -37,7 +31,6 @@ export function useMovementActions(space: "personal" | "household", onDone: () =
 	const addIncome = useConvexMutation(api.transactions.addIncome);
 	const updateIncome = useConvexMutation(api.transactions.updateIncome);
 	const deleteIncome = useConvexMutation(api.transactions.deleteIncome);
-	const addSaving = useConvexMutation(api.transactions.addSaving);
 
 	const action = useMutation({
 		mutationFn: async (command: Command) => {
@@ -46,13 +39,6 @@ export function useMovementActions(space: "personal" | "household", onDone: () =
 					return command.entity === "expense"
 						? deleteExpense({ space, id: command.id })
 						: deleteIncome({ space, id: command.id });
-				case "saving":
-					return addSaving({
-						space,
-						amountCents: command.amountCents,
-						note: command.note,
-						goalId: command.goalId,
-					});
 				case "expense": {
 					const base = {
 						space,
@@ -64,14 +50,16 @@ export function useMovementActions(space: "personal" | "household", onDone: () =
 				}
 				case "income": {
 					const base = { space, amountCents: command.amountCents, note: command.note };
-					return command.id ? updateIncome({ ...base, id: command.id }) : addIncome(base);
+					return command.id
+						? updateIncome({ ...base, id: command.id })
+						: addIncome({ ...base, extra: command.extra, forNextCycle: command.forNextCycle });
 				}
 			}
 		},
 		onSuccess: onDone,
 	});
 
-	function remove(entity: Exclude<Kind, "saving">, id: Movement["id"]) {
+	function remove(entity: Kind, id: Movement["id"]) {
 		action.mutate({ kind: "delete", entity, id });
 	}
 

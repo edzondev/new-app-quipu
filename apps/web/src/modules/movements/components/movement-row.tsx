@@ -1,4 +1,5 @@
 import { ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared/budget";
+import { formatDay, monthName } from "@quipu/backend/shared/dates";
 import { cn } from "cn";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { canEdit, editDraft, type Movement } from "#/modules/register/movement-draft";
@@ -12,6 +13,12 @@ const KIND = {
 	withdrawal: { name: "Retiro del fondo", adds: true },
 } satisfies Record<Movement["kind"], { name: string; adds: boolean }>;
 
+function incomeLabel(row: Movement, when?: string) {
+	if (row.extra) return "Ingreso · Extra";
+	if (row.startsOn) return `Ingreso · Para ${monthName(row.startsOn)} · ${formatDay(row.date)}`;
+	return when ? "Ingreso" : "Ingreso · Para este ciclo";
+}
+
 export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 	const openRegister = useRegister();
 	const { name, adds } = KIND[row.kind];
@@ -20,9 +27,7 @@ export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 		? "Ahorro · no es gasto"
 		: row.envelope
 			? ENVELOPE_LABELS[row.envelope]
-			: when
-				? "Ingreso"
-				: "Ingreso · Para este ciclo";
+			: incomeLabel(row, when);
 	// Personal leaves who null; household sends the author name and we swap mine → Tú here.
 	const whoLabel = row.mine && row.who !== null ? "Tú" : row.who;
 	const detail = [envelope, whoLabel, when].filter(Boolean).join(" · ");

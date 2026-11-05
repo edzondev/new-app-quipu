@@ -17,7 +17,7 @@ description: Revisa un diff de Quipu contra el diseño y los casos límite (carr
    - Permisos: solo el autor edita o borra; el espacio sale de la sesión.
    - Dinero en céntimos enteros y fechas en Lima.
 5. Tests. Por cada test nuevo, pregunta: si rompo la línea que arregla esto, ¿falla? Si pasa con el código roto, no prueba nada.
-6. Código. Funciones de una sola llamada, efectos sin razón, lógica repetida, abstracciones que ningún caso pide. Para bugs genéricos usa además `/code-review`.
+6. Código. Funciones de una sola llamada, efectos sin razón, lógica repetida, abstracciones sin caso que las pida. Para bugs genéricos carga `/ponytail-review` (cada hallazgo con un caso concreto; nada de gustos de estilo). Si hay un bug real, carga `diagnosing-bugs` (reproduce primero, arregla la causa raíz).
 7. Veredicto, en este formato:
    - `PASA`, con una línea de por qué.
    - `ARREGLA ESTO`, con una lista: `archivo:línea`, qué falla, arreglo mínimo.

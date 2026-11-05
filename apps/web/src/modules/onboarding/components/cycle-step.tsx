@@ -4,6 +4,7 @@ import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
+import { Label } from "#/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
 import { StepHeader } from "#/modules/onboarding/components/step-header";
 import { type Cadence, type CycleStepValues, cycleStepSchema } from "#/modules/onboarding/schemas";
@@ -76,7 +77,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 
 				<form.Field name="startDay">
 					{(field) => (
-						<label className="mt-6 flex items-center gap-3 text-sm text-muted-foreground">
+						<Label className="mt-6 flex items-center gap-3 text-sm sm:text-sm font-normal text-muted-foreground">
 							Empieza el
 							<select
 								name={field.name}
@@ -102,7 +103,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 									</>
 								)}
 							</select>
-						</label>
+						</Label>
 					)}
 				</form.Field>
 				<p className="mt-3 text-xs text-muted-foreground">

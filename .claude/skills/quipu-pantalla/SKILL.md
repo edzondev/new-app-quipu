@@ -30,9 +30,9 @@ Las reglas de `.claude/rules/` cargan solas. No leas el inventario ni el HTML en
 ## Pasos
 
 1. Confirma la unidad con `/quipu-estado`. Rama nueva desde `master` al día: `feat/<unidad>-<tema>`, por ejemplo `feat/u3-compromisos`.
-2. Plan en 5 líneas: qué cambia, archivos, qué textos pone el HTML, qué queda fuera, cómo verás que funciona. Usa el «Terminado» de la unidad.
+2. Plan en 6 líneas: qué cambia, archivos, qué textos pone el HTML, qué queda fuera, cómo verás que funciona, y qué abstracciones o efectos propones y por qué cada uno hace falta (si no hay, pon «ninguno»). Usa el «Terminado» de la unidad.
 3. Falta una query o mutación: `/quipu-backend` primero.
-4. Código. Solo lo que dibuja el HTML. Textos literales. Sin estados para casos que no pasan.
+4. Código. Solo lo que dibuja el HTML. Textos literales. Sin estados para casos que no pasan. Carga `/vercel-react-best-practices` al escribir componentes y `/ponytail` como forma de trabajar: ¿hace falta este código? → ¿se puede con lo que ya existe? → mínimo. Mantén la lógica fuera de los componentes (hooks o funciones puras aparte).
 5. Checks: la lista de `.agents/skills/verify-quipu/SKILL.md`. Formatea solo tus archivos: `pnpm exec oxfmt <archivos>`.
 6. Navegador. Si existe `apps/web/.env.local` con `VITE_CONVEX_URL`, corre `pnpm dev`, abre `http://localhost:3000` y recorre el «Terminado» de la unidad, también en 375 px de ancho. Si no existe, no inventes uno: escribe en el PR «no verificado en navegador: falta `.env.local`».
 7. `/quipu-revision` y luego `/quipu-cerrar-unidad`.

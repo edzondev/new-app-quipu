@@ -5,6 +5,8 @@ import {
 	formatDaysLeft,
 	formatPastDay,
 	formatRecentDay,
+	isEarlyIncomeWindow,
+	monthName,
 	getCycleRange,
 	getFirstCycleRange,
 	getLimaDate,
@@ -177,4 +179,26 @@ describe("formatPastDay", () => {
 	test("a day of another year carries it", () => {
 		expect(formatPastDay("2026-12-31", "2027-01-02")).toBe("31 dic 2026");
 	});
+});
+
+describe("isEarlyIncomeWindow", () => {
+	test("monthly counts the last 3 days, today included", () => {
+		expect(isEarlyIncomeWindow("monthly", "2026-10-28", "2026-10-31")).toBe(false);
+		expect(isEarlyIncomeWindow("monthly", "2026-10-29", "2026-10-31")).toBe(true);
+		expect(isEarlyIncomeWindow("monthly", "2026-10-31", "2026-10-31")).toBe(true);
+	});
+
+	test("biweekly counts the last 2 days", () => {
+		expect(isEarlyIncomeWindow("biweekly", "2026-10-29", "2026-10-31")).toBe(false);
+		expect(isEarlyIncomeWindow("biweekly", "2026-10-30", "2026-10-31")).toBe(true);
+	});
+
+	test("weekly counts only the last day", () => {
+		expect(isEarlyIncomeWindow("weekly", "2026-10-30", "2026-10-31")).toBe(false);
+		expect(isEarlyIncomeWindow("weekly", "2026-10-31", "2026-10-31")).toBe(true);
+	});
+});
+
+test("monthName gives the full lowercase month", () => {
+	expect(monthName("2026-11-01")).toBe("noviembre");
 });

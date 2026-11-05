@@ -19,3 +19,5 @@ Solo lectura. No edites nada.
    - Preguntas abiertas que la bloquean, si hay.
 
 No abras `AUDITORIA.md` aquí. Si necesitas la fila de una pantalla, búscala con `grep -n` en esa sección.
+
+Si la siguiente acción es una unidad de pantalla, backend o revisión, dilo en una línea y recuerda cargar la skill que toca de esta lista, no otra: `/quipu-pantalla`, `/quipu-backend`, `/quipu-revision`.

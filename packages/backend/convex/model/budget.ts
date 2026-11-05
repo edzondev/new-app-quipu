@@ -25,6 +25,10 @@ export async function getDayBudget(
 			.take(500),
 	]);
 	const hasIncome = cycleTx.some((tx) => tx.kind === "income" && !tx.forNextCycle);
+	const earlyCents = cycleTx.reduce(
+		(sum, tx) => (tx.kind === "income" && tx.forNextCycle ? sum + tx.amountCents : sum),
+		0,
+	);
 	const reserved = await Promise.all(
 		commitmentRows.map(async (row) => {
 			const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
@@ -60,5 +64,6 @@ export async function getDayBudget(
 		daysLeft,
 		pendingCents,
 		hasIncome,
+		earlyCents,
 	};
 }
