@@ -23,7 +23,7 @@ This block is written and re-added by `turbo` before repository-scoped commands 
 - `packages/backend`: Convex. Funciones en `convex/`, lógica compartida entre funciones en `convex/model/`, lógica pura (dinero, fechas, plan) en `shared/`, tests en `__tests__/`.
 - `docs/`: diseño, guías, auditoría y `estado.md`. Es local: no se versiona y no existe en un clon limpio.
 - `.claude/rules/`: reglas cortas por carpeta. `.claude/skills/`: los skills `quipu-*`.
-- `.agents/skills/`: skills de pstack (`poteto-mode`) y `verify-quipu`.
+- `.agents/skills/`: skills de pstack y `verify-quipu`.
 
 ## Comandos
 
@@ -34,6 +34,7 @@ Desde la raíz, con Node >= 24 y pnpm 12.14.0.
 - Tipos: `pnpm typecheck`
 - Lint: `pnpm lint`
 - Tests: `pnpm --filter @quipu/backend test`. `pnpm test` en la raíz no corre nada y sale con 0: no lo uses.
+- e2e web: `pnpm --filter web e2e` (Playwright). Lo que necesita: `.claude/rules/tests.md`.
 - Formato: `pnpm exec oxfmt <archivos>` escribe. `pnpm exec oxfmt --check` revisa. En Windows falla en archivos viejos por CRLF; formatea solo los tuyos.
 - Build: `pnpm --filter web build`
 
