@@ -10,6 +10,9 @@ export const Route = createFileRoute("/_app/home")({
 			context.queryClient.query(convexQuery(api.balances.getHome, args)),
 			context.queryClient.query(convexQuery(api.commitments.list, args)),
 			context.queryClient.query(convexQuery(api.transactions.list, args)),
+			context.space === "personal"
+				? context.queryClient.query(convexQuery(api.cycles.getUnseenClosed, { space: "personal" }))
+				: undefined,
 		]);
 	},
 	component: HomePage,

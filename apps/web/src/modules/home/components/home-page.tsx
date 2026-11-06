@@ -14,6 +14,7 @@ import { EYEBROW } from "#/lib/typography";
 import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import type { Movement } from "#/modules/register/movement-draft";
 import { useRegister } from "#/modules/register/register-dialog";
+import { CloseNotice } from "./close-notice";
 import { EnvelopeCards } from "./envelope-cards";
 import { RecentMovements } from "./recent-movements";
 import { UpcomingCommitments } from "./upcoming-commitments";
@@ -39,13 +40,20 @@ function Home({ today }: { today: string }) {
 	const commitments = useQuery(convexQuery(api.commitments.list, args));
 	const movements = useQuery(convexQuery(api.transactions.list, args));
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
+	const closed = useQuery(
+		convexQuery(
+			api.cycles.getUnseenClosed,
+			ensureOpen.isSuccess && space === "personal" ? { space } : "skip",
+		),
+	);
 
 	if (
 		ensureOpen.isError ||
 		home.isError ||
 		commitments.isError ||
 		movements.isError ||
-		profile.isError
+		profile.isError ||
+		closed.isError
 	) {
 		return (
 			<div role="alert" className="pt-6">
@@ -63,17 +71,30 @@ function Home({ today }: { today: string }) {
 		);
 	}
 	if (!home.data) return <HomeSkeleton />;
-	if (home.data.empty) return <EmptyCycle planIncomeCents={home.data.planIncomeCents} />;
+	const notice = closed.data ? (
+		<CloseNotice key={closed.data.cycleId} closed={closed.data} />
+	) : null;
+	if (home.data.empty) {
+		return (
+			<>
+				{notice}
+				<EmptyCycle planIncomeCents={home.data.planIncomeCents} />
+			</>
+		);
+	}
 	if (!commitments.data || !movements.data || !profile.data) return <HomeSkeleton />;
 	return (
-		<Overview
-			home={home.data}
-			name={profile.data.name}
-			items={commitments.data.items}
-			rows={movements.data.rows}
-			space={space}
-			today={today}
-		/>
+		<>
+			{notice}
+			<Overview
+				home={home.data}
+				name={profile.data.name}
+				items={commitments.data.items}
+				rows={movements.data.rows}
+				space={space}
+				today={today}
+			/>
+		</>
 	);
 }
 
