@@ -12,8 +12,8 @@ import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
 import { ACTION } from "#/lib/typography";
 import {
-	canPay,
 	type CommitmentItem,
+	canPay,
 	describeDue,
 	describePaid,
 	type Payment,
@@ -22,7 +22,10 @@ import { AmountField } from "./amount-field";
 
 const BADGE = {
 	overdue: { text: "Vencido", className: "bg-primary/15 text-primary" },
-	upcoming: { text: "Próximo", className: "bg-warning/15 text-warning-foreground" },
+	upcoming: {
+		text: "Próximo",
+		className: "bg-warning/15 text-warning-foreground",
+	},
 } as const;
 
 const paySchema = z.object({ amount: positiveMoney("Escribe un monto.") });
@@ -188,14 +191,13 @@ export function CommitmentRow({
 			amountCents={item.amountCents}
 			action={
 				canPay(item) ? (
-					<button
-						type="button"
+					<Button
 						className={ACTION}
 						aria-expanded={paying}
 						onClick={() => setPaying((open) => !open)}
 					>
 						Ya pagué
-					</button>
+					</Button>
 				) : null
 			}
 			below={
