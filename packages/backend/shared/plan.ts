@@ -44,6 +44,32 @@ export function isValidSplit({ needs, wants, savings }: Split): boolean {
 	);
 }
 
+export function isSamePlan(a: Plan, b: Plan): boolean {
+	return (
+		a.cadence === b.cadence &&
+		a.cycleStartDay === b.cycleStartDay &&
+		a.incomeCents === b.incomeCents
+	);
+}
+
+const CADENCE_LABELS: Record<Cadence, string> = {
+	monthly: "Cada mes",
+	biweekly: "Cada quincena",
+	weekly: "Cada semana",
+};
+const WEEKDAY_NAMES = "domingo lunes martes miércoles jueves viernes sábado".split(" ");
+
+/** "Cada mes · empieza el día 15". Weekly names the weekday, never a day number. */
+export function cycleLabel({ cadence, cycleStartDay }: Pick<Plan, "cadence" | "cycleStartDay">) {
+	const start =
+		cadence === "weekly"
+			? `el ${WEEKDAY_NAMES[Number(cycleStartDay)]}`
+			: cycleStartDay === "last"
+				? "el último día del mes"
+				: `el día ${cycleStartDay}`;
+	return `${CADENCE_LABELS[cadence]} · empieza ${start}`;
+}
+
 export function isValidPlan({ cadence, cycleStartDay, incomeCents }: Plan): boolean {
 	return centsSchema.safeParse(incomeCents).success && isValidStartDay(cadence, cycleStartDay);
 }

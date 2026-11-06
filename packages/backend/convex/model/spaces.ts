@@ -49,11 +49,15 @@ export async function requireSpaceById(ctx: Ctx, spaceId: Id<"spaces">) {
 	return { userId: user._id, space };
 }
 
-export async function requirePlan(ctx: Ctx, space: Doc<"spaces">) {
+export async function requireOwnerProfile(ctx: Ctx, space: Doc<"spaces">) {
 	const profile = await ctx.db
 		.query("profiles")
 		.withIndex("by_userId", (q) => q.eq("userId", space.ownerId))
 		.unique();
 	if (!profile?.plan) throw new ConvexError("Termina tus primeros pasos.");
-	return profile.plan;
+	return { profile, plan: profile.plan };
+}
+
+export async function requirePlan(ctx: Ctx, space: Doc<"spaces">) {
+	return (await requireOwnerProfile(ctx, space)).plan;
 }

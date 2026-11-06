@@ -91,6 +91,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	expect(await ana.query(api.profiles.myProfile, {})).toEqual({
 		name: "Ana",
 		plan: null,
+		nextPlan: null,
 		hasHousehold: false,
 	});
 
@@ -101,6 +102,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	expect(await ana.query(api.profiles.myProfile, {})).toEqual({
 		name: "Ana",
 		plan: planOnly,
+		nextPlan: null,
 		hasHousehold: false,
 	});
 
@@ -166,6 +168,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	expect(await luis.query(api.profiles.myProfile, {})).toEqual({
 		name: "Luis",
 		plan: null,
+		nextPlan: null,
 		hasHousehold: false,
 	});
 });

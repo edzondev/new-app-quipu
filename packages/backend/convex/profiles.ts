@@ -29,6 +29,7 @@ export const myProfile = query({
 		v.object({
 			name: v.string(),
 			plan: v.union(plan, v.null()),
+			nextPlan: v.union(plan, v.null()),
 			hasHousehold: v.boolean(),
 		}),
 	),
@@ -40,6 +41,7 @@ export const myProfile = query({
 		return {
 			name: user.name,
 			plan: profile.plan ?? null,
+			nextPlan: profile.nextPlan ?? null,
 			hasHousehold: (await getHousehold(ctx, user._id)) !== null,
 		};
 	},
