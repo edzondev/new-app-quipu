@@ -15,6 +15,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { authClient } from "#/lib/auth-client";
 import { getToken } from "#/lib/auth-server";
 import { AUTH_TOKEN_QUERY_KEY, AUTH_TOKEN_TTL_MS } from "#/lib/auth-token";
+import { THEME_SCRIPT } from "#/lib/theme";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -60,6 +61,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				href: appCss,
 			},
 		],
+		scripts: [{ children: THEME_SCRIPT }],
 	}),
 	component: RootComponent,
 	shellComponent: RootDocument,
@@ -80,7 +82,8 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="es">
+		// The theme script adds `dark` before React hydrates, so the class differs from the server HTML.
+		<html lang="es" suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>

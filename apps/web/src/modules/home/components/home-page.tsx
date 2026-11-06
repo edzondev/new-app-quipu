@@ -171,7 +171,7 @@ function Overview({
 					) : null}
 				</section>
 
-				<EnvelopeCards home={home} />
+				<EnvelopeCards home={home} space={space} />
 			</div>
 
 			<div className="mt-[52px] grid gap-14 border-t border-border/80 pt-7 lg:grid-cols-2">

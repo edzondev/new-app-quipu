@@ -1,15 +1,17 @@
 import { Menu } from "@base-ui/react/menu";
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useSearch } from "@tanstack/react-router";
 import { cn } from "cn";
-import { useState } from "react";
 import { Button } from "#/components/ui/button";
-import { authClient } from "#/lib/auth-client";
+import { useSignOut } from "#/hooks/use-sign-out";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
+import { setTheme, THEMES, useTheme } from "#/lib/theme";
 import { useRegister } from "#/modules/register/register-dialog";
 
+const menuItem =
+	"flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-sm outline-none data-highlighted:bg-muted data-disabled:opacity-50";
 const pill =
 	"flex h-11 items-center rounded-[22px] px-4 text-sm font-semibold text-muted-foreground";
 const pillOn = "bg-background text-foreground shadow-[0_1px_3px_rgba(29,22,16,0.12)]";
@@ -18,25 +20,12 @@ const navLink = "flex h-11 items-center rounded-[22px] px-[18px] text-[15px] fon
 export function AppBar() {
 	const { space } = useSearch({ from: "/_app" });
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
-	const queryClient = useQueryClient();
-	const navigate = useNavigate();
-	const [signingOut, setSigningOut] = useState(false);
-	const [signOutError, setSignOutError] = useState<string | null>(null);
+	const signOut = useSignOut("current");
+	const theme = useTheme();
 	const openRegister = useRegister();
-	const initial = (profile.data?.name?.trim().charAt(0) || "?").toUpperCase();
-
-	async function signOut() {
-		setSignOutError(null);
-		setSigningOut(true);
-		const { error } = await authClient.signOut();
-		setSigningOut(false);
-		if (error) {
-			setSignOutError(getAuthErrorMessage(error));
-			return;
-		}
-		queryClient.clear();
-		await navigate({ to: "/sign-in" });
-	}
+	// Spreading a string walks code points, so an emoji at the start stays whole.
+	const [first = "?"] = profile.data?.name.trim() ?? "";
+	const initial = first.toUpperCase();
 
 	return (
 		<header className="border-b border-input bg-background">
@@ -124,19 +113,49 @@ export function AppBar() {
 						<Menu.Portal>
 							<Menu.Positioner sideOffset={8} align="end" className="z-50">
 								<Menu.Popup className="min-w-44 rounded-xl border border-border bg-background p-1 shadow-md outline-none">
+									<Menu.LinkItem
+										render={<Link to="/settings" search={{ space: undefined }} />}
+										className={menuItem}
+									>
+										Ajustes
+									</Menu.LinkItem>
+									<Menu.Separator className="my-1 h-px bg-border" />
+									<Menu.Group>
+										<Menu.GroupLabel className="px-3 py-1 text-xs text-muted-foreground">
+											Tema
+										</Menu.GroupLabel>
+										<Menu.RadioGroup
+											value={theme}
+											onValueChange={(value, { event }) => {
+												const next = THEMES.find((option) => option.value === value);
+												if (next) setTheme(next.value, event);
+											}}
+										>
+											{THEMES.map((option) => (
+												<Menu.RadioItem
+													key={option.value}
+													value={option.value}
+													closeOnClick={false}
+													className={cn(menuItem, "justify-between")}
+												>
+													{option.label}
+													<Menu.RadioItemIndicator aria-hidden>✓</Menu.RadioItemIndicator>
+												</Menu.RadioItem>
+											))}
+										</Menu.RadioGroup>
+									</Menu.Group>
+									<Menu.Separator className="my-1 h-px bg-border" />
 									<Menu.Item
 										closeOnClick={false}
-										disabled={signingOut}
-										className="cursor-pointer rounded-lg px-3 py-2 text-sm outline-none data-highlighted:bg-muted data-disabled:opacity-50"
-										onClick={() => {
-											void signOut();
-										}}
+										disabled={signOut.isPending}
+										className={menuItem}
+										onClick={() => signOut.mutate()}
 									>
-										{signingOut ? "Saliendo…" : "Cerrar sesión"}
+										{signOut.isPending ? "Saliendo…" : "Cerrar sesión"}
 									</Menu.Item>
-									{signOutError ? (
+									{signOut.isError ? (
 										<p role="alert" className="px-3 py-1.5 text-xs text-warning-foreground">
-											{signOutError}
+											{getAuthErrorMessage(signOut.error)}
 										</p>
 									) : null}
 								</Menu.Popup>

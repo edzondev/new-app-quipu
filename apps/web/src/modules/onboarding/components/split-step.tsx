@@ -1,28 +1,19 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { AMOUNT_KEYS, formatCents, splitIncome, toCents } from "@quipu/backend/shared/budget";
+import { splitIncome, toCents } from "@quipu/backend/shared/budget";
 import { parseStartDay } from "@quipu/backend/shared/plan";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
-import { cn } from "cn";
 import { ConvexError } from "convex/values";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
-import { Field, FieldError } from "#/components/ui/field";
-import { Input } from "#/components/ui/input";
-import { ENVELOPE_DOT } from "#/lib/envelope-dot";
+import { SplitFields } from "#/modules/onboarding/components/split-fields";
 import { StepHeader } from "#/modules/onboarding/components/step-header";
 import {
 	type CycleStepValues,
 	type SplitStepValues,
 	splitStepSchema,
 } from "#/modules/onboarding/schemas";
-
-const ENVELOPES = [
-	{ key: "needs", label: "Necesidades", dot: ENVELOPE_DOT.needs },
-	{ key: "wants", label: "Gustos", dot: ENVELOPE_DOT.wants },
-	{ key: "savings", label: "Ahorro", dot: ENVELOPE_DOT.savings },
-] as const;
 
 type Props = {
 	defaultValues: SplitStepValues;
@@ -76,72 +67,14 @@ export function SplitStep({ defaultValues, cycleStep, onBack }: Props) {
 				}}
 			>
 				<form.Field name="split">
-					{(splitField) => {
-						const isInvalid = !splitField.state.meta.isValid;
-						const errorMessage = splitField.state.meta.errors[0]?.message;
-						const shares = splitIncome(todayCents, splitField.state.value);
-						return (
-							<>
-								<div className="border-t border-border">
-									{ENVELOPES.map((envelope) => (
-										<form.Field key={envelope.key} name={`split.${envelope.key}`}>
-											{(field) => (
-												<Field
-													name={field.name}
-													invalid={isInvalid}
-													className="border-b border-border py-5"
-												>
-													<div className="flex w-full items-center gap-3">
-														<span
-															aria-hidden="true"
-															className={cn("size-2 shrink-0 rounded-full", envelope.dot)}
-														/>
-														<span className="flex-1 text-base">{envelope.label}</span>
-														<Input
-															name={field.name}
-															type="number"
-															inputMode="decimal"
-															min={0}
-															max={100}
-															aria-label={`Porcentaje de ${envelope.label}`}
-															value={field.state.value}
-															onBlur={field.handleBlur}
-															onChange={(e) =>
-																field.handleChange(
-																	e.target.value === "" ? 0 : Number(e.target.value),
-																)
-															}
-															unstyled
-															className="w-14 border-0 border-b border-input bg-transparent has-focus-visible:border-foreground has-aria-invalid:border-warning [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-1 [&_[data-slot=input]]:text-right [&_[data-slot=input]]:tabular-nums"
-														/>
-														<span className="text-sm text-muted-foreground">%</span>
-														<span className="w-28 text-right text-sm tabular-nums text-muted-foreground">
-															S/ {formatCents(shares[AMOUNT_KEYS[envelope.key]])}
-														</span>
-													</div>
-													<div className="mt-4 h-1 w-full rounded-full bg-muted">
-														<div
-															className={cn("h-1 rounded-full", envelope.dot)}
-															style={{
-																width: `${Math.min(100, Math.max(0, field.state.value))}%`,
-															}}
-														/>
-													</div>
-												</Field>
-											)}
-										</form.Field>
-									))}
-								</div>
-								{isInvalid && errorMessage ? (
-									<Field name={splitField.name} invalid>
-										<FieldError match className="mt-3 text-xs text-warning-foreground">
-											{errorMessage}
-										</FieldError>
-									</Field>
-								) : null}
-							</>
-						);
-					}}
+					{(field) => (
+						<SplitFields
+							value={field.state.value}
+							amounts={splitIncome(todayCents, field.state.value)}
+							onChange={(key, percent) => form.setFieldValue(`split.${key}`, percent)}
+							error={field.state.meta.isValid ? undefined : field.state.meta.errors[0]?.message}
+						/>
+					)}
 				</form.Field>
 				<p className="mt-5 text-xs text-muted-foreground">
 					Puedes cambiarlo cuando quieras en tus sobres.

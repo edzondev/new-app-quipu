@@ -1,23 +1,12 @@
 import { formatRange, getFirstCycleRange } from "@quipu/backend/shared/dates";
-import { MAX_MONTH_DAY, parseStartDay } from "@quipu/backend/shared/plan";
+import { parseStartDay } from "@quipu/backend/shared/plan";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
-import { Label } from "#/components/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
+import { CadenceToggle, StartDaySelect } from "#/modules/onboarding/components/cycle-fields";
 import { StepHeader } from "#/modules/onboarding/components/step-header";
-import { type Cadence, type CycleStepValues, cycleStepSchema } from "#/modules/onboarding/schemas";
-
-const CADENCE_OPTIONS: { value: Cadence; label: string }[] = [
-	{ value: "monthly", label: "Cada mes" },
-	{ value: "biweekly", label: "Cada quincena" },
-	{ value: "weekly", label: "Cada semana" },
-];
-
-const WEEKDAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
-const CYCLE_DAYS = Array.from({ length: MAX_MONTH_DAY }, (_, index) => index + 1);
+import { type CycleStepValues, cycleStepSchema } from "#/modules/onboarding/schemas";
 
 type Props = {
 	defaultValues: CycleStepValues;
@@ -51,59 +40,18 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 					name="cadence"
 					listeners={{ onChange: () => form.setFieldValue("startDay", "1") }}
 				>
-					{(field) => (
-						<ToggleGroup
-							aria-label="Cada cuánto planear"
-							value={[field.state.value]}
-							onValueChange={(value) => {
-								const option = CADENCE_OPTIONS.find((item) => item.value === value[0]);
-								if (!option) return;
-								field.handleChange(option.value);
-							}}
-							className="rounded-full bg-muted p-1"
-						>
-							{CADENCE_OPTIONS.map((option) => (
-								<ToggleGroupItem
-									key={option.value}
-									value={option.value}
-									className="h-8 rounded-full px-3 text-xs before:rounded-full hover:bg-transparent data-pressed:bg-foreground data-pressed:text-background data-pressed:hover:bg-foreground sm:h-8 sm:px-4 sm:text-xs"
-								>
-									{option.label}
-								</ToggleGroupItem>
-							))}
-						</ToggleGroup>
-					)}
+					{(field) => <CadenceToggle value={field.state.value} onChange={field.handleChange} />}
 				</form.Field>
 
 				<form.Field name="startDay">
 					{(field) => (
-						<Label className="mt-6 flex items-center gap-3 text-sm sm:text-sm font-normal text-muted-foreground">
-							Empieza el
-							<select
-								name={field.name}
-								value={field.state.value}
-								onBlur={field.handleBlur}
-								onChange={(e) => field.handleChange(e.target.value)}
-								className="rounded-full bg-muted px-4 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-							>
-								{cadence === "weekly" ? (
-									WEEKDAYS.map((weekday, index) => (
-										<option key={weekday} value={String(index)}>
-											{weekday}
-										</option>
-									))
-								) : (
-									<>
-										{CYCLE_DAYS.map((day) => (
-											<option key={day} value={String(day)}>
-												Día {day}
-											</option>
-										))}
-										<option value="last">Último día del mes</option>
-									</>
-								)}
-							</select>
-						</Label>
+						<StartDaySelect
+							cadence={cadence}
+							name={field.name}
+							value={field.state.value}
+							onChange={field.handleChange}
+							onBlur={field.handleBlur}
+						/>
 					)}
 				</form.Field>
 				<p className="mt-3 text-xs text-muted-foreground">
