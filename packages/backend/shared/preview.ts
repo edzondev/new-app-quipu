@@ -1,4 +1,11 @@
-import { getDailyCents, splitIncome } from "./budget";
+import {
+	type EnvelopeAmounts,
+	getDailyCents,
+	reallocateFree,
+	splitIncome,
+	sumAmounts,
+	ZERO_AMOUNTS,
+} from "./budget";
 import { getPendingCents, type MonthlyCommitment } from "./commitments";
 import { daysBetween } from "./dates";
 import type { Split } from "./plan";
@@ -26,5 +33,25 @@ export function getPreview({
 		wantsCents,
 		savingsCents,
 		dailyCents: getDailyCents(needsCents + wantsCents - pendingCents, daysLeft),
+	};
+}
+
+// What Ajustes shows before saving a new split. The same `reallocateFree` updateSplit runs, so the
+// envelopes and the daily number match what Inicio shows after saving.
+export function getSplitPreview({
+	envelopes,
+	reserved,
+	split,
+	daysLeft,
+}: {
+	envelopes: EnvelopeAmounts;
+	reserved: EnvelopeAmounts;
+	split: Split;
+	daysLeft: number;
+}) {
+	const next = reallocateFree(envelopes, ZERO_AMOUNTS, reserved, split);
+	return {
+		envelopes: next,
+		dailyCents: getDailyCents(next.needsCents + next.wantsCents - sumAmounts(reserved), daysLeft),
 	};
 }

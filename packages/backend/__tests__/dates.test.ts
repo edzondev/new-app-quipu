@@ -10,6 +10,7 @@ import {
 	getCycleRange,
 	getFirstCycleRange,
 	getLimaDate,
+	getNextCycleRange,
 } from "../shared/dates";
 
 describe("formatDayHeading", () => {
@@ -201,4 +202,52 @@ describe("isEarlyIncomeWindow", () => {
 
 test("monthName gives the full lowercase month", () => {
 	expect(monthName("2026-11-01")).toBe("noviembre");
+});
+
+describe("getNextCycleRange", () => {
+	test("a normal period starts and ends where the plan says", () => {
+		expect(getNextCycleRange("monthly", 1, "2026-12-01")).toEqual({
+			startDate: "2026-12-01",
+			endDate: "2026-12-31",
+		});
+	});
+
+	test("monthly: 14 days join the next period, 15 do not", () => {
+		// Start day 15: 1–14 Nov is 14 days.
+		expect(getNextCycleRange("monthly", 15, "2026-11-01")).toEqual({
+			startDate: "2026-11-01",
+			endDate: "2026-12-14",
+		});
+		// Start day 16: 1–15 Nov is 15 days.
+		expect(getNextCycleRange("monthly", 16, "2026-11-01")).toEqual({
+			startDate: "2026-11-01",
+			endDate: "2026-11-15",
+		});
+	});
+
+	test("biweekly: 6 days join the next half, 7 do not", () => {
+		// Start day 7: the second half ends 6 Nov, so 1–6 Nov is 6 days.
+		expect(getNextCycleRange("biweekly", 7, "2026-11-01")).toEqual({
+			startDate: "2026-11-01",
+			endDate: "2026-11-21",
+		});
+		// Start day 8: 1–7 Nov is 7 days.
+		expect(getNextCycleRange("biweekly", 8, "2026-11-01")).toEqual({
+			startDate: "2026-11-01",
+			endDate: "2026-11-07",
+		});
+	});
+
+	test("weekly: 3 days join the next week, 4 do not", () => {
+		// 1 Nov 2026 is a Sunday. Weeks starting Wednesday end on Tuesday 3 Nov: 3 days.
+		expect(getNextCycleRange("weekly", 3, "2026-11-01")).toEqual({
+			startDate: "2026-11-01",
+			endDate: "2026-11-10",
+		});
+		// Weeks starting Thursday end on Wednesday 4 Nov: 4 days.
+		expect(getNextCycleRange("weekly", 4, "2026-11-01")).toEqual({
+			startDate: "2026-11-01",
+			endDate: "2026-11-04",
+		});
+	});
 });

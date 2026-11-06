@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { getMonthlyDueDates } from "../shared/commitments";
-import { getPreview } from "../shared/preview";
+import { getPreview, getSplitPreview } from "../shared/preview";
 
 const SPLIT = { needs: 50, wants: 30, savings: 20 };
 
@@ -91,5 +91,49 @@ describe("getPreview matches Inicio", () => {
 
 		expect(result.dailyCents).toBe(0);
 		expect(result.savingsCents).toBe(2000);
+	});
+});
+
+describe("getSplitPreview", () => {
+	const SPLIT_40 = { needs: 40, wants: 40, savings: 20 };
+	const NONE = { needsCents: 0, wantsCents: 0, savingsCents: 0 };
+
+	test("money reserved for a commitment stays in its envelope and lowers the daily number", () => {
+		const result = getSplitPreview({
+			envelopes: { needsCents: 25_000, wantsCents: 15_000, savingsCents: 10_000 },
+			reserved: { ...NONE, needsCents: 5_000 },
+			split: SPLIT_40,
+			daysLeft: 12,
+		});
+
+		expect(result).toEqual({
+			envelopes: { needsCents: 23_000, wantsCents: 18_000, savingsCents: 9_000 },
+			dailyCents: 3_000,
+		});
+	});
+
+	test("a negative envelope keeps its deficit and only positive free money is shared", () => {
+		const result = getSplitPreview({
+			envelopes: { needsCents: -5_000, wantsCents: 15_000, savingsCents: 10_000 },
+			reserved: NONE,
+			split: SPLIT_40,
+			daysLeft: 12,
+		});
+
+		expect(result).toEqual({
+			envelopes: { needsCents: 5_000, wantsCents: 10_000, savingsCents: 5_000 },
+			dailyCents: 1_250,
+		});
+	});
+
+	test("the daily number is zero when Necesidades plus Gustos is not positive", () => {
+		const result = getSplitPreview({
+			envelopes: { needsCents: -20_000, wantsCents: 15_000, savingsCents: 10_000 },
+			reserved: NONE,
+			split: SPLIT_40,
+			daysLeft: 12,
+		});
+
+		expect(result.dailyCents).toBe(0);
 	});
 });

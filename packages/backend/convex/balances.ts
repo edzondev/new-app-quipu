@@ -5,7 +5,7 @@ import { getDayBudget } from "./model/budget";
 import { requireOpenCycle } from "./model/cycles";
 import { parseInput } from "./model/input";
 import { requirePlan } from "./model/spaces";
-import { amounts, spaceKind } from "./schema";
+import { amounts, spaceKind, split } from "./schema";
 
 export const getBalances = query({
 	args: { space: spaceKind },
@@ -37,6 +37,8 @@ export const getHome = query({
 		wantsCents: v.number(),
 		savingsCents: v.number(),
 		assigned: amounts,
+		split,
+		reserved: amounts,
 		dailyCents: v.number(),
 		daysLeft: v.number(),
 		pendingCents: v.number(),
@@ -53,6 +55,7 @@ export const getHome = query({
 		const { needsCents, wantsCents } = cycle.carryIn;
 		return {
 			...budget,
+			split: cycle.split,
 			startDate: cycle.startDate,
 			endDate: cycle.endDate,
 			planIncomeCents: plan.incomeCents,

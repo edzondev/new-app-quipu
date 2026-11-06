@@ -1,10 +1,10 @@
 import { ConvexError } from "convex/values";
 import { addAmounts, ZERO_AMOUNTS } from "../../shared/budget";
-import { addDays, getCycleRange, getFirstCycleRange, getLimaDate } from "../../shared/dates";
+import { addDays, getFirstCycleRange, getLimaDate, getNextCycleRange } from "../../shared/dates";
 import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { requirePlan, requireSpace, type SpaceKind } from "./spaces";
+import { requireOwnerProfile, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -59,7 +59,10 @@ export async function requireOpenCycle(ctx: Ctx, kind: SpaceKind, today = getLim
 	return { userId, space, cycle, today };
 }
 
-/** Next cycle uses the plan as it is now: cadence or start-day changes apply here. */
+/**
+ * The next cycle is where a pending plan change takes effect. In the personal space the pending
+ * plan (`nextPlan`) becomes `plan` here; a household reads the owner's current plan and leaves it.
+ */
 export async function getOrCreateNextCycle(
 	ctx: MutationCtx,
 	space: Doc<"spaces">,
@@ -69,8 +72,11 @@ export async function getOrCreateNextCycle(
 	const existing = await getCycleStarting(ctx, space._id, startDate);
 	if (existing) return existing;
 
-	const plan = await requirePlan(ctx, space);
-	const { endDate } = getCycleRange(plan.cadence, plan.cycleStartDay, startDate);
+	const { profile, plan } = await requireOwnerProfile(ctx, space);
+	const pending = space.kind === "personal" ? profile.nextPlan : undefined;
+	const applied = pending ?? plan;
+	const { endDate } = getNextCycleRange(applied.cadence, applied.cycleStartDay, startDate);
+	if (pending) await ctx.db.patch("profiles", profile._id, { plan: pending, nextPlan: undefined });
 	const id = await ctx.db.insert("cycles", {
 		spaceId: space._id,
 		startDate,

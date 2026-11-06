@@ -67,6 +67,16 @@ export function getCycleRange(cadence: Cadence, startDay: CycleStartDay, date: s
 		: { startDate: monthStart, endDate: addDays(monthStart, 14) };
 }
 
+// Shorter than half a period, a stretch left by a changed start day joins the period that follows.
+const MIN_CYCLE_DAYS: Record<Cadence, number> = { monthly: 15, biweekly: 7, weekly: 4 };
+
+/** The cycle that begins on `startDate` under this plan. */
+export function getNextCycleRange(cadence: Cadence, startDay: CycleStartDay, startDate: string) {
+	const { endDate } = getCycleRange(cadence, startDay, startDate);
+	if (daysBetween(startDate, endDate) + 1 >= MIN_CYCLE_DAYS[cadence]) return { startDate, endDate };
+	return { startDate, endDate: getCycleRange(cadence, startDay, addDays(endDate, 1)).endDate };
+}
+
 /** First cycle after onboarding: from today to the day before the next payday. */
 export function getFirstCycleRange(cadence: Cadence, startDay: CycleStartDay, today: string) {
 	return { startDate: today, endDate: getCycleRange(cadence, startDay, today).endDate };
