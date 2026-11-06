@@ -17,6 +17,7 @@ import { Route as AppCommitmentsRouteImport } from './routes/_app/commitments'
 import { Route as AppHomeRouteImport } from './routes/_app/home'
 import { Route as AppMovementsRouteImport } from './routes/_app/movements'
 import { Route as AppSavingsRouteImport } from './routes/_app/savings'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -59,6 +60,11 @@ const AppSavingsRoute = AppSavingsRouteImport.update({
   path: '/savings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AuthSignInRoute = AuthSignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof AppHomeRoute
   '/movements': typeof AppMovementsRoute
   '/savings': typeof AppSavingsRoute
+  '/settings': typeof AppSettingsRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/home': typeof AppHomeRoute
   '/movements': typeof AppMovementsRoute
   '/savings': typeof AppSavingsRoute
+  '/settings': typeof AppSettingsRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/_app/home': typeof AppHomeRoute
   '/_app/movements': typeof AppMovementsRoute
   '/_app/savings': typeof AppSavingsRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/movements'
     | '/savings'
+    | '/settings'
     | '/sign-in'
     | '/sign-up'
     | '/api/auth/$'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/movements'
     | '/savings'
+    | '/settings'
     | '/sign-in'
     | '/sign-up'
     | '/api/auth/$'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/_app/home'
     | '/_app/movements'
     | '/_app/savings'
+    | '/_app/settings'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
     | '/api/auth/$'
@@ -215,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSavingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_auth/sign-in': {
       id: '/_auth/sign-in'
       path: '/sign-in'
@@ -244,6 +263,7 @@ interface AppRouteChildren {
   AppHomeRoute: typeof AppHomeRoute
   AppMovementsRoute: typeof AppMovementsRoute
   AppSavingsRoute: typeof AppSavingsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -251,6 +271,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHomeRoute: AppHomeRoute,
   AppMovementsRoute: AppMovementsRoute,
   AppSavingsRoute: AppSavingsRoute,
+  AppSettingsRoute: AppSettingsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

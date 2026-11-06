@@ -1,0 +1,113 @@
+import { formatPastDay, getLimaDate } from "@quipu/backend/shared/dates";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogClose,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogPopup,
+	AlertDialogTitle,
+} from "#/components/ui/alert-dialog";
+import { Button } from "#/components/ui/button";
+import { authClient } from "#/lib/auth-client";
+import { type AuthError, getAuthErrorMessage } from "#/lib/auth-errors";
+import { EYEBROW } from "#/lib/typography";
+import { type Passkey, passkeysQuery, unwrap } from "../auth-queries";
+import { AuthErrorNotice } from "./auth-error-notice";
+
+// Closing the browser prompt is not a failure. The library reports it as ERROR_CEREMONY_ABORTED, or
+// passes the browser's NotAllowedError through (dismissed or timed out; the two look the same).
+function isCancelled(error: NonNullable<AuthError>) {
+	return (
+		error.code === "ERROR_CEREMONY_ABORTED" || error.code === "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY"
+	);
+}
+
+function PasskeyRow({ passkey, today }: { passkey: Passkey; today: string }) {
+	const queryClient = useQueryClient();
+	const [confirming, setConfirming] = useState(false);
+	const remove = useMutation<unknown, NonNullable<AuthError>>({
+		mutationFn: () => unwrap(authClient.passkey.deletePasskey({ id: passkey.id })),
+		onSuccess: () => queryClient.invalidateQueries(passkeysQuery),
+	});
+
+	return (
+		<li className="flex items-center justify-between gap-3 border-b border-border/80 py-3">
+			<div className="min-w-0">
+				<p className="truncate text-sm font-semibold">{passkey.name ?? "Llave de acceso"}</p>
+				<p className="text-xs text-muted-foreground">
+					Creada el {formatPastDay(getLimaDate(new Date(passkey.createdAt)), today)}
+				</p>
+			</div>
+			<Button type="button" variant="outline" size="xl" onClick={() => setConfirming(true)}>
+				Borrar
+			</Button>
+			<AlertDialog open={confirming} onOpenChange={setConfirming}>
+				<AlertDialogPopup>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Borrar esta llave?</AlertDialogTitle>
+					</AlertDialogHeader>
+					{remove.isError ? (
+						<p role="alert" className="px-6 pb-4 text-xs text-warning-foreground">
+							{getAuthErrorMessage(remove.error)}
+						</p>
+					) : null}
+					<AlertDialogFooter>
+						<AlertDialogClose render={<Button variant="outline" size="xl" />}>
+							Cancelar
+						</AlertDialogClose>
+						<Button size="xl" loading={remove.isPending} onClick={() => remove.mutate()}>
+							Borrar
+						</Button>
+					</AlertDialogFooter>
+				</AlertDialogPopup>
+			</AlertDialog>
+		</li>
+	);
+}
+
+export function PasskeysSection({ today }: { today: string }) {
+	const queryClient = useQueryClient();
+	const passkeys = useQuery(passkeysQuery);
+	const add = useMutation<unknown, NonNullable<AuthError>>({
+		mutationFn: () => unwrap(authClient.passkey.addPasskey()),
+		onSuccess: () => queryClient.invalidateQueries(passkeysQuery),
+	});
+
+	return (
+		<section aria-labelledby="passkeys-title">
+			<h3 id="passkeys-title" className={EYEBROW}>
+				Llaves de acceso
+			</h3>
+			{passkeys.isError ? (
+				<p role="alert" className="mt-2 text-xs text-warning-foreground">
+					{getAuthErrorMessage(passkeys.error)}
+				</p>
+			) : null}
+			{passkeys.data?.length === 0 ? (
+				<p className="mt-2 text-sm text-muted-foreground">Todavía no tienes una llave de acceso.</p>
+			) : null}
+			<ul className="mt-1">
+				{passkeys.data?.map((passkey) => (
+					<PasskeyRow key={passkey.id} passkey={passkey} today={today} />
+				))}
+			</ul>
+			{add.isError && !isCancelled(add.error) ? (
+				<div className="mt-3">
+					<AuthErrorNotice error={add.error} goal="agregar una llave" />
+				</div>
+			) : null}
+			<Button
+				type="button"
+				variant="outline"
+				size="xl"
+				className="mt-4 rounded-full"
+				loading={add.isPending}
+				onClick={() => add.mutate()}
+			>
+				Agregar una llave
+			</Button>
+		</section>
+	);
+}
