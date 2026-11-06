@@ -250,6 +250,56 @@ test.describe("sesiones y llaves, con un usuario nuevo", () => {
 		await expect(dialog.getByText("Todavía no tienes una llave de acceso.")).toBeVisible();
 	});
 
+	test("agregar una llave: una ceremonia abortada no es un fallo, el resto se ve y dos clics piden una sola llave", async ({
+		page,
+	}) => {
+		await signUp(page, "Dani");
+		await open(page, "/settings");
+		await page
+			.getByRole("listitem")
+			.filter({ hasText: "Llaves y sesiones" })
+			.getByRole("button")
+			.click();
+		const dialog = page.getByRole("dialog");
+		const add = dialog.getByRole("button", { name: "Agregar una llave" });
+
+		// The browser prompt is replaced by one that fails the way a browser does, and counts its calls.
+		async function failPrompt(name: string, message: string) {
+			await page.evaluate(
+				({ name, message }) => {
+					Reflect.set(window, "promptCalls", 0);
+					navigator.credentials.create = () => {
+						Reflect.set(window, "promptCalls", Number(Reflect.get(window, "promptCalls")) + 1);
+						return Promise.reject(new DOMException(message, name));
+					};
+				},
+				{ name, message },
+			);
+		}
+		const promptCalls = () => page.evaluate(() => Number(Reflect.get(window, "promptCalls")));
+
+		// An AbortError is what the library reports as ERROR_CEREMONY_ABORTED ("Registration cancelled").
+		await failPrompt("AbortError", "The operation was aborted.");
+		await add.click();
+		await expect.poll(promptCalls).toBe(1);
+		await expect(add).toBeEnabled();
+		await expect(dialog.getByRole("alert")).toHaveCount(0);
+
+		// A NotAllowedError is passed through and stays visible, whatever its message says.
+		await failPrompt("NotAllowedError", "The operation either timed out or was not allowed.");
+		await add.click();
+		await expect.poll(promptCalls).toBe(1);
+		await expect(dialog.getByRole("alert")).toHaveText("Algo salió mal. Inténtalo otra vez.");
+
+		// Two clicks with no pause between them ask for one key.
+		await failPrompt("AbortError", "The operation was aborted.");
+		await add.dblclick();
+		await expect.poll(promptCalls).toBe(1);
+		await expect(add).toBeEnabled();
+		expect(await promptCalls()).toBe(1);
+		await expect(dialog.getByRole("alert")).toHaveCount(0);
+	});
+
 	test("cerrar otra sesión no cierra la actual", async ({ page, context, browser }) => {
 		await signUp(page, "Carla");
 		const first = await addVirtualAuthenticator(context, page);

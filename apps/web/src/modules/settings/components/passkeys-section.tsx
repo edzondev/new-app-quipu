@@ -1,6 +1,6 @@
 import { formatPastDay, getLimaDate } from "@quipu/backend/shared/dates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogClose,
@@ -16,12 +16,14 @@ import { EYEBROW } from "#/lib/typography";
 import { type Passkey, passkeysQuery, unwrap } from "../auth-queries";
 import { AuthErrorNotice } from "./auth-error-notice";
 
-// Closing the browser prompt is not a failure. The library reports it as ERROR_CEREMONY_ABORTED, or
-// passes the browser's NotAllowedError through (dismissed or timed out; the two look the same).
+/**
+ * Only an aborted ceremony counts as a cancel. Limit: this client drops the error's name and cause,
+ * so a prompt the person closes (a NotAllowedError, passed through as
+ * ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY) cannot be told apart reliably from other failures. It is
+ * shown like any other error.
+ */
 function isCancelled(error: NonNullable<AuthError>) {
-	return (
-		error.code === "ERROR_CEREMONY_ABORTED" || error.code === "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY"
-	);
+	return error.code === "ERROR_CEREMONY_ABORTED";
 }
 
 function PasskeyRow({ passkey, today }: { passkey: Passkey; today: string }) {
@@ -74,6 +76,21 @@ export function PasskeysSection({ today }: { today: string }) {
 		mutationFn: () => unwrap(authClient.passkey.addPasskey()),
 		onSuccess: () => queryClient.invalidateQueries(passkeysQuery),
 	});
+	// Not `add.isPending`: the button only learns about it a render later, and a fast double click
+	// has already sent a second request by then.
+	const adding = useRef(false);
+
+	async function addPasskey() {
+		if (adding.current) return;
+		adding.current = true;
+		try {
+			await add.mutateAsync();
+		} catch {
+			// The failure is already in `add.error`, shown below.
+		} finally {
+			adding.current = false;
+		}
+	}
 
 	return (
 		<section aria-labelledby="passkeys-title">
@@ -104,7 +121,7 @@ export function PasskeysSection({ today }: { today: string }) {
 				size="xl"
 				className="mt-4 rounded-full"
 				loading={add.isPending}
-				onClick={() => add.mutate()}
+				onClick={addPasskey}
 			>
 				Agregar una llave
 			</Button>
