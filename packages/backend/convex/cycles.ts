@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
-import { getLimaDate } from "../shared/dates";
+import { addDays, getLimaDate } from "../shared/dates";
 import { mutation, query } from "./_generated/server";
-import { ensureOpenCycle } from "./model/cycles";
+import { ensureOpenCycle, getCycleStarting } from "./model/cycles";
 import { requireSpace, requireSpaceById } from "./model/spaces";
 import { spaceKind } from "./schema";
 
@@ -26,8 +26,9 @@ export const getUnseenClosed = query({
 		v.null(),
 		v.object({
 			cycleId: v.id("cycles"),
-			startDate: v.string(),
-			endDate: v.string(),
+			newCycleStart: v.string(),
+			carriedCents: v.number(),
+			fundedCents: v.number(),
 		}),
 	),
 	handler: async (ctx, { space: kind }) => {
@@ -43,7 +44,14 @@ export const getUnseenClosed = query({
 			.take(20);
 		const latest = closed.find((cycle) => cycle.closedAt !== undefined);
 		if (!latest || latest._id === profile?.lastSeenClosedCycleId) return null;
-		return { cycleId: latest._id, startDate: latest.startDate, endDate: latest.endDate };
+		const next = await getCycleStarting(ctx, space._id, addDays(latest.endDate, 1));
+		if (!next) throw new ConvexError("No encontramos tu ciclo.");
+		return {
+			cycleId: latest._id,
+			newCycleStart: next.startDate,
+			carriedCents: next.carryIn.needsCents + next.carryIn.wantsCents,
+			fundedCents: Math.max(0, latest.envelopes.savingsCents),
+		};
 	},
 });
 
@@ -61,6 +69,11 @@ export const markClosedSeen = mutation({
 			.withIndex("by_userId", (q) => q.eq("userId", userId))
 			.unique();
 		if (!profile) throw new ConvexError("No encontramos tu perfil.");
+		const lastSeen = profile.lastSeenClosedCycleId
+			? await ctx.db.get("cycles", profile.lastSeenClosedCycleId)
+			: null;
+		const alreadyCoveredByLastSeen = lastSeen !== null && lastSeen.endDate >= cycle.endDate;
+		if (alreadyCoveredByLastSeen) return null;
 		await ctx.db.patch("profiles", profile._id, { lastSeenClosedCycleId: cycleId });
 		return null;
 	},
