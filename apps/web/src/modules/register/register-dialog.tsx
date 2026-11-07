@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from "react";
-import { Dialog } from "#/components/ui/dialog";
+import { FormSheet } from "#/components/form-sheet";
 import type { Draft } from "./movement-draft";
 import { RegisterForm } from "./register-form";
 
@@ -23,9 +23,9 @@ export function RegisterProvider({ children }: { children: React.ReactNode }) {
 	return (
 		<RegisterContext.Provider value={openRegister}>
 			{children}
-			<Dialog open={open} onOpenChange={setOpen}>
-				{open ? <RegisterForm key={session} draft={draft} onDone={() => setOpen(false)} /> : null}
-			</Dialog>
+			<FormSheet open={open} onOpenChange={setOpen}>
+				<RegisterForm key={session} draft={draft} onDone={() => setOpen(false)} />
+			</FormSheet>
 		</RegisterContext.Provider>
 	);
 }

@@ -17,14 +17,14 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import {
-	Dialog,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-} from "#/components/ui/dialog";
+	FormSheet,
+	FormSheetDescription,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetPopup,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
 import { CHIP } from "#/lib/typography";
@@ -55,7 +55,7 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 	const amount = useSelector(form.store, (state) => state.values.amount);
 
 	return (
-		<DialogPopup>
+		<FormSheetPopup>
 			<form
 				noValidate
 				className="contents"
@@ -64,15 +64,15 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 					void form.handleSubmit();
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>Meta del fondo</DialogTitle>
+				<FormSheetHeader>
+					<FormSheetTitle>Meta del fondo</FormSheetTitle>
 					{suggestedCents ? (
-						<DialogDescription>
+						<FormSheetDescription>
 							Sugerimos 3 meses de lo que gastas en Necesidades. Puedes poner otra cifra.
-						</DialogDescription>
+						</FormSheetDescription>
 					) : null}
-				</DialogHeader>
-				<DialogPanel className="flex flex-col gap-4">
+				</FormSheetHeader>
+				<FormSheetPanel className="flex flex-col gap-4">
 					<form.Field name="amount">
 						{(field) => (
 							<AmountField
@@ -108,8 +108,8 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 							</Button>
 						</div>
 					) : null}
-				</DialogPanel>
-				<DialogFooter variant="bare">
+				</FormSheetPanel>
+				<FormSheetFooter variant="bare">
 					<Button
 						type="submit"
 						className="h-11 w-full rounded-full"
@@ -118,7 +118,7 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 					>
 						Guardar meta
 					</Button>
-				</DialogFooter>
+				</FormSheetFooter>
 			</form>
 
 			<AlertDialog open={confirmingRemove} onOpenChange={setConfirmingRemove}>
@@ -142,19 +142,19 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 					</AlertDialogFooter>
 				</AlertDialogPopup>
 			</AlertDialog>
-		</DialogPopup>
+		</FormSheetPopup>
 	);
 }
 
 export function FundGoalDialog({ open, ...props }: FundGoalProps & { open: boolean }) {
 	return (
-		<Dialog
+		<FormSheet
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) props.onClose();
 			}}
 		>
 			{open ? <FundGoalForm {...props} /> : null}
-		</Dialog>
+		</FormSheet>
 	);
 }

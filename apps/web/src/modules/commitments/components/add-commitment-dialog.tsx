@@ -10,14 +10,14 @@ import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
 import {
-	Dialog,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-} from "#/components/ui/dialog";
+	FormSheet,
+	FormSheetDescription,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetPopup,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { Input } from "#/components/ui/input";
 import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
@@ -100,7 +100,7 @@ function AddCommitmentForm({
 	const frequency = useSelector(form.store, (state) => state.values.frequency);
 
 	return (
-		<DialogPopup>
+		<FormSheetPopup>
 			<form
 				noValidate
 				className="contents"
@@ -109,11 +109,11 @@ function AddCommitmentForm({
 					void form.handleSubmit();
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>Añadir compromiso</DialogTitle>
-					<DialogDescription>Quipu lo reserva antes de que gastes.</DialogDescription>
-				</DialogHeader>
-				<DialogPanel className="flex flex-col gap-5">
+				<FormSheetHeader>
+					<FormSheetTitle>Añadir compromiso</FormSheetTitle>
+					<FormSheetDescription>Quipu lo reserva antes de que gastes.</FormSheetDescription>
+				</FormSheetHeader>
+				<FormSheetPanel className="flex flex-col gap-5">
 					<form.Field name="name">
 						{(field) => {
 							const message = field.state.meta.errors[0]?.message;
@@ -211,17 +211,17 @@ function AddCommitmentForm({
 					)}
 
 					{save.isError ? <FieldError>{readError(save.error)}</FieldError> : null}
-				</DialogPanel>
-				<DialogFooter>
+				</FormSheetPanel>
+				<FormSheetFooter>
 					<Button type="button" variant="ghost" onClick={onDone}>
 						Cancelar
 					</Button>
 					<Button type="submit" loading={save.isPending}>
 						Guardar compromiso
 					</Button>
-				</DialogFooter>
+				</FormSheetFooter>
 			</form>
-		</DialogPopup>
+		</FormSheetPopup>
 	);
 }
 
@@ -234,13 +234,13 @@ export function AddCommitmentDialog({
 	onClose: () => void;
 }) {
 	return (
-		<Dialog
+		<FormSheet
 			open={space !== null}
 			onOpenChange={(open) => {
 				if (!open) onClose();
 			}}
 		>
 			{space ? <AddCommitmentForm space={space} onDone={onClose} /> : null}
-		</Dialog>
+		</FormSheet>
 	);
 }

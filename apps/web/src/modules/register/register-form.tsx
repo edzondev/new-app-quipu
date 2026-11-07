@@ -15,16 +15,16 @@ import { useSearch } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
+import {
+	FormSheetDescription,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetPopup,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { Button } from "#/components/ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "#/components/ui/collapsible";
-import {
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-} from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
@@ -171,19 +171,19 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 
 	if (confirmation) {
 		return (
-			<DialogPopup>
-				<DialogHeader>
-					<DialogTitle>Registrar</DialogTitle>
-				</DialogHeader>
-				<DialogPanel>
+			<FormSheetPopup>
+				<FormSheetHeader>
+					<FormSheetTitle>Registrar</FormSheetTitle>
+				</FormSheetHeader>
+				<FormSheetPanel>
 					<p role="status">{confirmation}</p>
-				</DialogPanel>
-				<DialogFooter>
+				</FormSheetPanel>
+				<FormSheetFooter>
 					<Button type="button" onClick={onDone}>
 						Cerrar
 					</Button>
-				</DialogFooter>
-			</DialogPopup>
+				</FormSheetFooter>
+			</FormSheetPopup>
 		);
 	}
 
@@ -220,7 +220,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		: 0;
 
 	return (
-		<DialogPopup>
+		<FormSheetPopup>
 			<form
 				noValidate
 				className="contents"
@@ -229,13 +229,13 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 					void form.handleSubmit();
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>Registrar</DialogTitle>
-					<DialogDescription>
+				<FormSheetHeader>
+					<FormSheetTitle>Registrar</FormSheetTitle>
+					<FormSheetDescription>
 						En {space === "household" ? "Nuestro espacio" : "Personal"}
-					</DialogDescription>
-				</DialogHeader>
-				<DialogPanel className="flex flex-col gap-5">
+					</FormSheetDescription>
+				</FormSheetHeader>
+				<FormSheetPanel className="flex flex-col gap-5">
 					{editId ? null : (
 						<form.Field name="kind">
 							{(field) => (
@@ -394,8 +394,8 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 							{error}
 						</p>
 					) : null}
-				</DialogPanel>
-				<DialogFooter>
+				</FormSheetPanel>
+				<FormSheetFooter>
 					{editId ? (
 						<DeleteButton
 							kind={draft.kind}
@@ -412,8 +412,8 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 									? `Guardar para ${monthName(nextStart)}`
 									: "Guardar ingreso"}
 					</Button>
-				</DialogFooter>
+				</FormSheetFooter>
 			</form>
-		</DialogPopup>
+		</FormSheetPopup>
 	);
 }

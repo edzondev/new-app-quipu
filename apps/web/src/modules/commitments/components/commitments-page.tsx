@@ -92,8 +92,8 @@ function Commitments({ today }: { today: string }) {
 
 	return (
 		<>
-			<header className="flex items-end justify-between gap-4">
-				<div>
+			<header className="flex flex-wrap items-end gap-4">
+				<div className="min-w-0 flex-1 basis-64">
 					<h1 className="font-heading text-4xl font-medium tracking-tight">Compromisos</h1>
 					<p className="mt-2 text-sm text-muted-foreground">
 						Lo que pagas cada mes. Quipu lo reserva antes de que gastes.

@@ -9,14 +9,14 @@ import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
 import {
-	Dialog,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-} from "#/components/ui/dialog";
+	FormSheet,
+	FormSheetDescription,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetPopup,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { Input } from "#/components/ui/input";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { positiveMoney } from "#/lib/money-schema";
@@ -62,7 +62,7 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 	const canSave = withdrawSchema.safeParse({ amount }).success && !over && !save.isPending;
 
 	return (
-		<DialogPopup>
+		<FormSheetPopup>
 			<form
 				noValidate
 				className="contents"
@@ -71,11 +71,11 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 					void form.handleSubmit();
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>Retirar del fondo</DialogTitle>
-					<DialogDescription>Tienes S/ {formatCents(fundCents)}</DialogDescription>
-				</DialogHeader>
-				<DialogPanel className="flex flex-col gap-5">
+				<FormSheetHeader>
+					<FormSheetTitle>Retirar del fondo</FormSheetTitle>
+					<FormSheetDescription>Tienes S/ {formatCents(fundCents)}</FormSheetDescription>
+				</FormSheetHeader>
+				<FormSheetPanel className="flex flex-col gap-5">
 					<form.Field name="amount">
 						{(field) => (
 							<AmountField
@@ -128,8 +128,8 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 						/>
 						Pasa a Necesidades de este ciclo.
 					</p>
-				</DialogPanel>
-				<DialogFooter variant="bare">
+				</FormSheetPanel>
+				<FormSheetFooter variant="bare">
 					<Button
 						type="submit"
 						className="h-11 w-full rounded-full"
@@ -138,21 +138,21 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 					>
 						Confirmar
 					</Button>
-				</DialogFooter>
+				</FormSheetFooter>
 			</form>
-		</DialogPopup>
+		</FormSheetPopup>
 	);
 }
 
 export function WithdrawDialog({ open, ...props }: WithdrawProps & { open: boolean }) {
 	return (
-		<Dialog
+		<FormSheet
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) props.onClose();
 			}}
 		>
 			{open ? <WithdrawForm {...props} /> : null}
-		</Dialog>
+		</FormSheet>
 	);
 }

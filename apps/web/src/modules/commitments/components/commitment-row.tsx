@@ -110,16 +110,36 @@ function RowLayout({
 	below?: React.ReactNode;
 }) {
 	const amount = (
-		<span className={cn("font-mono text-[15px]", paid && "text-muted-foreground")}>
+		<span
+			className={cn(
+				"col-start-3 row-start-1 self-start font-mono text-[15px] leading-[1.3] sm:self-auto sm:leading-normal",
+				paid && "text-muted-foreground",
+			)}
+		>
 			S/ {formatCents(amountCents)}
 		</span>
 	);
+	// Narrow screens show the status under the date; from `sm` it sits next to the name.
+	const statusBadge = (className: string) =>
+		badge ? (
+			<span
+				className={cn(
+					"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+					badge.className,
+					className,
+				)}
+			>
+				{badge.text}
+			</span>
+		) : null;
 
+	// Narrow: name and amount on top, date and status below, the action on its own line.
+	// From `sm` it is the single-line row, with the wrappers dissolved by `contents` or `flex`.
 	return (
 		<li className="border-b border-border/60">
-			<div className="flex min-h-[60px] items-center justify-between gap-4 py-2.5">
-				<div className="flex min-w-0 items-center gap-3.5">
-					<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
+			<div className="grid min-h-[60px] grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3.5 gap-y-0.5 py-2.5 sm:flex sm:items-center sm:justify-between sm:gap-4">
+				<div className="contents sm:flex sm:min-w-0 sm:items-center sm:gap-3.5">
+					<span className="col-start-1 row-span-2 row-start-1 flex size-9 shrink-0 items-center justify-center rounded-full self-center bg-muted">
 						<span
 							aria-hidden
 							className={cn(
@@ -128,27 +148,21 @@ function RowLayout({
 							)}
 						/>
 					</span>
-					<span className="min-w-0">
-						<span className="flex items-center gap-2">
-							<span className="truncate text-[15px] leading-[1.3] font-semibold">{name}</span>
-							{badge ? (
-								<span
-									className={cn(
-										"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-										badge.className,
-									)}
-								>
-									{badge.text}
-								</span>
-							) : null}
+					<span className="contents sm:block sm:min-w-0">
+						<span className="col-start-2 row-start-1 flex min-w-0 items-center gap-2 self-start">
+							<span className="min-w-0 text-[15px] leading-[1.3] font-semibold break-words sm:truncate">
+								{name}
+							</span>
+							{statusBadge("max-sm:hidden")}
 						</span>
-						<span className="mt-0.5 block truncate text-[12.5px] text-muted-foreground">
+						<span className="col-span-2 col-start-2 row-start-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground sm:mt-0.5 sm:block sm:truncate">
 							{detail}
+							{statusBadge("sm:hidden")}
 						</span>
 					</span>
 				</div>
-				<div className="flex shrink-0 items-center gap-[18px]">
-					{action}
+				<div className="contents sm:flex sm:shrink-0 sm:items-center sm:gap-[18px]">
+					{action ? <div className="col-span-3 row-start-3 mt-2 sm:contents">{action}</div> : null}
 					{amount}
 				</div>
 			</div>
@@ -192,7 +206,7 @@ export function CommitmentRow({
 			action={
 				canPay(item) ? (
 					<Button
-						className={ACTION}
+						className={cn(ACTION, "h-11 w-full sm:h-[34px] sm:w-auto")}
 						aria-expanded={paying}
 						onClick={() => setPaying((open) => !open)}
 					>
