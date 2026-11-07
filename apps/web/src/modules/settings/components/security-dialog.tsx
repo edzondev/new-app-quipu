@@ -1,4 +1,4 @@
-import { DialogHeader, DialogPanel, DialogTitle } from "#/components/ui/dialog";
+import { FormSheetHeader, FormSheetPanel, FormSheetTitle } from "#/components/form-sheet";
 import { useLimaDate } from "#/hooks/use-lima-date";
 import { ActionDialog } from "./action-dialog";
 import { PasskeysSection } from "./passkeys-section";
@@ -8,13 +8,13 @@ function Security() {
 	const today = useLimaDate();
 	return (
 		<>
-			<DialogHeader>
-				<DialogTitle>Llaves y sesiones</DialogTitle>
-			</DialogHeader>
-			<DialogPanel>
+			<FormSheetHeader>
+				<FormSheetTitle>Llaves y sesiones</FormSheetTitle>
+			</FormSheetHeader>
+			<FormSheetPanel>
 				<PasskeysSection today={today} />
 				<SessionsSection today={today} />
-			</DialogPanel>
+			</FormSheetPanel>
 		</>
 	);
 }

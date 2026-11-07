@@ -14,9 +14,7 @@ async function expectWithinViewport(locator: Locator) {
 	expect(box.x + box.width).toBeLessThanOrEqual(WIDTH);
 }
 
-// Known overflow (web-ui.md, U14 «Layout angosto»): the nav links row in app-bar.tsx:54 is 447 px
-// wide and does not wrap, so every page is 471 px wide at 375. Remove the fixme when U14 lands.
-test.fixme("Inicio no tiene scroll horizontal a 375 px", async ({ page }) => {
+test("Inicio no tiene scroll horizontal a 375 px", async ({ page }) => {
 	await open(page, "/home");
 	await expect(page.getByRole("heading", { name: "Hola, Ana" })).toBeVisible();
 
@@ -25,6 +23,15 @@ test.fixme("Inicio no tiene scroll horizontal a 375 px", async ({ page }) => {
 		clientWidth: document.documentElement.clientWidth,
 	}));
 	expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+});
+
+test("el menú lateral navega y se cierra a 375 px", async ({ page }) => {
+	await open(page, "/home");
+	await page.getByRole("button", { name: "Menú" }).click();
+	await page.getByRole("dialog").getByRole("link", { name: "Movimientos" }).click();
+
+	await expect(page).toHaveURL(/\/movements/);
+	await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("el diálogo de Registrar cabe en 375 px", async ({ page }) => {

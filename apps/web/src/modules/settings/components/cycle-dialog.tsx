@@ -6,13 +6,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import {
-	DialogClose,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogTitle,
-} from "#/components/ui/dialog";
+	FormSheetClose,
+	FormSheetDescription,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { readError } from "#/lib/read-error";
 import { CadenceToggle, StartDaySelect } from "#/modules/onboarding/components/cycle-fields";
 import { getJoinedCycleText } from "../cycle-summary";
@@ -52,13 +52,13 @@ function CycleEditor({ plan, nextPlan, currentEnd, onDone }: Props & { onDone: (
 				save.mutate();
 			}}
 		>
-			<DialogHeader>
-				<DialogTitle>Ciclo</DialogTitle>
-				<DialogDescription>
+			<FormSheetHeader>
+				<FormSheetTitle>Ciclo</FormSheetTitle>
+				<FormSheetDescription>
 					Aplica desde tu próximo ciclo. Tu ciclo actual cierra el {formatDay(currentEnd)}.
-				</DialogDescription>
-			</DialogHeader>
-			<DialogPanel>
+				</FormSheetDescription>
+			</FormSheetHeader>
+			<FormSheetPanel>
 				<p className="mb-2 text-sm text-muted-foreground">Cada cuánto</p>
 				<CadenceToggle
 					value={cadence}
@@ -74,17 +74,17 @@ function CycleEditor({ plan, nextPlan, currentEnd, onDone }: Props & { onDone: (
 						{readError(save.error)}
 					</p>
 				) : null}
-			</DialogPanel>
-			<DialogFooter variant="bare">
-				<DialogClose
+			</FormSheetPanel>
+			<FormSheetFooter variant="bare">
+				<FormSheetClose
 					render={<Button type="button" variant="outline" size="xl" className="rounded-full" />}
 				>
 					Cancelar
-				</DialogClose>
+				</FormSheetClose>
 				<Button type="submit" size="xl" className="rounded-full" loading={save.isPending}>
 					Guardar
 				</Button>
-			</DialogFooter>
+			</FormSheetFooter>
 		</form>
 	);
 }

@@ -18,13 +18,13 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import {
-	Dialog,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-} from "#/components/ui/dialog";
+	FormSheet,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetPopup,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { Field, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { positiveMoney } from "#/lib/money-schema";
@@ -82,7 +82,7 @@ function GoalForm({ space, goal, onClose }: GoalFormProps) {
 	});
 
 	return (
-		<DialogPopup>
+		<FormSheetPopup>
 			<form
 				noValidate
 				className="contents"
@@ -91,10 +91,10 @@ function GoalForm({ space, goal, onClose }: GoalFormProps) {
 					void form.handleSubmit();
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>{goal ? "Editar meta" : "Nueva meta"}</DialogTitle>
-				</DialogHeader>
-				<DialogPanel className="flex flex-col gap-5">
+				<FormSheetHeader>
+					<FormSheetTitle>{goal ? "Editar meta" : "Nueva meta"}</FormSheetTitle>
+				</FormSheetHeader>
+				<FormSheetPanel className="flex flex-col gap-5">
 					<form.Field name="name">
 						{(field) => {
 							const message = field.state.meta.errors[0]?.message;
@@ -162,12 +162,12 @@ function GoalForm({ space, goal, onClose }: GoalFormProps) {
 							</Button>
 						</div>
 					) : null}
-				</DialogPanel>
-				<DialogFooter variant="bare">
+				</FormSheetPanel>
+				<FormSheetFooter variant="bare">
 					<Button type="submit" className="h-11 w-full rounded-full" loading={save.isPending}>
 						{goal ? "Guardar meta" : "Crear meta"}
 					</Button>
-				</DialogFooter>
+				</FormSheetFooter>
 			</form>
 
 			{goal ? (
@@ -199,20 +199,20 @@ function GoalForm({ space, goal, onClose }: GoalFormProps) {
 					</AlertDialogPopup>
 				</AlertDialog>
 			) : null}
-		</DialogPopup>
+		</FormSheetPopup>
 	);
 }
 
 /** Without `goal` it creates one; with `goal` it edits and can delete it. */
 export function GoalFormDialog({ open, ...props }: GoalFormProps & { open: boolean }) {
 	return (
-		<Dialog
+		<FormSheet
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) props.onClose();
 			}}
 		>
 			{open ? <GoalForm {...props} /> : null}
-		</Dialog>
+		</FormSheet>
 	);
 }

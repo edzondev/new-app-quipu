@@ -8,13 +8,13 @@ import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import {
-	DialogClose,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogTitle,
-} from "#/components/ui/dialog";
+	FormSheetClose,
+	FormSheetDescription,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { readError } from "#/lib/read-error";
 import { SplitFields } from "#/modules/onboarding/components/split-fields";
 import { ActionDialog } from "./action-dialog";
@@ -49,11 +49,11 @@ function SplitEditor({ home, onDone }: { home: Home; onDone: () => void }) {
 				if (preview) save.mutate();
 			}}
 		>
-			<DialogHeader>
-				<DialogTitle>Editar reparto</DialogTitle>
-				<DialogDescription>Aplica desde hoy. Lo ya gastado no cambia.</DialogDescription>
-			</DialogHeader>
-			<DialogPanel>
+			<FormSheetHeader>
+				<FormSheetTitle>Editar reparto</FormSheetTitle>
+				<FormSheetDescription>Aplica desde hoy. Lo ya gastado no cambia.</FormSheetDescription>
+			</FormSheetHeader>
+			<FormSheetPanel>
 				<SplitFields
 					value={split}
 					amounts={preview?.envelopes ?? home}
@@ -72,13 +72,13 @@ function SplitEditor({ home, onDone }: { home: Home; onDone: () => void }) {
 						{readError(save.error)}
 					</p>
 				) : null}
-			</DialogPanel>
-			<DialogFooter variant="bare">
-				<DialogClose
+			</FormSheetPanel>
+			<FormSheetFooter variant="bare">
+				<FormSheetClose
 					render={<Button type="button" variant="outline" size="xl" className="rounded-full" />}
 				>
 					Cancelar
-				</DialogClose>
+				</FormSheetClose>
 				<Button
 					type="submit"
 					size="xl"
@@ -88,7 +88,7 @@ function SplitEditor({ home, onDone }: { home: Home; onDone: () => void }) {
 				>
 					Guardar
 				</Button>
-			</DialogFooter>
+			</FormSheetFooter>
 		</form>
 	);
 }

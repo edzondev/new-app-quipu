@@ -8,13 +8,13 @@ import type { FunctionArgs } from "convex/server";
 import * as z from "zod/mini";
 import { Button } from "#/components/ui/button";
 import {
-	Dialog,
-	DialogFooter,
-	DialogHeader,
-	DialogPanel,
-	DialogPopup,
-	DialogTitle,
-} from "#/components/ui/dialog";
+	FormSheet,
+	FormSheetFooter,
+	FormSheetHeader,
+	FormSheetPanel,
+	FormSheetPopup,
+	FormSheetTitle,
+} from "#/components/form-sheet";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
@@ -66,7 +66,7 @@ function ContributeForm({
 		over || available === 0 ? `Solo tienes S/ ${formatCents(available)} en Ahorro.` : undefined;
 
 	return (
-		<DialogPopup>
+		<FormSheetPopup>
 			<form
 				noValidate
 				className="contents"
@@ -75,14 +75,14 @@ function ContributeForm({
 					void form.handleSubmit();
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>{goal ? `Aportar a ${goal.name}` : "Aportar al fondo"}</DialogTitle>
+				<FormSheetHeader>
+					<FormSheetTitle>{goal ? `Aportar a ${goal.name}` : "Aportar al fondo"}</FormSheetTitle>
 					<p className="text-sm text-muted-foreground tabular-nums">
 						S/ {formatCents(savedCents)}
 						{targetCents ? ` de S/ ${formatCents(targetCents)}` : ""}
 					</p>
-				</DialogHeader>
-				<DialogPanel className="flex flex-col gap-4">
+				</FormSheetHeader>
+				<FormSheetPanel className="flex flex-col gap-4">
 					<form.Field name="amount">
 						{(field) => (
 							<AmountField
@@ -119,8 +119,8 @@ function ContributeForm({
 						/>
 						Sale del sobre Ahorro. No cuenta como gasto.
 					</p>
-				</DialogPanel>
-				<DialogFooter variant="bare">
+				</FormSheetPanel>
+				<FormSheetFooter variant="bare">
 					<Button
 						type="submit"
 						className="h-11 w-full rounded-full"
@@ -129,21 +129,21 @@ function ContributeForm({
 					>
 						Aportar
 					</Button>
-				</DialogFooter>
+				</FormSheetFooter>
 			</form>
-		</DialogPopup>
+		</FormSheetPopup>
 	);
 }
 
 export function ContributeDialog({ open, ...props }: ContributeProps & { open: boolean }) {
 	return (
-		<Dialog
+		<FormSheet
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) props.onClose();
 			}}
 		>
 			{open ? <ContributeForm {...props} /> : null}
-		</Dialog>
+		</FormSheet>
 	);
 }

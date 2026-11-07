@@ -29,5 +29,5 @@ Backend: Vitest en `packages/backend` (`pnpm --filter @quipu/backend test`). Web
 4. **Entra con `open(page, ruta)`, no con `page.goto`.** La página es SSR: un clic o texto antes de hidratar se pierde.
 5. **Selectores por rol y texto visible.** Sin ids de prueba y sin `waitForTimeout`. Un caso por flujo que el usuario ve. La regla 2 de backend vale igual: rompe la línea y míralo fallar.
 6. **El sueldo adelantado se prueba en backend.** Solo aparece en los últimos días del ciclo y la fecha no se puede forzar de punta a punta.
-7. **`test.fixme` es un bug conocido, no un verde.** Lleva la causa en un comentario. Hoy: scroll horizontal a 375 px (U14) y el doble clic en Registrar, Compromisos y Ahorros.
+7. **`test.fixme` es un bug conocido, no un verde.** Lleva la causa en un comentario. Hoy: el doble clic en Registrar, Compromisos y Ahorros.
 8. **Cómo mirar.** `pnpm --filter web e2e --headed`, `--debug` o `e2e:ui`. Capturas en `apps/web/test-results/`; con un fallo hay trace: `pnpm --filter web exec playwright show-trace <carpeta>/trace.zip`.

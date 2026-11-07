@@ -174,7 +174,7 @@ function Overview({
 				<EnvelopeCards home={home} space={space} />
 			</div>
 
-			<div className="mt-[52px] grid gap-14 border-t border-border/80 pt-7 lg:grid-cols-2">
+			<div className="mt-[52px] grid grid-cols-1 gap-14 border-t border-border/80 pt-7 lg:grid-cols-2">
 				<UpcomingCommitments items={items} today={today} space={space} />
 				<RecentMovements rows={rows} today={today} />
 			</div>

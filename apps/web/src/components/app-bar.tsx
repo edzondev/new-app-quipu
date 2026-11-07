@@ -1,28 +1,104 @@
-import { Menu } from "@base-ui/react/menu";
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link, useRouterState, useSearch } from "@tanstack/react-router";
 import { cn } from "cn";
+import { MenuIcon } from "lucide-react";
+import { useState } from "react";
 import { Button } from "#/components/ui/button";
+import {
+	Drawer,
+	DrawerHeader,
+	DrawerPanel,
+	DrawerPopup,
+	DrawerTitle,
+	DrawerTrigger,
+} from "#/components/ui/drawer";
+import {
+	Menu,
+	MenuGroup,
+	MenuGroupLabel,
+	MenuItem,
+	MenuLinkItem,
+	MenuPopup,
+	MenuRadioGroup,
+	MenuRadioItem,
+	MenuSeparator,
+	MenuTrigger,
+} from "#/components/ui/menu";
 import { useSignOut } from "#/hooks/use-sign-out";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
 import { setTheme, THEMES, useTheme } from "#/lib/theme";
 import { useRegister } from "#/modules/register/register-dialog";
 
-const menuItem =
-	"flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-sm outline-none data-highlighted:bg-muted data-disabled:opacity-50";
+// The menu items are 44 px tall on touch screens.
+const tapTarget = "pointer-coarse:min-h-11";
 const pill =
 	"flex h-11 items-center rounded-[22px] px-4 text-sm font-semibold text-muted-foreground";
 const pillOn = "bg-background text-foreground shadow-[0_1px_3px_rgba(29,22,16,0.12)]";
 const navLink = "flex h-11 items-center rounded-[22px] px-[18px] text-[15px] font-semibold";
 
-export function AppBar() {
+const NAV_LINKS = [
+	{ to: "/home", label: "Inicio" },
+	{ to: "/movements", label: "Movimientos" },
+	{ to: "/savings", label: "Ahorros" },
+	{ to: "/commitments", label: "Compromisos" },
+] as const;
+
+function NavLinks({ onSelect }: { onSelect?: () => void }) {
+	return NAV_LINKS.map(({ to, label }) => (
+		<Link
+			key={to}
+			to={to}
+			onClick={onSelect}
+			activeProps={{ className: "bg-muted text-foreground" }}
+			inactiveProps={{ className: "text-muted-foreground" }}
+			className={navLink}
+		>
+			{label}
+		</Link>
+	));
+}
+
+function SpaceSwitch({ onSelect }: { onSelect?: () => void }) {
 	const { space } = useSearch({ from: "/_app" });
+
+	return (
+		<div role="tablist" aria-label="Espacio" className="flex rounded-3xl bg-muted p-0.5">
+			<Link
+				to="."
+				role="tab"
+				aria-selected={!space}
+				search={(prev) => ({ ...prev, space: undefined })}
+				onClick={onSelect}
+				className={cn(pill, !space && pillOn)}
+			>
+				Personal
+			</Link>
+			<Link
+				to="."
+				role="tab"
+				aria-selected={space === "household"}
+				search={(prev) => ({ ...prev, space: "household" })}
+				onClick={onSelect}
+				className={cn(pill, space === "household" && pillOn)}
+			>
+				Nuestro espacio
+			</Link>
+		</div>
+	);
+}
+
+export function AppBar() {
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const signOut = useSignOut("current");
 	const theme = useTheme();
 	const openRegister = useRegister();
+	// The menu is open only for the address it was opened on, so back and forward close it
+	// without an effect. Choosing the page you are already on has to close it by hand.
+	const href = useRouterState({ select: (state) => state.location.href });
+	const [menuOpenAt, setMenuOpenAt] = useState<string | null>(null);
+	const closeMenu = () => setMenuOpenAt(null);
 	// Spreading a string walks code points, so an emoji at the start stays whole.
 	const [first = "?"] = profile.data?.name.trim() ?? "";
 	const initial = first.toUpperCase();
@@ -31,71 +107,54 @@ export function AppBar() {
 		<header className="border-b border-input bg-background">
 			<nav
 				aria-label="Principal"
-				className="mx-auto flex min-h-16 w-full max-w-[1120px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-2"
+				className="mx-auto flex min-h-16 w-full max-w-280 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-2"
 			>
-				<Link
-					to="/home"
-					className="font-heading text-[21px] font-medium tracking-tight text-foreground"
-				>
-					Quipu
-				</Link>
-
-				<div className="flex gap-1">
+				<div className="flex items-center gap-2">
+					<Drawer
+						position="left"
+						open={menuOpenAt === href}
+						onOpenChange={(open) => setMenuOpenAt(open ? href : null)}
+					>
+						<DrawerTrigger
+							render={
+								<Button
+									variant="ghost"
+									size="icon-xl"
+									aria-label="Menú"
+									className="-ms-2 lg:hidden"
+								/>
+							}
+						>
+							<MenuIcon />
+						</DrawerTrigger>
+						<DrawerPopup variant="straight" showCloseButton>
+							<DrawerHeader>
+								<DrawerTitle>Menú</DrawerTitle>
+							</DrawerHeader>
+							<DrawerPanel className="flex flex-col gap-4">
+								{profile.data?.hasHousehold ? <SpaceSwitch onSelect={closeMenu} /> : null}
+								<nav aria-label="Secciones" className="flex flex-col gap-1">
+									<NavLinks onSelect={closeMenu} />
+								</nav>
+							</DrawerPanel>
+						</DrawerPopup>
+					</Drawer>
 					<Link
 						to="/home"
-						activeProps={{ className: "bg-muted text-foreground" }}
-						inactiveProps={{ className: "text-muted-foreground" }}
-						className={navLink}
+						className="font-heading text-[21px] font-medium tracking-tight text-foreground"
 					>
-						Inicio
+						Quipu
 					</Link>
-					<Link
-						to="/movements"
-						activeProps={{ className: "bg-muted text-foreground" }}
-						inactiveProps={{ className: "text-muted-foreground" }}
-						className={navLink}
-					>
-						Movimientos
-					</Link>
-					<Link
-						to="/savings"
-						activeProps={{ className: "bg-muted text-foreground" }}
-						inactiveProps={{ className: "text-muted-foreground" }}
-						className={navLink}
-					>
-						Ahorros
-					</Link>
-					<Link
-						to="/commitments"
-						activeProps={{ className: "bg-muted text-foreground" }}
-						inactiveProps={{ className: "text-muted-foreground" }}
-						className={navLink}
-					>
-						Compromisos
-					</Link>
+				</div>
+
+				<div className="hidden gap-1 lg:flex">
+					<NavLinks />
 				</div>
 
 				<div className="flex items-center gap-2.5">
 					{profile.data?.hasHousehold ? (
-						<div role="tablist" aria-label="Espacio" className="flex rounded-3xl bg-muted p-0.5">
-							<Link
-								to="."
-								role="tab"
-								aria-selected={!space}
-								search={(prev) => ({ ...prev, space: undefined })}
-								className={cn(pill, !space && pillOn)}
-							>
-								Personal
-							</Link>
-							<Link
-								to="."
-								role="tab"
-								aria-selected={space === "household"}
-								search={(prev) => ({ ...prev, space: "household" })}
-								className={cn(pill, space === "household" && pillOn)}
-							>
-								Nuestro espacio
-							</Link>
+						<div className="hidden lg:block">
+							<SpaceSwitch />
 						</div>
 					) : null}
 
@@ -103,65 +162,58 @@ export function AppBar() {
 						+ Registrar
 					</Button>
 
-					<Menu.Root>
-						<Menu.Trigger
+					<Menu>
+						<MenuTrigger
 							aria-label="Cuenta"
 							className="flex size-11 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						>
 							{initial}
-						</Menu.Trigger>
-						<Menu.Portal>
-							<Menu.Positioner sideOffset={8} align="end" className="z-50">
-								<Menu.Popup className="min-w-44 rounded-xl border border-border bg-background p-1 shadow-md outline-none">
-									<Menu.LinkItem
-										render={<Link to="/settings" search={{ space: undefined }} />}
-										className={menuItem}
-									>
-										Ajustes
-									</Menu.LinkItem>
-									<Menu.Separator className="my-1 h-px bg-border" />
-									<Menu.Group>
-										<Menu.GroupLabel className="px-3 py-1 text-xs text-muted-foreground">
-											Tema
-										</Menu.GroupLabel>
-										<Menu.RadioGroup
-											value={theme}
-											onValueChange={(value, { event }) => {
-												const next = THEMES.find((option) => option.value === value);
-												if (next) setTheme(next.value, event);
-											}}
+						</MenuTrigger>
+						<MenuPopup sideOffset={8} align="end">
+							<MenuLinkItem
+								render={<Link to="/settings" search={{ space: undefined }} />}
+								className={tapTarget}
+							>
+								Ajustes
+							</MenuLinkItem>
+							<MenuSeparator />
+							<MenuGroup>
+								<MenuGroupLabel>Tema</MenuGroupLabel>
+								<MenuRadioGroup
+									value={theme}
+									onValueChange={(value, { event }) => {
+										const next = THEMES.find((option) => option.value === value);
+										if (next) setTheme(next.value, event);
+									}}
+								>
+									{THEMES.map((option) => (
+										<MenuRadioItem
+											key={option.value}
+											value={option.value}
+											closeOnClick={false}
+											className={tapTarget}
 										>
-											{THEMES.map((option) => (
-												<Menu.RadioItem
-													key={option.value}
-													value={option.value}
-													closeOnClick={false}
-													className={cn(menuItem, "justify-between")}
-												>
-													{option.label}
-													<Menu.RadioItemIndicator aria-hidden>✓</Menu.RadioItemIndicator>
-												</Menu.RadioItem>
-											))}
-										</Menu.RadioGroup>
-									</Menu.Group>
-									<Menu.Separator className="my-1 h-px bg-border" />
-									<Menu.Item
-										closeOnClick={false}
-										disabled={signOut.isPending}
-										className={menuItem}
-										onClick={() => signOut.mutate()}
-									>
-										{signOut.isPending ? "Saliendo…" : "Cerrar sesión"}
-									</Menu.Item>
-									{signOut.isError ? (
-										<p role="alert" className="px-3 py-1.5 text-xs text-warning-foreground">
-											{getAuthErrorMessage(signOut.error)}
-										</p>
-									) : null}
-								</Menu.Popup>
-							</Menu.Positioner>
-						</Menu.Portal>
-					</Menu.Root>
+											{option.label}
+										</MenuRadioItem>
+									))}
+								</MenuRadioGroup>
+							</MenuGroup>
+							<MenuSeparator />
+							<MenuItem
+								closeOnClick={false}
+								disabled={signOut.isPending}
+								className={tapTarget}
+								onClick={() => signOut.mutate()}
+							>
+								{signOut.isPending ? "Saliendo…" : "Cerrar sesión"}
+							</MenuItem>
+							{signOut.isError ? (
+								<p role="alert" className="px-2 py-1.5 text-xs text-warning-foreground">
+									{getAuthErrorMessage(signOut.error)}
+								</p>
+							) : null}
+						</MenuPopup>
+					</Menu>
 				</div>
 			</nav>
 		</header>

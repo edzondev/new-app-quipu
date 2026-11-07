@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { Dialog, DialogPopup, DialogTrigger } from "#/components/ui/dialog";
+import { FormSheet, FormSheetPopup } from "#/components/form-sheet";
 import { ACTION } from "#/lib/typography";
 
 /**
@@ -15,9 +15,13 @@ export function ActionDialog({
 }) {
 	const [open, setOpen] = useState(false);
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger render={<button type="button" className={ACTION} />}>{label}</DialogTrigger>
-			<DialogPopup>{children(() => setOpen(false))}</DialogPopup>
-		</Dialog>
+		<>
+			<button type="button" aria-haspopup="dialog" className={ACTION} onClick={() => setOpen(true)}>
+				{label}
+			</button>
+			<FormSheet open={open} onOpenChange={setOpen}>
+				<FormSheetPopup>{children(() => setOpen(false))}</FormSheetPopup>
+			</FormSheet>
+		</>
 	);
 }
