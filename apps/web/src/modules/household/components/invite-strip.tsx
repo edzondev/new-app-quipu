@@ -43,7 +43,7 @@ export function InviteStrip({ invite, firstName }: Props) {
 					<p>La invitación venció. Envía una nueva para que tu pareja pueda entrar.</p>
 					<Button
 						variant="outline"
-						className="rounded-full"
+						className="rounded-full pointer-coarse:min-h-11"
 						loading={resend.isPending}
 						onClick={() => resend.mutate()}
 					>
@@ -57,10 +57,18 @@ export function InviteStrip({ invite, firstName }: Props) {
 							Tu pareja aún no entra. Código{" "}
 							<span className="font-mono font-semibold">{invite.code}</span>.
 						</p>
-						<Button variant="outline" className="rounded-full" onClick={share}>
+						<Button
+							variant="outline"
+							className="rounded-full pointer-coarse:min-h-11"
+							onClick={share}
+						>
 							Compartir invitación
 						</Button>
-						<Button variant="outline" className="rounded-full" onClick={copyCode}>
+						<Button
+							variant="outline"
+							className="rounded-full pointer-coarse:min-h-11"
+							onClick={copyCode}
+						>
 							Copiar código
 						</Button>
 					</div>

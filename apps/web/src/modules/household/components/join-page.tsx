@@ -206,7 +206,7 @@ export function JoinPage({
 						</Message>
 						<button
 							type="button"
-							className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+							className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground pointer-coarse:min-h-11"
 							onClick={writeAnother}
 						>
 							¿Tienes otro código?
