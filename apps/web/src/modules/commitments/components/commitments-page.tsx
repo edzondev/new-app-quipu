@@ -3,14 +3,16 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { Toast } from "#/components/toast";
+import { useNotice } from "#/modules/household/use-notice";
 import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { groupCommitments } from "../commitment-view";
-import { AddCommitmentDialog } from "./add-commitment-dialog";
+import { CommitmentDialog } from "./commitment-dialog";
 import { CommitmentRow, PaymentRow } from "./commitment-row";
 
 export function CommitmentsPage() {
@@ -52,7 +54,8 @@ function Commitments({ today }: { today: string }) {
 	const gate = useReadOnlyGate();
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	const queryClient = useQueryClient();
-	const [addingIn, setAddingIn] = useState<typeof space | null>(null);
+	const [dialog, setDialog] = useState<ComponentProps<typeof CommitmentDialog>["target"]>(null);
+	const [notice, setNotice] = useNotice();
 	const ensureOpen = useEnsureOpenCycle(space, today);
 	const list = useQuery(
 		convexQuery(api.commitments.list, ensureOpen.isSuccess ? { space, today } : "skip"),
@@ -91,6 +94,15 @@ function Commitments({ today }: { today: string }) {
 
 	const { items, payments, payableCents, paidCents } = list.data;
 	const groups = groupCommitments(items);
+	const renderRow = (item: (typeof items)[number]) => (
+		<CommitmentRow
+			key={item.id}
+			item={item}
+			today={today}
+			space={space}
+			menu={{ onEdit: () => setDialog({ space, item }), onNotice: setNotice }}
+		/>
+	);
 
 	return (
 		<>
@@ -101,7 +113,12 @@ function Commitments({ today }: { today: string }) {
 						Lo que pagas cada mes. Quipu lo reserva antes de que gastes.
 					</p>
 				</div>
-				<Button variant="outline" className="shrink-0" onClick={() => setAddingIn(space)} {...gate}>
+				<Button
+					variant="outline"
+					className="shrink-0"
+					onClick={() => setDialog({ space, item: null })}
+					{...gate}
+				>
 					+ Añadir compromiso
 				</Button>
 			</header>
@@ -116,15 +133,9 @@ function Commitments({ today }: { today: string }) {
 						S/ {formatCents(payableCents)} por pagar · S/ {formatCents(paidCents)} pagado este ciclo
 					</p>
 					<Group title="Por pagar este ciclo" totalCents={payableCents}>
-						{groups.pending.map((item) => (
-							<CommitmentRow key={item.id} item={item} today={today} space={space} />
-						))}
+						{groups.pending.map(renderRow)}
 					</Group>
-					<Group title="Más adelante">
-						{groups.later.map((item) => (
-							<CommitmentRow key={item.id} item={item} today={today} space={space} />
-						))}
-					</Group>
+					<Group title="Más adelante">{groups.later.map(renderRow)}</Group>
 					<Group
 						title="Ya pagados este ciclo"
 						totalCents={paidCents}
@@ -134,15 +145,12 @@ function Commitments({ today }: { today: string }) {
 							<PaymentRow key={payment.paymentId} payment={payment} today={today} />
 						))}
 					</Group>
-					<Group title="Pagados antes">
-						{groups.paidBefore.map((item) => (
-							<CommitmentRow key={item.id} item={item} today={today} space={space} />
-						))}
-					</Group>
+					<Group title="Pagados antes">{groups.paidBefore.map(renderRow)}</Group>
 				</div>
 			)}
 
-			<AddCommitmentDialog space={addingIn} onClose={() => setAddingIn(null)} />
+			<CommitmentDialog target={dialog} today={today} onClose={() => setDialog(null)} />
+			<Toast message={notice} />
 		</>
 	);
 }

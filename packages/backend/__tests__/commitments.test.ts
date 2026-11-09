@@ -80,7 +80,7 @@ test("Luz S/ 50 day 25 lowers daily; markPaid cuts Needs and stops the discount"
 		name: "Luz",
 		amountCents: 5_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 25 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 25 } },
 	});
 
 	const before = await ana.query(api.balances.getBalances, { space: "personal" });
@@ -164,7 +164,7 @@ function addLuz(ana: Ana) {
 		name: "Luz",
 		amountCents: 5_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 25 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 25 } },
 	});
 }
 
@@ -342,7 +342,7 @@ test("a commitment only counts from the day it was created", async () => {
 		name: "Alquiler",
 		amountCents: 20_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 1 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 1 } },
 	});
 
 	// Ciclo 2026-10-20 → 2026-10-31. El 1 oct es antes de crearlo y el 1 nov cae fuera del ciclo.
@@ -466,7 +466,7 @@ test("a monthly with no charge left in the cycle still lists its next due date, 
 		name: "Internet",
 		amountCents: 9_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 15 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 15 } },
 	});
 	const id = await firstCommitmentId(t);
 
@@ -499,7 +499,7 @@ test("a monthly due after the cycle end, listed before its day, shows next month
 		name: "Internet",
 		amountCents: 9_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 5 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 5 } },
 	});
 
 	const list = await ana.query(api.commitments.list, { space: "personal", today: "2026-10-23" });
@@ -525,7 +525,7 @@ test("a monthly last paid in the previous cycle is listed as later, not as paid"
 		name: "Internet",
 		amountCents: 9_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 5 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 5 } },
 	});
 	await ana.mutation(api.commitments.markPaid, {
 		space: "personal",
@@ -619,7 +619,7 @@ test("a charge due on the cycle's first day is listed as itself, open and then p
 		name: "Internet",
 		amountCents: 9_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 1 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 1 } },
 	});
 	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
 	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });

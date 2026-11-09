@@ -668,7 +668,7 @@ test("paying a commitment counts as spent in its envelope", async () => {
 		name: "Luz",
 		amountCents: 5_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 25 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 25 } },
 	});
 	at("2026-10-25");
 	const id = await t.run(async (ctx) => (await ctx.db.query("commitments").take(1))[0]._id);

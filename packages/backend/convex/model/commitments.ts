@@ -1,9 +1,19 @@
-import { getOccurrences } from "../../shared/commitments";
+import { getOccurrences, type Schedule } from "../../shared/commitments";
 import { getLimaDate } from "../../shared/dates";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 const PAYMENTS_CAP = 500;
+
+/** The schedule of a row, whether it has a rule or only the old `dueDay`. */
+export function scheduleOf(row: Doc<"commitments">): Schedule {
+	if (row.frequency === "once") return { frequency: "once", dueDate: row.dueDate };
+	return {
+		frequency: "monthly",
+		rule: "rule" in row ? row.rule : { kind: "day", day: row.dueDay },
+		adjustment: row.adjustment,
+	};
+}
 
 /** A commitment's payments in every cycle. A payment settles the oldest open occurrence, so the count drives the states. */
 export function getCommitmentPayments(ctx: QueryCtx | MutationCtx, row: Doc<"commitments">) {
@@ -20,7 +30,7 @@ export function getCommitmentStates(
 	cycleEnd: string,
 ) {
 	return getOccurrences(
-		row,
+		scheduleOf(row),
 		getLimaDate(new Date(row._creationTime)),
 		paymentCount,
 		today,

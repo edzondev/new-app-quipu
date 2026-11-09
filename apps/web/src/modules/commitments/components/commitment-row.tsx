@@ -20,6 +20,7 @@ import {
 	type Payment,
 } from "../commitment-view";
 import { AmountField } from "./amount-field";
+import { BackToRuleButton, CommitmentMenu } from "./commitment-menu";
 
 const BADGE = {
 	overdue: { text: "Vencido", className: "bg-primary/15 text-primary" },
@@ -99,6 +100,7 @@ function RowLayout({
 	detail,
 	amountCents,
 	action,
+	menu,
 	below,
 }: {
 	envelope: Envelope;
@@ -108,16 +110,20 @@ function RowLayout({
 	detail: string;
 	amountCents: number;
 	action?: React.ReactNode;
+	menu?: React.ReactNode;
 	below?: React.ReactNode;
 }) {
 	const amount = (
-		<span
-			className={cn(
-				"col-start-3 row-start-1 self-start font-mono text-[15px] leading-[1.3] sm:self-auto sm:leading-normal",
-				paid && "text-muted-foreground",
-			)}
-		>
-			S/ {formatCents(amountCents)}
+		<span className="col-start-3 row-start-1 flex items-center gap-1 self-start sm:self-auto">
+			<span
+				className={cn(
+					"font-mono text-[15px] leading-[1.3] sm:leading-normal",
+					paid && "text-muted-foreground",
+				)}
+			>
+				S/ {formatCents(amountCents)}
+			</span>
+			{menu}
 		</span>
 	);
 	// Narrow screens show the status under the date; from `sm` it sits next to the name.
@@ -188,10 +194,13 @@ export function CommitmentRow({
 	item,
 	today,
 	space,
+	menu,
 }: {
 	item: CommitmentItem;
 	today: string;
 	space: "personal" | "household";
+	/** Only Compromisos has the "⋯" menu; Inicio lists the same rows without it. */
+	menu?: { onEdit: () => void; onNotice: (message: string) => void };
 }) {
 	const [paying, setPaying] = useState(false);
 	const gate = useReadOnlyGate();
@@ -205,6 +214,17 @@ export function CommitmentRow({
 			badge={badge}
 			detail={describeDue(item, today)}
 			amountCents={item.amountCents}
+			menu={
+				menu ? (
+					<CommitmentMenu
+						item={item}
+						space={space}
+						today={today}
+						onEdit={menu.onEdit}
+						onNotice={menu.onNotice}
+					/>
+				) : null
+			}
 			action={
 				canPay(item) ? (
 					<Button
@@ -218,7 +238,16 @@ export function CommitmentRow({
 				) : null
 			}
 			below={
-				paying ? <PayInline item={item} space={space} onClose={() => setPaying(false)} /> : null
+				<>
+					{item.adjusted ? (
+						<BackToRuleButton
+							item={item}
+							space={space}
+							className={cn(ACTION, "mb-1 ml-[50px] min-h-11")}
+						/>
+					) : null}
+					{paying ? <PayInline item={item} space={space} onClose={() => setPaying(false)} /> : null}
+				</>
 			}
 		/>
 	);

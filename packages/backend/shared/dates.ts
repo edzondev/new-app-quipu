@@ -28,6 +28,9 @@ export function formatLimaTime(at: number): string {
 
 export const isoDateSchema = z.iso.date();
 
+/** A month as "2026-11". */
+export const monthSchema = z.string().check(z.regex(/^\d{4}-(0[1-9]|1[0-2])$/));
+
 function toUtc(date: string): number {
 	return Date.parse(`${date}T00:00:00Z`);
 }
@@ -96,6 +99,39 @@ export function getFirstCycleRange(cadence: Cadence, startDay: CycleStartDay, to
 
 export function monthName(date: string): string {
 	return MONTH_NAMES[Number(date.split("-")[1]) - 1];
+}
+
+/** "sáb 28 nov". */
+export function formatWeekdayDay(date: string): string {
+	return `${WEEKDAYS[new Date(toUtc(date)).getUTCDay()]} ${formatDay(date)}`;
+}
+
+/** "16 nov 2026". */
+export function formatFullDay(date: string): string {
+	return `${formatDay(date)} ${date.slice(0, 4)}`;
+}
+
+/** The month after "2026-12", which is "2027-01". */
+export function nextMonth(month: string): string {
+	const [year, monthNumber] = month.split("-").map(Number);
+	return dayInMonth(year, monthNumber, 1).slice(0, 7);
+}
+
+/** "marzo 2027" for "2027-03". */
+export function formatMonthYear(month: string): string {
+	return `${monthName(month)} ${month.slice(0, 4)}`;
+}
+
+/** The calendar works with local Dates: "2026-11-16" at local midnight, and back. */
+export function parseLocalDate(date: string): Date {
+	const [year, month, day] = date.split("-").map(Number);
+	return new Date(year, month - 1, day);
+}
+
+export function formatLocalDate(date: Date): string {
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export function formatDay(date: string): string {

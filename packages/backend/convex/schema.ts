@@ -48,6 +48,17 @@ export const eventType = v.union(
 	...otherEvents.map((type) => v.literal(type)),
 );
 
+// How a monthly commitment decides its day. Rows from before this existed keep a plain `dueDay`.
+export const dueRule = v.union(
+	v.object({ kind: v.literal("day"), day: v.number() }),
+	v.object({ kind: v.literal("last") }),
+	v.object({ kind: v.literal("beforeEnd"), days: v.number() }),
+	v.object({ kind: v.literal("mid") }),
+);
+
+// A day that only counts in its own month ("2026-11"); the next month goes back to the rule.
+export const dueAdjustment = v.object({ month: v.string(), day: v.number() });
+
 export const extraType = v.union(
 	v.literal("gratification"),
 	v.literal("bonus"),
@@ -188,7 +199,15 @@ export default defineSchema({
 			v.object({
 				...commitmentBase,
 				frequency: v.literal("monthly"),
+				rule: dueRule,
+				adjustment: v.optional(dueAdjustment),
+			}),
+			// Before rules: read as { kind: "day", day: dueDay }, so no data had to be migrated.
+			v.object({
+				...commitmentBase,
+				frequency: v.literal("monthly"),
 				dueDay: v.number(),
+				adjustment: v.optional(dueAdjustment),
 			}),
 			v.object({
 				...commitmentBase,

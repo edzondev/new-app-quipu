@@ -1,6 +1,7 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS } from "@quipu/backend/shared/budget";
-import { daysBetween, formatDay, formatPastDay } from "@quipu/backend/shared/dates";
+import { dueDateFor, ruleText } from "@quipu/backend/shared/commitments";
+import { formatPastDay, formatWeekdayDay } from "@quipu/backend/shared/dates";
 import type { FunctionReturnType } from "convex/server";
 
 type CommitmentList = FunctionReturnType<typeof api.commitments.list>;
@@ -33,22 +34,31 @@ export function describePaid(
 	return `Pagado el ${formatPastDay(paidOn, today)} · ${ENVELOPE_LABELS[envelope]}`;
 }
 
+/** The day of the month the rule gives in the month of this charge, ignoring a one-month change. */
+export function ruleDay(item: CommitmentItem): number | null {
+	if (!item.rule) return null;
+	return Number(dueDateFor(item.rule, undefined, item.dueDate.slice(0, 7)).slice(8));
+}
+
+/** "cada mes el 28", or "el 27 · solo este mes" when this month was moved by hand. */
+function describeRule(item: CommitmentItem) {
+	if (!item.rule) return ENVELOPE_LABELS[item.envelope];
+	if (item.adjusted) return `el ${Number(item.dueDate.slice(8))} · solo este mes`;
+	return `cada mes ${ruleText(item.rule)}`;
+}
+
 export function describeDue(item: CommitmentItem, today: string) {
-	const envelope = ENVELOPE_LABELS[item.envelope];
-	const date = formatDay(item.dueDate);
+	const date = formatWeekdayDay(item.dueDate);
+	const rule = describeRule(item);
 	switch (item.status) {
 		case "paid":
 			return describePaid(item, today);
 		case "overdue":
-			return `Venció el ${date} · ${envelope}`;
+			return `Venció el ${date} · ${rule}`;
 		case "later":
-			return `${date} · ${envelope}`;
-		case "upcoming": {
-			const days = daysBetween(today, item.dueDate);
-			const when = days === 0 ? "Hoy" : days === 1 ? "Mañana" : `Vence en ${days} días`;
-			return `${when} · ${envelope}`;
-		}
+			return `${date} · ${rule}`;
+		case "upcoming":
 		case "reserved":
-			return `Vence el ${date} · ${envelope}`;
+			return `Vence el ${date} · ${rule}`;
 	}
 }

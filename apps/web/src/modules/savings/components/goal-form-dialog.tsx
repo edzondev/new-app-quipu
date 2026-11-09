@@ -27,6 +27,8 @@ import {
 } from "#/components/form-sheet";
 import { Field, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
+import { MonthField } from "#/components/month-field";
+import { useLimaDate } from "#/hooks/use-lima-date";
 import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
 import { AmountField } from "#/modules/commitments/components/amount-field";
@@ -48,6 +50,7 @@ type GoalFormProps = {
 };
 
 function GoalForm({ space, goal, onClose }: GoalFormProps) {
+	const today = useLimaDate();
 	const add = useConvexMutation(api.goals.add);
 	const update = useConvexMutation(api.goals.update);
 	const remove = useConvexMutation(api.goals.remove);
@@ -134,16 +137,20 @@ function GoalForm({ space, goal, onClose }: GoalFormProps) {
 
 					<form.Field name="month">
 						{(field) => (
-							<Field>
-								<FieldLabel className="font-normal text-muted-foreground">
-									Para cuándo · opcional
-								</FieldLabel>
-								<Input
-									type="month"
-									value={field.state.value}
-									onChange={(event) => field.handleChange(event.target.value)}
-								/>
-							</Field>
+							<div>
+								<MonthField value={field.state.value} onChange={field.handleChange} today={today} />
+								{field.state.value ? (
+									<Button
+										type="button"
+										variant="link"
+										size="sm"
+										className="px-0 text-muted-foreground"
+										onClick={() => field.handleChange("")}
+									>
+										Quitar
+									</Button>
+								) : null}
+							</div>
 						)}
 					</form.Field>
 

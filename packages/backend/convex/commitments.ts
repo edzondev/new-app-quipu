@@ -3,25 +3,29 @@ import { rowLabel } from "../shared/activity";
 import { AMOUNT_KEYS, centsSchema, nameSchema } from "../shared/budget";
 import {
 	type CommitmentStatus,
+	dayExistsIn,
+	type DueAdjustment,
+	dueDateFor,
 	getNextDueDate,
 	isReserved,
+	isValidRule,
 	type Occurrence,
 } from "../shared/commitments";
-import { isoDateSchema } from "../shared/dates";
-import { monthDaySchema } from "../shared/plan";
+import { formatDay, isoDateSchema, monthSchema } from "../shared/dates";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import {
 	getCommitmentOccurrences,
 	getCommitmentPayments,
 	getCommitmentStates,
+	scheduleOf,
 } from "./model/commitments";
 import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
 import { logEvent } from "./model/events";
-import { parseInput } from "./model/input";
+import { BAD_INPUT, parseInput } from "./model/input";
 import { requireWritableSpace } from "./model/plus";
 import { type SpaceKind } from "./model/spaces";
-import { spaceKind, spendable } from "./schema";
+import { dueRule, spaceKind, spendable } from "./schema";
 
 const NOT_FOUND = "No encontramos este dato.";
 const ALREADY_PAID = "Este compromiso ya está pagado en este ciclo.";
@@ -30,7 +34,7 @@ const COMMITMENTS_CAP = 100;
 const schedule = v.union(
 	v.object({
 		frequency: v.literal("monthly"),
-		dueDay: v.number(),
+		rule: dueRule,
 	}),
 	v.object({
 		frequency: v.literal("once"),
@@ -52,16 +56,18 @@ function buildRow(
 	amountCents: number,
 	envelope: "needs" | "wants",
 	when: Schedule,
+	adjustment?: DueAdjustment,
 ) {
 	if (when.frequency === "monthly") {
-		parseInput(monthDaySchema, when.dueDay);
+		if (!isValidRule(when.rule)) throw new ConvexError(BAD_INPUT);
 		return {
 			spaceId,
 			name,
 			amountCents,
 			envelope,
 			frequency: "monthly" as const,
-			dueDay: when.dueDay,
+			rule: when.rule,
+			...(adjustment ? { adjustment } : {}),
 		};
 	}
 	parseInput(isoDateSchema, when.dueDate);
@@ -113,7 +119,14 @@ export const update = mutation({
 		await ctx.db.replace(
 			"commitments",
 			row._id,
-			buildRow(row.spaceId, cleanName, amountCents, envelope, when),
+			buildRow(
+				row.spaceId,
+				cleanName,
+				amountCents,
+				envelope,
+				when,
+				row.frequency === "monthly" ? row.adjustment : undefined,
+			),
 		);
 		await logEvent(ctx, space, userId, "commitment_edited", {
 			detail: rowLabel(cleanName, amountCents),
@@ -136,6 +149,54 @@ export const remove = mutation({
 	},
 });
 
+/** Moves a monthly commitment's date for one month only. */
+export const setDueThisMonth = mutation({
+	args: { space: spaceKind, id: v.id("commitments"), month: v.string(), day: v.number() },
+	returns: v.null(),
+	handler: async (ctx, { space: kind, id, month, day }) => {
+		const { userId, space, row } = await requireOwnCommitment(ctx, kind, id);
+		const schedule = scheduleOf(row);
+		if (schedule.frequency !== "monthly") throw new ConvexError(NOT_FOUND);
+		parseInput(monthSchema, month);
+		if (!dayExistsIn(month, day)) throw new ConvexError(BAD_INPUT);
+		await ctx.db.patch("commitments", id, { adjustment: { month, day } });
+		const before = dueDateFor(schedule.rule, schedule.adjustment, month);
+		const after = dueDateFor(schedule.rule, { month, day }, month);
+		if (before !== after) {
+			await logEvent(ctx, space, userId, "commitment_edited", {
+				detail: row.name,
+				before: formatDay(before),
+				after: formatDay(after),
+			});
+		}
+		return null;
+	},
+});
+
+/** Takes the one-month change back: the date follows the rule again. */
+export const clearDueThisMonth = mutation({
+	args: { space: spaceKind, id: v.id("commitments") },
+	returns: v.null(),
+	handler: async (ctx, { space: kind, id }) => {
+		const { userId, space, row } = await requireOwnCommitment(ctx, kind, id);
+		const schedule = scheduleOf(row);
+		if (schedule.frequency !== "monthly") throw new ConvexError(NOT_FOUND);
+		const { adjustment } = schedule;
+		if (!adjustment) return null;
+		await ctx.db.patch("commitments", id, { adjustment: undefined });
+		const before = dueDateFor(schedule.rule, adjustment, adjustment.month);
+		const after = dueDateFor(schedule.rule, undefined, adjustment.month);
+		if (before !== after) {
+			await logEvent(ctx, space, userId, "commitment_edited", {
+				detail: row.name,
+				before: formatDay(before),
+				after: formatDay(after),
+			});
+		}
+		return null;
+	},
+});
+
 const listItem = {
 	id: v.id("commitments"),
 	name: v.string(),
@@ -143,6 +204,9 @@ const listItem = {
 	envelope: spendable,
 	frequency: v.union(v.literal("monthly"), v.literal("once")),
 	dueDate: v.string(),
+	// The rule of a monthly (null for a one-off) and whether this charge's date is a one-month change.
+	rule: v.union(dueRule, v.null()),
+	adjusted: v.boolean(),
 };
 
 type Charge =
@@ -163,7 +227,7 @@ function pickCharge(
 	const open = occurrences.find(({ status }) => status !== "paid");
 	if (open && open.status !== "paid") return { dueDate: open.dueDate, status: open.status };
 	if (row.frequency === "monthly") {
-		return { dueDate: getNextDueDate(row, cycle.endDate), status: "later" };
+		return { dueDate: getNextDueDate(scheduleOf(row), cycle.endDate), status: "later" };
 	}
 	const payment = payments[0];
 	if (!payment || payment.cycleId === cycle._id) return undefined;
@@ -248,20 +312,23 @@ export const list = query({
 			}),
 		);
 		const items = charges
-			.flatMap(({ row, charge }) =>
-				charge
-					? [
-							{
-								id: row._id,
-								name: row.name,
-								amountCents: row.amountCents,
-								envelope: row.envelope,
-								frequency: row.frequency,
-								...charge,
-							},
-						]
-					: [],
-			)
+			.flatMap(({ row, charge }) => {
+				if (!charge) return [];
+				const schedule = scheduleOf(row);
+				const monthly = schedule.frequency === "monthly" ? schedule : null;
+				return [
+					{
+						id: row._id,
+						name: row.name,
+						amountCents: row.amountCents,
+						envelope: row.envelope,
+						frequency: row.frequency,
+						rule: monthly?.rule ?? null,
+						adjusted: monthly?.adjustment?.month === charge.dueDate.slice(0, 7),
+						...charge,
+					},
+				];
+			})
 			.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 		const payments = charges
 			.flatMap(({ cyclePayments }) => cyclePayments)

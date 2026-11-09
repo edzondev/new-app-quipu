@@ -186,7 +186,7 @@ test("either of the two marks a commitment as paid and the row keeps who paid", 
 		name: "Internet",
 		amountCents: 9_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 25 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 25 } },
 	});
 	const {
 		items: [commitment],
