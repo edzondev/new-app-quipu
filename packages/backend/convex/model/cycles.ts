@@ -4,11 +4,13 @@ import { addDays, getFirstCycleRange, getLimaDate, getNextCycleRange } from "../
 import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { type CloseSummary, summarizeClose } from "./close-summary";
 import { requireOwnerProfile, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
 
 const ZERO_CARRY = { needsCents: 0, wantsCents: 0 };
+const MAX_SUMMARY_ROWS = 500;
 
 export function createFirstCycle(
 	ctx: MutationCtx,
@@ -148,7 +150,20 @@ export async function closeCycle(
 			await moveEarlyIncomes(ctx, cycle._id, next._id),
 		),
 	});
-	await ctx.db.patch("cycles", cycle._id, { closedAt: Date.now() });
+	// Read after the early incomes moved out, so they are not counted in the cycle that closes.
+	const rows = await ctx.db
+		.query("transactions")
+		.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+		.take(MAX_SUMMARY_ROWS + 1);
+	const summary: CloseSummary =
+		rows.length > MAX_SUMMARY_ROWS
+			? { status: "tooManyMovements" }
+			: summarizeClose(cycle, rows, Math.max(0, savingsCents));
+	if (summary.status === "inconsistent") {
+		// Never block the close: record it so it is not mistaken for a cycle closed before summaries.
+		console.error("Cycle close summary does not add up", cycle._id);
+	}
+	await ctx.db.patch("cycles", cycle._id, { closedAt: Date.now(), closeSummary: summary });
 	const closedNext = await ctx.db.get("cycles", next._id);
 	if (!closedNext) throw new ConvexError("No encontramos tu ciclo.");
 	return closedNext;

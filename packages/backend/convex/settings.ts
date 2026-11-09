@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { reallocateFree, ZERO_AMOUNTS } from "../shared/budget";
+import { addAmounts, reallocateFree, subtractAmounts, ZERO_AMOUNTS } from "../shared/budget";
 import { isSamePlan, isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation } from "./_generated/server";
 import { getReserved } from "./model/budget";
@@ -43,7 +43,14 @@ export const updateSplit = mutation({
 		// Spent money already left the envelopes; money held for commitments still due stays where it is.
 		const reserved = await getReserved(ctx, space._id, cycle.endDate, today);
 		const envelopes = reallocateFree(cycle.envelopes, ZERO_AMOUNTS, reserved, splitValue);
-		await ctx.db.patch("cycles", cycle._id, { split: splitValue, envelopes });
+		await ctx.db.patch("cycles", cycle._id, {
+			split: splitValue,
+			envelopes,
+			reallocated: addAmounts(
+				cycle.reallocated ?? ZERO_AMOUNTS,
+				subtractAmounts(envelopes, cycle.envelopes),
+			),
+		});
 		return null;
 	},
 });
