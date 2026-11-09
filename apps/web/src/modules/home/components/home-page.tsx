@@ -29,7 +29,12 @@ type HouseholdData = FunctionReturnType<typeof api.household.get>;
 export function HomePage() {
 	const today = useLimaDate();
 	// Remount when the Lima day flips so ensureOpen runs again for the new cycle.
-	return <Home key={today} today={today} />;
+	return (
+		<>
+			<JoinedNotice />
+			<Home key={today} today={today} />
+		</>
+	);
 }
 
 function Home({ today }: { today: string }) {
@@ -55,7 +60,6 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 	const movements = useQuery(convexQuery(api.transactions.list, args));
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const household = useQuery(convexQuery(api.household.get, space === "household" ? {} : "skip"));
-	const joined = useSearch({ from: "/_app/home" }).joined;
 	const closed = useQuery(
 		convexQuery(
 			api.cycles.getUnseenClosed,
@@ -108,7 +112,6 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 			<Overview
 				home={home.data}
 				household={household.data ?? null}
-				joined={joined === true}
 				name={profile.data.name}
 				items={commitments.data.items}
 				rows={movements.data.rows}
@@ -137,7 +140,6 @@ function HomeSkeleton() {
 function Overview({
 	home,
 	household,
-	joined,
 	name,
 	items,
 	rows,
@@ -146,7 +148,6 @@ function Overview({
 }: {
 	home: HomeData;
 	household: HouseholdData;
-	joined: boolean;
 	name: string;
 	items: CommitmentItem[];
 	rows: Movement[];
@@ -158,9 +159,6 @@ function Overview({
 
 	return (
 		<>
-			{joined && household?.partnerName ? (
-				<JoinedNotice partnerName={household.partnerName} />
-			) : null}
 			<header>
 				<h1 className="font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
 					{space === "household" ? "Nuestro espacio" : firstName ? `Hola, ${firstName}` : "Hola"}
