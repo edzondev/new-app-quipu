@@ -21,8 +21,8 @@ import { Route as AppSavingsRouteImport } from './routes/_app/savings'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
-import { Route as UnirmeIndexRouteImport } from './routes/unirme.index'
-import { Route as UnirmeCodeRouteImport } from './routes/unirme.$code'
+import { Route as UnirmeIndexRouteImport } from './routes/unirme/index'
+import { Route as UnirmeCodeRouteImport } from './routes/unirme/$code'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,9 +89,9 @@ const UnirmeIndexRoute = UnirmeIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnirmeCodeRoute = UnirmeCodeRouteImport.update({
-  id: '/$code',
-  path: '/$code',
-  getParentRoute: () => UnirmeRoute,
+  id: '/unirme/$code',
+  path: '/unirme/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -202,6 +202,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  UnirmeCodeRoute: typeof UnirmeCodeRoute
   UnirmeIndexRoute: typeof UnirmeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -301,10 +302,10 @@ declare module '@tanstack/react-router' {
     }
     '/unirme/$code': {
       id: '/unirme/$code'
-      path: '/$code'
+      path: '/unirme/$code'
       fullPath: '/unirme/$code'
       preLoaderRoute: typeof UnirmeCodeRouteImport
-      parentRoute: typeof UnirmeRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -353,6 +354,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  UnirmeCodeRoute: UnirmeCodeRoute,
   UnirmeIndexRoute: UnirmeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
