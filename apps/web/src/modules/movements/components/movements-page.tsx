@@ -6,9 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useSearch } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
+import { Stale } from "#/components/stale";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { spaceQuery } from "#/lib/space-query";
 import type { Movement } from "#/modules/register/movement-draft";
 import { ActivityPage } from "./activity-view";
 import { MovementRow } from "./movement-row";
@@ -72,11 +74,14 @@ function Movements({ today }: { today: string }) {
 	const ensureOpen = useEnsureOpenCycle(space, today);
 
 	const list = useQuery(
-		convexQuery(api.transactions.list, ensureOpen.isSuccess ? { space, today } : "skip"),
+		spaceQuery(
+			convexQuery(api.transactions.list, ensureOpen.isSuccess ? { space, today } : "skip"),
+		),
 	);
 	const home = useQuery(
-		convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space, today } : "skip"),
+		spaceQuery(convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space, today } : "skip")),
 	);
+	const stale = list.isPlaceholderData || home.isPlaceholderData;
 
 	if (space === "household" && vista === "actividad") {
 		return (
@@ -126,7 +131,7 @@ function Movements({ today }: { today: string }) {
 			: `${count} ${count === 1 ? "movimiento" : "movimientos"} en este ciclo`;
 
 	return (
-		<>
+		<Stale active={stale}>
 			<header>
 				<h1 className="font-heading text-4xl font-medium tracking-tight">Movimientos</h1>
 				<p className="mt-2 text-sm text-muted-foreground">
@@ -179,6 +184,6 @@ function Movements({ today }: { today: string }) {
 			<p className="mt-12 border-t pt-5 text-sm text-muted-foreground">
 				{countLabel} · Disponible hoy S/ {formatCents(home.data.dailyCents)}
 			</p>
-		</>
+		</Stale>
 	);
 }

@@ -5,9 +5,11 @@ import { useSearch } from "@tanstack/react-router";
 import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
+import { Stale } from "#/components/stale";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { spaceQuery } from "#/lib/space-query";
 import { ContributeDialog } from "./contribute-dialog";
 import { FundCard } from "./fund-card";
 import { FundGoalDialog } from "./fund-goal-dialog";
@@ -25,7 +27,7 @@ export function SavingsPage() {
 	const today = useLimaDate();
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	// Remount when the Lima day or the space changes, so an open dialog never writes to the wrong one.
-	return <Savings key={`${space}-${today}`} space={space} today={today} />;
+	return <Savings key={today} space={space} today={today} />;
 }
 
 function Savings({
@@ -39,12 +41,15 @@ function Savings({
 	const [panel, setPanel] = useState<Panel>(null);
 	const ensureOpen = useEnsureOpenCycle(space, today);
 	const fund = useQuery(
-		convexQuery(api.goals.fund, ensureOpen.isSuccess ? { space, today } : "skip"),
+		spaceQuery(convexQuery(api.goals.fund, ensureOpen.isSuccess ? { space, today } : "skip")),
 	);
 	const balances = useQuery(
-		convexQuery(api.balances.getBalances, ensureOpen.isSuccess ? { space } : "skip"),
+		spaceQuery(convexQuery(api.balances.getBalances, ensureOpen.isSuccess ? { space } : "skip")),
 	);
-	const goals = useQuery(convexQuery(api.goals.list, ensureOpen.isSuccess ? { space } : "skip"));
+	const goals = useQuery(
+		spaceQuery(convexQuery(api.goals.list, ensureOpen.isSuccess ? { space } : "skip")),
+	);
+	const stale = [fund, balances, goals].some((query) => query.isPlaceholderData);
 	const close = () => setPanel(null);
 
 	if (ensureOpen.isError || fund.isError || balances.isError || goals.isError) {
@@ -77,7 +82,7 @@ function Savings({
 	const { savingsCents } = balances.data;
 	const goal = panel && "id" in panel ? goals.data.find((item) => item.id === panel.id) : undefined;
 	return (
-		<>
+		<Stale active={stale}>
 			<header>
 				<h1 className="font-heading text-4xl font-medium tracking-tight">Ahorros</h1>
 				<p className="mt-2 text-sm text-muted-foreground">
@@ -127,6 +132,6 @@ function Savings({
 				suggestedCents={fund.data.suggestedFundGoalCents}
 				onClose={close}
 			/>
-		</>
+		</Stale>
 	);
 }

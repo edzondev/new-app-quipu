@@ -19,6 +19,8 @@ import { HouseholdNotices } from "#/modules/household/components/household-notic
 import { InviteStrip } from "#/modules/household/components/invite-strip";
 import { JoinedNotice } from "#/modules/household/components/joined-notice";
 import { useRegister } from "#/modules/register/register-dialog";
+import { Stale } from "#/components/stale";
+import { spaceQuery } from "#/lib/space-query";
 import { CloseNotice } from "./close-notice";
 import { EnvelopeCards } from "./envelope-cards";
 import { RecentMovements } from "./recent-movements";
@@ -58,16 +60,21 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 		? { space, today }
 		: "skip";
 
-	const home = useQuery(convexQuery(api.balances.getHome, args));
-	const commitments = useQuery(convexQuery(api.commitments.list, args));
-	const movements = useQuery(convexQuery(api.transactions.list, args));
+	const home = useQuery(spaceQuery(convexQuery(api.balances.getHome, args)));
+	const commitments = useQuery(spaceQuery(convexQuery(api.commitments.list, args)));
+	const movements = useQuery(spaceQuery(convexQuery(api.transactions.list, args)));
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const household = useQuery(convexQuery(api.household.get, space === "household" ? {} : "skip"));
 	const contributions = useQuery(
-		convexQuery(api.household.contributions, space === "household" ? { today } : "skip"),
+		spaceQuery(
+			convexQuery(api.household.contributions, space === "household" ? { today } : "skip"),
+		),
 	);
 	const closed = useQuery(
-		convexQuery(api.cycles.getUnseenClosed, ensureOpen.isSuccess ? { space } : "skip"),
+		spaceQuery(convexQuery(api.cycles.getUnseenClosed, ensureOpen.isSuccess ? { space } : "skip")),
+	);
+	const stale = [home, commitments, movements, contributions, closed].some(
+		(query) => query.isPlaceholderData,
 	);
 
 	if (
@@ -111,7 +118,7 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 	if (!commitments.data || !movements.data || !profile.data) return <HomeSkeleton />;
 	if (space === "household" && (!household.data || !contributions.data)) return <HomeSkeleton />;
 	return (
-		<>
+		<Stale active={stale}>
 			{notice}
 			<Overview
 				home={home.data}
@@ -123,7 +130,7 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 				space={space}
 				today={today}
 			/>
-		</>
+		</Stale>
 	);
 }
 
@@ -220,7 +227,7 @@ function Overview({
 					) : null}
 				</section>
 
-				<EnvelopeCards home={home} space={space} />
+				<EnvelopeCards home={home} />
 			</div>
 
 			<div className="mt-[52px] grid grid-cols-1 gap-14 border-t border-border/80 pt-7 lg:grid-cols-2">

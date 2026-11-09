@@ -56,7 +56,7 @@ function PayInline({
 	return (
 		<form
 			noValidate
-			className="mb-3 rounded-xl bg-muted/60 p-4"
+			className="pop-in mb-3 rounded-xl bg-muted/60 p-4"
 			onSubmit={(event) => {
 				event.preventDefault();
 				void form.handleSubmit();
