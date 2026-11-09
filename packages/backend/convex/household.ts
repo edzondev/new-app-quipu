@@ -6,7 +6,7 @@ import { isValidPlan } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
-import { createFirstCycle, getCycleAt } from "./model/cycles";
+import { createFirstCycle, getCycleAt, getLatestClosed } from "./model/cycles";
 import { parseInput } from "./model/input";
 import { householdHasPlus, requirePlus, requireWritableSpace } from "./model/plus";
 import {
@@ -140,6 +140,17 @@ export const joinHousehold = mutation({
 			spaceId: space._id,
 			userId: user._id,
 		});
+		// Closes before this person arrived are not news for them.
+		const latestClosed = await getLatestClosed(ctx, space._id);
+		const profile = await ctx.db
+			.query("profiles")
+			.withIndex("by_userId", (q) => q.eq("userId", user._id))
+			.unique();
+		if (latestClosed && profile) {
+			await ctx.db.patch("profiles", profile._id, {
+				lastSeenHouseholdClosedCycleId: latestClosed._id,
+			});
+		}
 		// Invalidate the code without clearing optional fields (patch can't unset).
 		await ctx.db.patch("spaces", space._id, { inviteExpiresAt: 0 });
 		return { ok: true as const };

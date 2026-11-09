@@ -85,6 +85,8 @@ export default defineSchema({
 		// A cycle change waits here and becomes `plan` when the next personal cycle is created.
 		nextPlan: v.optional(plan),
 		lastSeenClosedCycleId: v.optional(v.id("cycles")),
+		// The same for the household's closes: each person dismisses their own notice.
+		lastSeenHouseholdClosedCycleId: v.optional(v.id("cycles")),
 		// Quipu Plus trial end (ms). Set by us on the server for 14 days, no card.
 		// Polar (web) and RevenueCat (mobile) only charge.
 		trialEndsAt: v.optional(v.number()),

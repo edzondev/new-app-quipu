@@ -1,7 +1,13 @@
 import { ConvexError, v } from "convex/values";
 import { addDays, getLimaDate } from "../shared/dates";
 import { mutation, query } from "./_generated/server";
-import { ensureOpenCycle, getCycleStarting } from "./model/cycles";
+import {
+	ensureOpenCycle,
+	getCycleStarting,
+	getLatestClosed,
+	lastSeenOf,
+	seenPatch,
+} from "./model/cycles";
 import { requireSpace, requireSpaceById } from "./model/spaces";
 import { spaceKind } from "./schema";
 
@@ -29,6 +35,9 @@ export const getUnseenClosed = query({
 			newCycleStart: v.string(),
 			carriedCents: v.number(),
 			fundedCents: v.number(),
+			// Household only: what Necesidades and Gustos left (to Ahorro) or fell short by. Zero in Personal.
+			surplusCents: v.number(),
+			shortfallCents: v.number(),
 		}),
 	),
 	handler: async (ctx, { space: kind }) => {
@@ -37,20 +46,18 @@ export const getUnseenClosed = query({
 			.query("profiles")
 			.withIndex("by_userId", (q) => q.eq("userId", userId))
 			.unique();
-		const closed = await ctx.db
-			.query("cycles")
-			.withIndex("by_space_closedAt", (q) => q.eq("spaceId", space._id))
-			.order("desc")
-			.take(20);
-		const latest = closed.find((cycle) => cycle.closedAt !== undefined);
-		if (!latest || latest._id === profile?.lastSeenClosedCycleId) return null;
+		const latest = await getLatestClosed(ctx, space._id);
+		if (!latest || (profile && latest._id === lastSeenOf(profile, kind))) return null;
 		const next = await getCycleStarting(ctx, space._id, addDays(latest.endDate, 1));
 		if (!next) throw new ConvexError("No encontramos tu ciclo.");
+		const net = latest.envelopes.needsCents + latest.envelopes.wantsCents;
 		return {
 			cycleId: latest._id,
 			newCycleStart: next.startDate,
 			carriedCents: next.carryIn.needsCents + next.carryIn.wantsCents,
 			fundedCents: Math.max(0, latest.envelopes.savingsCents),
+			surplusCents: kind === "household" ? Math.max(0, net) : 0,
+			shortfallCents: kind === "household" ? Math.max(0, -net) : 0,
 		};
 	},
 });
@@ -63,18 +70,19 @@ export const markClosedSeen = mutation({
 		if (!cycle || cycle.closedAt === undefined) {
 			throw new ConvexError("No encontramos este dato.");
 		}
-		const { userId } = await requireSpaceById(ctx, cycle.spaceId);
+		const { userId, space } = await requireSpaceById(ctx, cycle.spaceId);
 		const profile = await ctx.db
 			.query("profiles")
 			.withIndex("by_userId", (q) => q.eq("userId", userId))
 			.unique();
 		if (!profile) throw new ConvexError("No encontramos tu perfil.");
-		const lastSeen = profile.lastSeenClosedCycleId
-			? await ctx.db.get("cycles", profile.lastSeenClosedCycleId)
-			: null;
-		const alreadyCoveredByLastSeen = lastSeen !== null && lastSeen.endDate >= cycle.endDate;
+		const lastSeenId = lastSeenOf(profile, space.kind);
+		const lastSeen = lastSeenId ? await ctx.db.get("cycles", lastSeenId) : null;
+		// Only a close of the same space can cover this one.
+		const alreadyCoveredByLastSeen =
+			lastSeen !== null && lastSeen.spaceId === cycle.spaceId && lastSeen.endDate >= cycle.endDate;
 		if (alreadyCoveredByLastSeen) return null;
-		await ctx.db.patch("profiles", profile._id, { lastSeenClosedCycleId: cycleId });
+		await ctx.db.patch("profiles", profile._id, seenPatch(space.kind, cycleId));
 		return null;
 	},
 });

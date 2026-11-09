@@ -130,10 +130,14 @@ export async function closeCycle(
 	}
 
 	const next = await getOrCreateNextCycle(ctx, space, cycle);
-	const carryIn = {
-		needsCents: cycle.envelopes.needsCents,
-		wantsCents: cycle.envelopes.wantsCents,
-	};
+	// A household does not carry Necesidades and Gustos: their net goes to Ahorro, and a deficit is not carried.
+	const isHousehold = space.kind === "household";
+	const carryIn = isHousehold
+		? ZERO_CARRY
+		: { needsCents: cycle.envelopes.needsCents, wantsCents: cycle.envelopes.wantsCents };
+	const sweptCents = isHousehold
+		? Math.max(0, cycle.envelopes.needsCents + cycle.envelopes.wantsCents)
+		: 0;
 	const savingsCents = cycle.envelopes.savingsCents;
 
 	if (savingsCents > 0) {
@@ -156,7 +160,7 @@ export async function closeCycle(
 	await ctx.db.patch("cycles", next._id, {
 		carryIn,
 		envelopes: addAmounts(
-			{ ...carryIn, savingsCents: 0 },
+			{ ...carryIn, savingsCents: sweptCents },
 			await moveEarlyIncomes(ctx, cycle._id, next._id),
 		),
 	});
@@ -199,6 +203,29 @@ export async function ensureOpenCycle(
 		cycle = await closeCycle(ctx, space, cycle, userId);
 	}
 	return cycle;
+}
+
+/** The profile field where each person remembers the last close notice they dismissed, per kind of space. */
+export function lastSeenOf(profile: Doc<"profiles">, kind: SpaceKind) {
+	return kind === "household"
+		? profile.lastSeenHouseholdClosedCycleId
+		: profile.lastSeenClosedCycleId;
+}
+
+export function seenPatch(kind: SpaceKind, cycleId: Id<"cycles">) {
+	return kind === "household"
+		? { lastSeenHouseholdClosedCycleId: cycleId }
+		: { lastSeenClosedCycleId: cycleId };
+}
+
+/** Latest closed cycle of a space, if any. */
+export async function getLatestClosed(ctx: Ctx, spaceId: Id<"spaces">) {
+	const closed = await ctx.db
+		.query("cycles")
+		.withIndex("by_space_closedAt", (q) => q.eq("spaceId", spaceId))
+		.order("desc")
+		.take(20);
+	return closed.find((cycle) => cycle.closedAt !== undefined) ?? null;
 }
 
 /** `requireOpenCycle` for a write: a household without Plus is read-only. */
