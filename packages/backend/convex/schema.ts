@@ -19,6 +19,23 @@ export const amounts = v.object({
 	savingsCents: v.number(),
 });
 
+export const spendableAmounts = v.object({
+	needsCents: v.number(),
+	wantsCents: v.number(),
+});
+
+// How a cycle's money added up when it closed. Absent means it closed before this existed.
+export const closeSummary = v.union(
+	v.object({
+		status: v.literal("ok"),
+		assigned: spendableAmounts,
+		spent: spendableAmounts,
+		fundedCents: v.number(),
+	}),
+	v.object({ status: v.literal("tooManyMovements") }),
+	v.object({ status: v.literal("inconsistent") }),
+);
+
 export const envelope = v.union(v.literal("needs"), v.literal("wants"), v.literal("savings"));
 export const spendable = v.union(v.literal("needs"), v.literal("wants"));
 export const spaceKind = v.union(v.literal("personal"), v.literal("household"));
@@ -102,10 +119,10 @@ export default defineSchema({
 		closedAt: v.optional(v.number()),
 		split,
 		envelopes: amounts,
-		carryIn: v.object({
-			needsCents: v.number(),
-			wantsCents: v.number(),
-		}),
+		carryIn: spendableAmounts,
+		// Money net-moved between envelopes by split changes. Zero-sum; only `updateSplit` writes it.
+		reallocated: v.optional(amounts),
+		closeSummary: v.optional(closeSummary),
 	})
 		.index("by_space_closedAt", ["spaceId", "closedAt"])
 		.index("by_space_start", ["spaceId", "startDate"]),

@@ -1,0 +1,52 @@
+import { v } from "convex/values";
+import { isoDateSchema } from "../shared/dates";
+import { query } from "./_generated/server";
+import { parseInput } from "./model/input";
+import { closedCycle, hasCycleBefore, scanClosedCycles } from "./model/progress";
+import { requireSpace } from "./model/spaces";
+
+const PAGE_ROWS = 12;
+const PAGE_BUDGET = 200;
+const STREAK_BUDGET = 500;
+
+/** One page of the history of closed cycles with activity, newest first. Follow `next` for more. */
+export const list = query({
+	args: { before: v.optional(v.string()) },
+	returns: v.object({
+		cycles: v.array(closedCycle),
+		hidden: v.number(),
+		next: v.union(v.string(), v.null()),
+	}),
+	handler: async (ctx, { before }) => {
+		const { space } = await requireSpace(ctx, "personal");
+		if (before !== undefined) parseInput(isoDateSchema, before);
+		const { rows, hidden, next } = await scanClosedCycles(ctx, space._id, {
+			before,
+			budget: PAGE_BUDGET,
+			stopAfter: (_, found) => found.length >= PAGE_ROWS,
+		});
+		// A full page may have used the last cycle: look so "more" never leads to an empty page.
+		const hasMore =
+			next !== null && (rows.length < PAGE_ROWS || (await hasCycleBefore(ctx, space._id, next)));
+		return { cycles: rows, hidden, next: hasMore ? next : null };
+	},
+});
+
+/** Cycles in a row without running out of margin, from the latest. `exact` is false if the read budget ran out first. */
+export const streak = query({
+	args: {},
+	returns: v.object({ streak: v.number(), exact: v.boolean(), hasActive: v.boolean() }),
+	handler: async (ctx) => {
+		const { space } = await requireSpace(ctx, "personal");
+		const { rows, next } = await scanClosedCycles(ctx, space._id, {
+			budget: STREAK_BUDGET,
+			stopAfter: (row) => row.marginCents < 0,
+		});
+		const cut = rows.findIndex((row) => row.marginCents < 0);
+		return {
+			streak: cut === -1 ? rows.length : cut,
+			exact: cut !== -1 || next === null,
+			hasActive: rows.length > 0,
+		};
+	},
+});
