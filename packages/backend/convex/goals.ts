@@ -109,10 +109,10 @@ export const setFundGoal = mutation({
 		await ctx.db.patch("spaces", space._id, { fundGoalCents: targetCents ?? undefined });
 		const label = (cents: number | undefined) =>
 			cents === undefined ? "Sin meta" : moneyLabel(cents);
-		await logEvent(ctx, space, userId, "fund_goal_changed", {
-			before: label(space.fundGoalCents),
-			after: label(targetCents ?? undefined),
-		});
+		const before = label(space.fundGoalCents);
+		const after = label(targetCents ?? undefined);
+		if (before !== after)
+			await logEvent(ctx, space, userId, "fund_goal_changed", { before, after });
 		return null;
 	},
 });
@@ -132,7 +132,10 @@ export const add = mutation({
 			.query("goals")
 			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
 			.take(FREE_GOAL_CAP + 1);
-		if (existing.length >= FREE_GOAL_CAP) await requirePlus(ctx, userId);
+		// The limit is a Personal one; a household is already Plus (writing needs it).
+		if (space.kind === "personal" && existing.length >= FREE_GOAL_CAP) {
+			await requirePlus(ctx, userId);
+		}
 
 		await ctx.db.insert("goals", { spaceId: space._id, ...fields });
 		await logEvent(ctx, space, userId, "goal_added", { detail: fields.name });
@@ -153,12 +156,18 @@ export const update = mutation({
 		const { userId, space, row } = await requireOwnGoal(ctx, kind, id);
 		const fields = parseInput(goalFieldsSchema, { name, targetCents, targetMonth });
 		await ctx.db.patch("goals", row._id, fields);
-		await logEvent(ctx, space, userId, "goal_edited", {
-			detail: fields.name,
-			...(row.targetCents === fields.targetCents
-				? {}
-				: { before: moneyLabel(row.targetCents), after: moneyLabel(fields.targetCents) }),
-		});
+		const unchanged =
+			row.name === fields.name &&
+			row.targetCents === fields.targetCents &&
+			row.targetMonth === fields.targetMonth;
+		if (!unchanged) {
+			await logEvent(ctx, space, userId, "goal_edited", {
+				detail: fields.name,
+				...(row.targetCents === fields.targetCents
+					? {}
+					: { before: moneyLabel(row.targetCents), after: moneyLabel(fields.targetCents) }),
+			});
+		}
 		return null;
 	},
 });

@@ -173,7 +173,7 @@ async function renzoWithHisOwn() {
 test("'Borrar el mío y unirme': an empty household is deleted and its owner joins the other", async () => {
 	const { t, ana, luis, code } = await renzoWithHisOwn();
 	expect(await householdCount(t)).toBe(2);
-	expect((await luis.as.query(api.household.get, {}))?.isEmpty).toBe(true);
+	expect(await luis.as.query(api.household.isEmpty, {})).toBe(true);
 
 	await expect(luis.as.mutation(api.household.joinHousehold, { code })).rejects.toThrow(ALREADY_IN);
 	expect(await householdCount(t)).toBe(2);
@@ -230,7 +230,7 @@ test("a household with anything recorded is not deleted and nothing is lost", as
 	for (const [name, record] of setups) {
 		const s = await renzoWithHisOwn();
 		await record(s);
-		expect((await s.luis.as.query(api.household.get, {}))?.isEmpty, name).toBe(false);
+		expect(await s.luis.as.query(api.household.isEmpty, {}), name).toBe(false);
 		await expect(
 			s.luis.as.mutation(api.household.joinHousehold, { code: s.code, replaceEmpty: true }),
 			name,

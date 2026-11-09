@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "../convex/_generated/api";
 import { firstName } from "../shared/household";
-import { joinedCouple, TODAY } from "./couple";
+import { DAY, joinedCouple, setTrialEnd, TODAY } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -88,6 +88,55 @@ test("contributions add each person's incomes of the cycle, not the ones for the
 	expect(await luis.as.query(api.household.contributions, { today: TODAY })).toEqual({
 		mineCents: 30_000,
 		partnerCents: 70_000,
+	});
+});
+
+test("contributions leave out an income for the next cycle", async () => {
+	const { t, ana, luis } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 50_000 });
+	vi.setSystemTime(new Date("2026-11-13T17:00:00.000Z"));
+	await setTrialEnd(t, ana.userId, Date.now() + 60 * DAY);
+	// Two days before the cycle ends, a salary goes to the next cycle.
+	await luis.as.mutation(api.transactions.addIncome, { space: household, amountCents: 40_000 });
+	const { rows } = await ana.as.query(api.transactions.list, {
+		space: household,
+		today: "2026-11-13",
+	});
+	expect(rows.find((row) => row.startsOn !== null)?.amountCents).toBe(40_000);
+
+	expect(await ana.as.query(api.household.contributions, { today: "2026-11-13" })).toEqual({
+		mineCents: 50_000,
+		partnerCents: 0,
+	});
+});
+
+test("contributions count every income of the cycle, also after 500 other rows", async () => {
+	const { t, ana, luis } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 50_000 });
+	await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(10)).find((row) => row.kind === "household");
+		if (!space) throw new Error("missing household");
+		const cycle = await ctx.db
+			.query("cycles")
+			.withIndex("by_space_start", (q) => q.eq("spaceId", space._id))
+			.first();
+		if (!cycle) throw new Error("missing cycle");
+		for (let i = 0; i < 500; i++) {
+			await ctx.db.insert("transactions", {
+				kind: "expense",
+				spaceId: space._id,
+				cycleId: cycle._id,
+				userId: ana.userId,
+				amountCents: 1,
+				date: cycle.startDate,
+				envelope: "needs",
+			});
+		}
+	});
+	await luis.as.mutation(api.transactions.addIncome, { space: household, amountCents: 30_000 });
+	expect(await ana.as.query(api.household.contributions, { today: TODAY })).toEqual({
+		mineCents: 50_000,
+		partnerCents: 30_000,
 	});
 });
 
@@ -202,7 +251,8 @@ test("changing the household cycle keeps the open cycle and sets the next one; P
 	vi.setSystemTime(new Date("2026-11-16T17:00:00.000Z"));
 	const next = await ana.as.mutation(api.cycles.ensureOpen, { space: household });
 	expect(next.startDate).toBe("2026-11-15");
-	expect(next.endDate).not.toBe("2026-12-14");
+	// The 15 to 17 Nov stretch is shorter than a week, so it joins the 18 Nov to 2 Dec period.
+	expect(next.endDate).toBe("2026-12-02");
 	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
 	const own = await ana.as.query(api.balances.getHome, { space: "personal", today: "2026-11-16" });
 	expect([own.startDate, own.endDate]).toEqual(["2026-11-15", "2026-12-14"]);

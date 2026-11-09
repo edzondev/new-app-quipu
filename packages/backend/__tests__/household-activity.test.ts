@@ -1,6 +1,12 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "../convex/_generated/api";
-import { activityText, EVENT_TYPES, type EventType } from "../shared/activity";
+import {
+	activityText,
+	EVENT_TYPES,
+	type EventType,
+	eventLine,
+	groupEventsByDay,
+} from "../shared/activity";
 import { couple, DAY, joinedCouple, START, startUser, TODAY } from "./couple";
 
 afterEach(() => {
@@ -192,6 +198,77 @@ test("nothing recorded in Personal reaches the household activity", async () => 
 	expect(await allEvents(pair)).toEqual([]);
 });
 
+test("saving without changing anything leaves no event", async () => {
+	const pair = await joinedCouple();
+	const { ana, luis } = pair;
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.goals.add, { space: household, name: "Viaje", targetCents: 100_000 });
+	const [goal] = await ana.as.query(api.goals.list, { space: household });
+	if (!goal) throw new Error("missing goal");
+	await ana.as.mutation(api.household.rename, { name: "Casa" });
+	await ana.as.mutation(api.goals.setFundGoal, { space: household, targetCents: 50_000 });
+	await ana.as.mutation(api.settings.updateSplit, {
+		space: household,
+		split: { needs: 40, wants: 40, savings: 20 },
+	});
+	await ana.as.mutation(api.household.updateCycle, { cadence: "biweekly", cycleStartDay: 3 });
+	const before = (await allEvents(pair)).length;
+
+	await luis.as.mutation(api.household.rename, { name: "Casa" });
+	await luis.as.mutation(api.goals.setFundGoal, { space: household, targetCents: 50_000 });
+	await luis.as.mutation(api.settings.updateSplit, {
+		space: household,
+		split: { needs: 40, wants: 40, savings: 20 },
+	});
+	await luis.as.mutation(api.household.updateCycle, { cadence: "biweekly", cycleStartDay: 3 });
+	await luis.as.mutation(api.goals.update, {
+		space: household,
+		id: goal.id,
+		name: "Viaje",
+		targetCents: 100_000,
+	});
+	expect((await allEvents(pair)).length).toBe(before);
+
+	// A real change still counts.
+	await luis.as.mutation(api.goals.update, {
+		space: household,
+		id: goal.id,
+		name: "Viaje",
+		targetCents: 120_000,
+	});
+	expect((await allEvents(pair)).length).toBe(before + 1);
+});
+
+test("five withdrawals of your own do not hide the other's, and the name is the one who withdrew", async () => {
+	const { ana, luis } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 20_000 });
+	tick();
+	await luis.as.mutation(api.transactions.withdrawSaving, {
+		space: household,
+		amountCents: 1_500,
+		reason: "emergency",
+	});
+	for (let i = 0; i < 5; i++) {
+		tick();
+		await ana.as.mutation(api.transactions.withdrawSaving, {
+			space: household,
+			amountCents: 100,
+			reason: "other",
+		});
+	}
+	expect((await ana.as.query(api.household.get, {}))?.withdrawalNotice).toEqual({
+		name: "Renzo",
+		amountCents: 1_500,
+	});
+
+	// It names who withdrew even if that person already left.
+	await luis.as.mutation(api.household.leaveHousehold, {});
+	expect((await ana.as.query(api.household.get, {}))?.withdrawalNotice?.name).toBe("Renzo");
+	await ana.as.mutation(api.household.dismissWithdrawalNotice, {});
+	expect((await ana.as.query(api.household.get, {}))?.withdrawalNotice).toBeNull();
+});
+
 test("a new expense is not in the activity: it is already in Movimientos", async () => {
 	const pair = await joinedCouple();
 	await pair.ana.as.mutation(api.transactions.addExpense, {
@@ -292,6 +369,34 @@ test("deleting an empty household takes its activity with it", async () => {
 	const left = await t.run(async (ctx) => await ctx.db.query("spaceEvents").take(10));
 	expect(left).toEqual([]);
 	expect((await ana.as.query(api.household.get, {}))?.partnerName).toBe("Renzo");
+});
+
+test("eventLine joins what it was about, the amount and the change", () => {
+	const none = { detail: null, before: null, after: null, amountCents: null };
+	expect(eventLine({ ...none, detail: "Fondo de emergencia", amountCents: 8_000 })).toBe(
+		"Fondo de emergencia · S/ 80.00",
+	);
+	expect(eventLine({ ...none, amountCents: 2_000 })).toBe("S/ 20.00");
+	expect(eventLine({ ...none, before: "50 · 30 · 20", after: "40 · 40 · 20" })).toBe(
+		"50 · 30 · 20 → 40 · 40 · 20",
+	);
+	expect(eventLine({ ...none, detail: "Mercado", before: "S/ 45.00", after: "S/ 50.00" })).toBe(
+		"Mercado · S/ 45.00 → S/ 50.00",
+	);
+	expect(eventLine(none)).toBe("");
+});
+
+test("groupEventsByDay cuts at midnight in Lima, not in UTC", () => {
+	const late = { at: Date.parse("2026-11-10T04:30:00.000Z"), id: "late" };
+	const evening = { at: Date.parse("2026-11-10T01:00:00.000Z"), id: "evening" };
+	const next = { at: Date.parse("2026-11-10T06:00:00.000Z"), id: "next" };
+	expect(
+		groupEventsByDay([next, late, evening]).map((group) => group.events.map((e) => e.id)),
+	).toEqual([["next"], ["late", "evening"]]);
+});
+
+test("activityText has no leading space when the name is missing", () => {
+	expect(activityText("split_changed", false, "")).toBe("Cambió el reparto");
 });
 
 test("activityText says 'Tú' for what you did and the first name for the other", () => {

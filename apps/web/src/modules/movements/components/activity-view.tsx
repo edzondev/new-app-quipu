@@ -1,7 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { activityText, moneyLabel } from "@quipu/backend/shared/activity";
-import { formatDayHeading, formatLimaTime, getLimaDate } from "@quipu/backend/shared/dates";
+import { activityText, eventLine, groupEventsByDay } from "@quipu/backend/shared/activity";
+import { formatDayHeading, formatLimaTime } from "@quipu/backend/shared/dates";
 import { useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
@@ -10,22 +10,8 @@ import { Skeleton } from "#/components/ui/skeleton";
 
 type ActivityEvent = FunctionReturnType<typeof api.activity.list>["events"][number];
 
-function groupByDay(events: ActivityEvent[]) {
-	const groups: { date: string; events: ActivityEvent[] }[] = [];
-	for (const event of events) {
-		const date = getLimaDate(new Date(event.at));
-		const last = groups.at(-1);
-		if (last?.date === date) last.events.push(event);
-		else groups.push({ date, events: [event] });
-	}
-	return groups;
-}
-
 function EventRow({ event }: { event: ActivityEvent }) {
-	const change =
-		event.before !== null && event.after !== null ? `${event.before} → ${event.after}` : null;
-	const extra =
-		event.amountCents === null ? event.detail : (event.detail ?? moneyLabel(event.amountCents));
+	const line = eventLine(event);
 	return (
 		<li className="flex min-h-[60px] items-center justify-between gap-4 border-b border-border/60 py-2.5">
 			<span className="flex min-w-0 items-center gap-3.5">
@@ -39,9 +25,9 @@ function EventRow({ event }: { event: ActivityEvent }) {
 					<span className="block truncate text-[15px] leading-[1.3] font-semibold">
 						{activityText(event.type, event.mine, event.who)}
 					</span>
-					{change || extra ? (
+					{line ? (
 						<span className="mt-0.5 block truncate text-[12.5px] text-muted-foreground">
-							{[extra, change].filter(Boolean).join(" · ")}
+							{line}
 						</span>
 					) : null}
 				</span>
@@ -77,12 +63,16 @@ export function ActivityPage({ today, before }: { today: string; before?: number
 
 	const { events, next } = page.data;
 	if (events.length === 0 && before === undefined) {
-		return <p className="mt-10 text-sm text-muted-foreground">Aún no hay cambios.</p>;
+		return (
+			<p className="mt-10 text-sm text-muted-foreground">
+				Aún no hay cambios. La actividad aparecerá aquí.
+			</p>
+		);
 	}
 	return (
 		<>
 			<div className="mt-8 space-y-8">
-				{groupByDay(events).map((group) => (
+				{groupEventsByDay(events).map((group) => (
 					<section key={group.date}>
 						<h2 className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
 							{formatDayHeading(group.date, today)}

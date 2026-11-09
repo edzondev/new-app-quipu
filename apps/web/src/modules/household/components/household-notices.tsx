@@ -11,7 +11,7 @@ import { PlusSheet } from "./plus-sheet";
 type Household = NonNullable<FunctionReturnType<typeof api.household.get>>;
 
 /** W-Plus4 / W-P17: the Plus lapsed, so the household can be read but not written. */
-function ReadOnlyStrip({ payerName }: { payerName: string | null }) {
+function ReadOnlyStrip({ payerName, payerIsMe }: { payerName: string | null; payerIsMe: boolean }) {
 	const [sheetOpen, setSheetOpen] = useState(false);
 	return (
 		<div
@@ -20,7 +20,7 @@ function ReadOnlyStrip({ payerName }: { payerName: string | null }) {
 		>
 			<p className="min-w-0 wrap-break-word">
 				{payerName === null
-					? "Tu Plus venció. Pueden ver todo, pero no anotar."
+					? "Pueden ver todo, pero no anotar."
 					: `El Plus de ${payerName} venció. Pueden ver todo, pero no anotar.`}
 			</p>
 			<Button
@@ -28,7 +28,7 @@ function ReadOnlyStrip({ payerName }: { payerName: string | null }) {
 				className="rounded-full pointer-coarse:min-h-11"
 				onClick={() => setSheetOpen(true)}
 			>
-				{payerName === null ? "Renovar" : "Pagar yo"}
+				{payerIsMe ? "Renovar" : "Pagar yo"}
 			</Button>
 			<PlusSheet open={sheetOpen} onOpenChange={setSheetOpen} />
 		</div>
@@ -47,7 +47,9 @@ export function HouseholdNotices({ household }: { household: Household }) {
 
 	return (
 		<>
-			{household.plus.active ? null : <ReadOnlyStrip payerName={household.plus.payerName} />}
+			{household.plus.active ? null : (
+				<ReadOnlyStrip payerName={household.plus.payerName} payerIsMe={household.plus.payerIsMe} />
+			)}
 			{partnerLeft ? (
 				<NoticeBar
 					onDismiss={() => dismissLeft.mutate({})}

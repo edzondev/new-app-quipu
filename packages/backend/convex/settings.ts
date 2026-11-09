@@ -53,10 +53,9 @@ export const updateSplit = mutation({
 				subtractAmounts(envelopes, cycle.envelopes),
 			),
 		});
-		await logEvent(ctx, space, userId, "split_changed", {
-			before: splitLabel(cycle.split),
-			after: splitLabel(splitValue),
-		});
+		const before = splitLabel(cycle.split);
+		const after = splitLabel(splitValue);
+		if (before !== after) await logEvent(ctx, space, userId, "split_changed", { before, after });
 		return null;
 	},
 });

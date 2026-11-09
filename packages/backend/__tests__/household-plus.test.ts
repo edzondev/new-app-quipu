@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "../convex/_generated/api";
-import { DAY, joinedCouple, setTrialEnd, START } from "./couple";
+import { couple, DAY, joinedCouple, setTrialEnd, signUp, START } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -229,14 +229,77 @@ test("the server decides at the moment of writing, with no reload", async () => 
 	await expect(ana.as.mutation(api.transactions.addExpense, args)).rejects.toThrow(READ_ONLY);
 });
 
-test("household.get says who pays: null for the payer, the first name for the other", async () => {
+test("household.get names who pays, the same for both, and tells each if it is them", async () => {
 	const { ana, luis } = await joinedCouple();
 	expect((await ana.as.query(api.household.get, {}))?.plus).toEqual({
 		active: true,
-		payerName: null,
+		payerName: "Camila",
+		payerIsMe: true,
 	});
 	expect((await luis.as.query(api.household.get, {}))?.plus).toEqual({
 		active: true,
 		payerName: "Camila",
+		payerIsMe: false,
 	});
+});
+
+test("if both have a trial on record, the owner pays; the one with a trial pays if the owner has none", async () => {
+	const { t, ana, luis } = await joinedCouple();
+	expect((await luis.as.query(api.household.get, {}))?.plus.payerName).toBe("Camila");
+	await t.run(async (ctx) => {
+		const profile = await ctx.db
+			.query("profiles")
+			.withIndex("by_userId", (q) => q.eq("userId", ana.userId))
+			.unique();
+		if (!profile) throw new Error("missing profile");
+		await ctx.db.patch("profiles", profile._id, { trialEndsAt: undefined });
+	});
+	expect((await ana.as.query(api.household.get, {}))?.plus).toMatchObject({
+		payerName: "Renzo",
+		payerIsMe: false,
+	});
+});
+
+test("after the payer leaves, the new owner sees no false notice: nobody pays", async () => {
+	const { t, ana, code } = await couple();
+	vi.setSystemTime(new Date("2026-10-20T18:00:00.000Z"));
+	const marta = await signUp(t, "marta@correo.com", "Marta Soto");
+	await marta.as.mutation(api.household.joinHousehold, { code });
+	await ana.as.mutation(api.household.leaveHousehold, {});
+
+	const info = await marta.as.query(api.household.get, {});
+	expect(info?.isOwner).toBe(true);
+	expect(info?.plus).toEqual({ active: false, payerName: null, payerIsMe: false });
+});
+
+test("after the payer leaves, a partner whose own trial lapsed is the one named", async () => {
+	const { ana, luis } = await joinedCouple();
+	vi.setSystemTime(new Date(Date.parse(START) + 15 * DAY));
+	await ana.as.mutation(api.household.leaveHousehold, {});
+	expect((await luis.as.query(api.household.get, {}))?.plus).toEqual({
+		active: false,
+		payerName: "Renzo",
+		payerIsMe: true,
+	});
+});
+
+test("the third goal of a household works with the Plus of the partner only", async () => {
+	const { t, ana, luis } = await joinedCouple();
+	// Camila's trial is over; Renzo's is not. Her own Plus is not what counts in the household.
+	await setTrialEnd(t, ana.userId, Date.now() - DAY);
+	await setTrialEnd(t, luis.userId, Date.now() + 30 * DAY);
+	for (const name of ["Uno", "Dos", "Tres"]) {
+		await ana.as.mutation(api.goals.add, { space: household, name, targetCents: 10_000 });
+	}
+	expect(await ana.as.query(api.goals.list, { space: household })).toHaveLength(3);
+});
+
+test("Personal still asks for Plus on the third goal", async () => {
+	const { t, ana } = await joinedCouple();
+	await setTrialEnd(t, ana.userId, Date.now() - DAY);
+	await ana.as.mutation(api.goals.add, { space: "personal", name: "Uno", targetCents: 10_000 });
+	await ana.as.mutation(api.goals.add, { space: "personal", name: "Dos", targetCents: 10_000 });
+	await expect(
+		ana.as.mutation(api.goals.add, { space: "personal", name: "Tres", targetCents: 10_000 }),
+	).rejects.toThrow("Esto requiere Quipu Plus.");
 });

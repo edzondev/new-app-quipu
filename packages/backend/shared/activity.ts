@@ -1,4 +1,5 @@
 import { formatCents } from "./budget";
+import { getLimaDate } from "./dates";
 import type { Split } from "./plan";
 
 export const EVENT_TYPES = [
@@ -44,10 +45,37 @@ const PHRASES: Record<EventType, [string, string]> = {
 	withdrawal: ["retiró del fondo", "retiraste del fondo"],
 };
 
-/** "Ana cambió el reparto" / "Tú cambiaste el reparto". */
+/** "Ana cambió el reparto" / "Tú cambiaste el reparto". Without a name: "Cambió el reparto". */
 export function activityText(type: EventType, mine: boolean, name: string) {
 	const [theirs, yours] = PHRASES[type];
-	return mine ? `Tú ${yours}` : `${name} ${theirs}`;
+	if (mine) return `Tú ${yours}`;
+	return name ? `${name} ${theirs}` : `${theirs.charAt(0).toUpperCase()}${theirs.slice(1)}`;
+}
+
+type EventDetail = {
+	detail: string | null;
+	before: string | null;
+	after: string | null;
+	amountCents: number | null;
+};
+
+/** The small line under an event: what it was about, its amount and "antes → después". */
+export function eventLine({ detail, before, after, amountCents }: EventDetail) {
+	const change = before !== null && after !== null ? `${before} → ${after}` : null;
+	const amount = amountCents === null ? null : moneyLabel(amountCents);
+	return [detail, amount, change].filter((part) => part !== null).join(" · ");
+}
+
+/** Events (newest first) grouped by their day in Lima. */
+export function groupEventsByDay<T extends { at: number }>(events: T[]) {
+	const groups: { date: string; events: T[] }[] = [];
+	for (const event of events) {
+		const date = getLimaDate(new Date(event.at));
+		const last = groups.at(-1);
+		if (last?.date === date) last.events.push(event);
+		else groups.push({ date, events: [event] });
+	}
+	return groups;
 }
 
 export const moneyLabel = (cents: number) => `S/ ${formatCents(cents)}`;

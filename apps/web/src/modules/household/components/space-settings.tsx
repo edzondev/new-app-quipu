@@ -187,16 +187,13 @@ function Space({ today }: { today: string }) {
 				<h1 className="font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
 					{name ?? DEFAULT_NAME}
 				</h1>
-				<p className="mt-1.5 text-sm leading-normal text-muted-foreground">
-					Lo que se cambia aquí lo ven los dos.
-				</p>
 			</header>
 
 			<SettingsGroup title="Nuestro espacio">
 				<SettingsRow
 					title="Nombre"
 					action={
-						<ActionDialog label="Cambiar">
+						<ActionDialog label="Cambiar" gated>
 							{(close) => <RenameEditor name={name ?? DEFAULT_NAME} onDone={close} />}
 						</ActionDialog>
 					}

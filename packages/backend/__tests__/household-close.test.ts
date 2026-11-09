@@ -64,6 +64,14 @@ test("an envelope below zero is netted against the other one", async () => {
 	expect(notice).toMatchObject({ surplusCents: 10_000, shortfallCents: 0 });
 });
 
+test("a deficit with amounts of different sign is told as the net and not carried", async () => {
+	// Necesidades 50,000 - 80,000 = -30,000 and Gustos 30,000 - 10,000 = +20,000: -10,000 together.
+	const pair = await closedHousehold({ needs: 80_000, wants: 10_000 });
+	expect(await envelopesAfterClose(pair)).toEqual([0, 0, 0]);
+	const notice = await pair.luis.as.query(api.cycles.getUnseenClosed, { space: household });
+	expect(notice).toMatchObject({ surplusCents: 0, shortfallCents: 10_000 });
+});
+
 test("a net of exactly zero moves nothing", async () => {
 	const pair = await closedHousehold({ needs: 50_000, wants: 30_000 });
 	expect(await envelopesAfterClose(pair)).toEqual([0, 0, 0]);
@@ -230,7 +238,7 @@ test("a notice only moves forward: dismissing an older close does not bring back
 });
 
 test("who joins after a close does not see it", async () => {
-	const { t, ana, luis } = await couple();
+	const { ana, luis } = await couple();
 	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
 	vi.setSystemTime(new Date("2026-11-16T17:00:00.000Z"));
 	await ana.as.mutation(api.cycles.ensureOpen, { space: household });
@@ -239,5 +247,4 @@ test("who joins after a close does not see it", async () => {
 
 	expect(await luis.as.query(api.cycles.getUnseenClosed, { space: household })).toBeNull();
 	expect(await ana.as.query(api.cycles.getUnseenClosed, { space: household })).not.toBeNull();
-	expect(t).toBeDefined();
 });

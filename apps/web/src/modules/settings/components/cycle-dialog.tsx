@@ -103,7 +103,7 @@ function CycleEditor({
 
 export function CycleDialog(props: Props) {
 	return (
-		<ActionDialog label="Cambiar">
+		<ActionDialog label="Cambiar" gated={props.space === "household"}>
 			{(close) => <CycleEditor {...props} onDone={close} />}
 		</ActionDialog>
 	);

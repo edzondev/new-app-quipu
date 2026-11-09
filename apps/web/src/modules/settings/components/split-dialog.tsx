@@ -98,7 +98,7 @@ function SplitEditor({ home, space, onDone }: { home: Home; space: Space; onDone
 /** Opens the split editor. Used by Ajustes ("Cambiar") and by "Tus sobres" in Inicio ("Editar reparto"). */
 export function SplitDialog({ home, space, label }: { home: Home; space: Space; label: string }) {
 	return (
-		<ActionDialog label={label}>
+		<ActionDialog label={label} gated={space === "household"}>
 			{(close) => <SplitEditor home={home} space={space} onDone={close} />}
 		</ActionDialog>
 	);

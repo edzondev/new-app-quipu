@@ -9,7 +9,7 @@ import { authComponent } from "./auth";
 import { createFirstCycle, getCycleAt, getLatestClosed } from "./model/cycles";
 import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
-import { householdHasPlus, requirePlus, requireWritableSpace } from "./model/plus";
+import { getPayerId, householdHasPlus, requirePlus, requireWritableSpace } from "./model/plus";
 import {
 	checkAccess,
 	getHousehold,
@@ -85,19 +85,26 @@ async function isEmptyHousehold(ctx: QueryCtx, space: Doc<"spaces">) {
 	return true;
 }
 
-/** The latest fund withdrawal by the other person that this person has not dismissed. */
+/**
+ * The latest fund withdrawal by the other person that this person has not dismissed. It walks back
+ * from the newest and stops at the first one by the other or at what was already seen, so any
+ * number of their own withdrawals in between cannot hide it.
+ */
 async function unseenPartnerWithdrawal(ctx: QueryCtx, spaceId: Id<"spaces">, userId: string) {
 	const profile = await ctx.db
 		.query("profiles")
 		.withIndex("by_userId", (q) => q.eq("userId", userId))
 		.unique();
-	const latest = await ctx.db
+	const seenAt = profile?.seenWithdrawalAt ?? 0;
+	const withdrawals = ctx.db
 		.query("spaceEvents")
 		.withIndex("by_space_type", (q) => q.eq("spaceId", spaceId).eq("type", "withdrawal"))
-		.order("desc")
-		.take(5);
-	const theirs = latest.find((event) => event.userId !== userId);
-	return theirs && theirs._creationTime > (profile?.seenWithdrawalAt ?? 0) ? theirs : null;
+		.order("desc");
+	for await (const event of withdrawals) {
+		if (event._creationTime <= seenAt) return null;
+		if (event.userId !== userId) return event;
+	}
+	return null;
 }
 
 /** Deletes an empty household: its cycles, its member and the space. */
@@ -294,10 +301,10 @@ export const rename = mutation({
 		const { userId, space } = await requireWritableSpace(ctx, "household");
 		const cleanName = parseInput(nameSchema, name);
 		await ctx.db.patch("spaces", space._id, { name: cleanName });
-		await logEvent(ctx, space, userId, "renamed", {
-			before: space.name ?? DEFAULT_NAME,
-			after: cleanName,
-		});
+		const before = space.name ?? DEFAULT_NAME;
+		if (before !== cleanName) {
+			await logEvent(ctx, space, userId, "renamed", { before, after: cleanName });
+		}
 		return null;
 	},
 });
@@ -313,10 +320,12 @@ export const updateCycle = mutation({
 		}
 		const before = await requirePlan(ctx, space);
 		await ctx.db.patch("spaces", space._id, { cadence, cycleStartDay });
-		await logEvent(ctx, space, userId, "cycle_changed", {
-			before: cycleLabel(before),
-			after: cycleLabel({ cadence, cycleStartDay }),
-		});
+		if (before.cadence !== cadence || before.cycleStartDay !== cycleStartDay) {
+			await logEvent(ctx, space, userId, "cycle_changed", {
+				before: cycleLabel(before),
+				after: cycleLabel({ cadence, cycleStartDay }),
+			});
+		}
 		return null;
 	},
 });
@@ -332,15 +341,17 @@ export const get = query({
 			partnerJoinedAt: v.union(v.number(), v.null()),
 			cycle: v.object({ cadence: plan.fields.cadence, cycleStartDay: plan.fields.cycleStartDay }),
 			partnerLeft: v.union(v.string(), v.null()),
-			// Alone and with nothing recorded: it can be deleted to join another household.
-			isEmpty: v.boolean(),
 			// The other person's latest withdrawal from the fund, until this person dismisses it.
 			withdrawalNotice: v.union(v.object({ name: v.string(), amountCents: v.number() }), v.null()),
 			// Only for who created the household, while nobody has joined. The page decides if it expired:
 			// a query does not run again when time passes.
 			invite: v.union(v.object({ code: v.string(), expiresAt: v.number() }), v.null()),
-			// A household without Plus can be read but not written. `payerName` is null when it is me.
-			plus: v.object({ active: v.boolean(), payerName: v.union(v.string(), v.null()) }),
+			// A household without Plus can be read but not written. Null `payerName`: nobody has Plus on record.
+			plus: v.object({
+				active: v.boolean(),
+				payerName: v.union(v.string(), v.null()),
+				payerIsMe: v.boolean(),
+			}),
 		}),
 	),
 	handler: async (ctx) => {
@@ -355,7 +366,11 @@ export const get = query({
 		const { inviteCode, inviteExpiresAt } = space;
 		const isOwner = space.ownerId === user._id;
 		const withdrawal = await unseenPartnerWithdrawal(ctx, space._id, user._id);
-		const payer = isOwner ? null : await authComponent.getAnyUserById(ctx, space.ownerId);
+		const payerId = await getPayerId(ctx, space);
+		const payer = payerId ? await authComponent.getAnyUserById(ctx, payerId) : null;
+		const withdrawer = withdrawal
+			? await authComponent.getAnyUserById(ctx, withdrawal.userId)
+			: null;
 
 		return {
 			name: space.name ?? null,
@@ -364,9 +379,11 @@ export const get = query({
 			partnerJoinedAt: partnerMember?.joinedAt ?? null,
 			cycle: await requirePlan(ctx, space),
 			partnerLeft: space.partnerLeft?.name ?? null,
-			isEmpty: await isEmptyHousehold(ctx, space),
 			withdrawalNotice: withdrawal
-				? { name: partner ? firstName(partner.name) : "", amountCents: withdrawal.amountCents ?? 0 }
+				? {
+						name: withdrawer ? firstName(withdrawer.name) : "",
+						amountCents: withdrawal.amountCents ?? 0,
+					}
 				: null,
 			invite:
 				isOwner && !partnerId && inviteCode && inviteExpiresAt
@@ -375,8 +392,21 @@ export const get = query({
 			plus: {
 				active: await householdHasPlus(ctx, space._id),
 				payerName: payer ? firstName(payer.name) : null,
+				payerIsMe: payerId === user._id,
 			},
 		};
+	},
+});
+
+/** Alone and with nothing recorded: it can be deleted to join another household. */
+export const isEmpty = query({
+	args: {},
+	returns: v.boolean(),
+	handler: async (ctx) => {
+		const user = await checkAccess(ctx);
+		if (!user) return false;
+		const space = await getHousehold(ctx, user._id);
+		return space ? await isEmptyHousehold(ctx, space) : false;
 	},
 });
 
@@ -388,14 +418,13 @@ export const contributions = query({
 		parseInput(isoDateSchema, today);
 		const { userId, space } = await requireSpace(ctx, "household");
 		const cycle = await getCycleAt(ctx, space._id, today);
-		const rows = cycle
-			? await ctx.db
-					.query("transactions")
-					.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-					.take(500)
-			: [];
 		const totals = { mineCents: 0, partnerCents: 0 };
-		for (const row of rows) {
+		if (!cycle) return totals;
+		// Every row of the cycle: a cap would leave out incomes recorded after it.
+		const rows = ctx.db
+			.query("transactions")
+			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id));
+		for await (const row of rows) {
 			if (row.kind !== "income" || row.forNextCycle) continue;
 			if (row.userId === userId) totals.mineCents += row.amountCents;
 			else totals.partnerCents += row.amountCents;

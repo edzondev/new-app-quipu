@@ -7,12 +7,16 @@ type Ctx = QueryCtx | MutationCtx;
 
 const NEED_PLUS = "Esto requiere Quipu Plus.";
 
-/** Plus for now = trial still open. Subscriptions land later (Polar / RevenueCat). */
-export async function hasPlus(ctx: Ctx, userId: string) {
-	const profile = await ctx.db
+function getProfile(ctx: Ctx, userId: string) {
+	return ctx.db
 		.query("profiles")
 		.withIndex("by_userId", (q) => q.eq("userId", userId))
 		.unique();
+}
+
+/** Plus for now = trial still open. Subscriptions land later (Polar / RevenueCat). */
+export async function hasPlus(ctx: Ctx, userId: string) {
+	const profile = await getProfile(ctx, userId);
 	return profile?.trialEndsAt !== undefined && profile.trialEndsAt > Date.now();
 }
 
@@ -31,6 +35,18 @@ export async function householdHasPlus(ctx: Ctx, spaceId: Id<"spaces">) {
 }
 
 /** Personal is never read-only. A household without Plus can be read, closed and left, not written. */
+/**
+ * Who pays: the member with a Plus trial or subscription on record, the owner if both have one.
+ * Null when neither has. The one place U16 changes when real subscriptions arrive.
+ */
+export async function getPayerId(ctx: Ctx, space: Doc<"spaces">) {
+	const withPlus: string[] = [];
+	for (const userId of await getMemberIds(ctx, space._id)) {
+		if ((await getProfile(ctx, userId))?.trialEndsAt !== undefined) withPlus.push(userId);
+	}
+	return withPlus.includes(space.ownerId) ? space.ownerId : (withPlus[0] ?? null);
+}
+
 export async function requireWritable(ctx: Ctx, space: Doc<"spaces">) {
 	if (space.kind === "household" && !(await householdHasPlus(ctx, space._id))) {
 		throw new ConvexError(READ_ONLY);

@@ -8,9 +8,6 @@ export function EmptyPersonal() {
 			<h1 className="max-w-2xl font-heading text-3xl font-medium tracking-tight sm:text-5xl">
 				Arma tu plan personal cuando quieras
 			</h1>
-			<p className="mt-5 max-w-lg text-sm text-muted-foreground">
-				Tus sobres personales son solo tuyos. Mientras tanto, puedes llevar Nuestro espacio.
-			</p>
 			<Button
 				size="lg"
 				className="mt-8 rounded-full px-7"
