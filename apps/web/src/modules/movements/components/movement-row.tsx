@@ -28,8 +28,8 @@ export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 		: row.envelope
 			? ENVELOPE_LABELS[row.envelope]
 			: incomeLabel(row, when);
-	// Personal leaves who null; household sends the author name and we swap mine → Tú here.
-	const whoLabel = row.mine && row.who !== null ? "Tú" : row.who;
+	// Personal leaves who null; household sends the author's first name. Only the author changes a row.
+	const whoLabel = row.who === null ? null : row.mine ? "Tú" : `Anotó ${row.who}`;
 	const detail = [envelope, whoLabel, when].filter(Boolean).join(" · ");
 	const amount = formatCents(row.amountCents);
 	const signedAmount = isSaving ? `S/ ${amount}` : `${adds ? "+" : "−"} S/ ${amount}`;

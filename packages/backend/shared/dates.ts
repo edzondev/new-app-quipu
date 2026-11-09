@@ -14,6 +14,18 @@ export function getLimaDate(now = new Date()): string {
 	return limaDateFormat.format(now);
 }
 
+const limaTimeFormat = new Intl.DateTimeFormat("en-GB", {
+	timeZone: "America/Lima",
+	hour: "2-digit",
+	minute: "2-digit",
+	hourCycle: "h23",
+});
+
+/** "10:42" in Lima for a time in milliseconds. */
+export function formatLimaTime(at: number): string {
+	return limaTimeFormat.format(at);
+}
+
 export const isoDateSchema = z.iso.date();
 
 function toUtc(date: string): number {

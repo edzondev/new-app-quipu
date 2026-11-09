@@ -8,6 +8,7 @@ import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { groupCommitments } from "../commitment-view";
 import { AddCommitmentDialog } from "./add-commitment-dialog";
 import { CommitmentRow, PaymentRow } from "./commitment-row";
@@ -48,6 +49,7 @@ function Group({
 }
 
 function Commitments({ today }: { today: string }) {
+	const gate = useReadOnlyGate();
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	const queryClient = useQueryClient();
 	const [addingIn, setAddingIn] = useState<typeof space | null>(null);
@@ -99,7 +101,7 @@ function Commitments({ today }: { today: string }) {
 						Lo que pagas cada mes. Quipu lo reserva antes de que gastes.
 					</p>
 				</div>
-				<Button variant="outline" className="shrink-0" onClick={() => setAddingIn(space)}>
+				<Button variant="outline" className="shrink-0" onClick={() => setAddingIn(space)} {...gate}>
 					+ Añadir compromiso
 				</Button>
 			</header>

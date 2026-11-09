@@ -330,6 +330,7 @@ export const get = query({
 			isOwner: v.boolean(),
 			partnerName: v.union(v.string(), v.null()),
 			partnerJoinedAt: v.union(v.number(), v.null()),
+			cycle: v.object({ cadence: plan.fields.cadence, cycleStartDay: plan.fields.cycleStartDay }),
 			partnerLeft: v.union(v.string(), v.null()),
 			// Alone and with nothing recorded: it can be deleted to join another household.
 			isEmpty: v.boolean(),
@@ -361,6 +362,7 @@ export const get = query({
 			isOwner,
 			partnerName: partner ? firstName(partner.name) : null,
 			partnerJoinedAt: partnerMember?.joinedAt ?? null,
+			cycle: await requirePlan(ctx, space),
 			partnerLeft: space.partnerLeft?.name ?? null,
 			isEmpty: await isEmptyHousehold(ctx, space),
 			withdrawalNotice: withdrawal

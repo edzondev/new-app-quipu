@@ -3,13 +3,14 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared/budget";
 import { formatDayHeading, formatRange } from "@quipu/backend/shared/dates";
 import { useQuery } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
 import type { Movement } from "#/modules/register/movement-draft";
+import { ActivityPage } from "./activity-view";
 import { MovementRow } from "./movement-row";
 
 const FILTERS = [
@@ -40,8 +41,32 @@ export function MovementsPage() {
 	return <Movements key={today} today={today} />;
 }
 
+function ViewTabs({ active }: { active: "movimientos" | "actividad" }) {
+	return (
+		<nav aria-label="Vista" className="mt-6 flex gap-2">
+			{(["movimientos", "actividad"] as const).map((view) => (
+				<Link
+					key={view}
+					to="/movements"
+					search={(prev) => ({ ...prev, vista: view === "actividad" ? view : undefined })}
+					aria-current={active === view ? "page" : undefined}
+					className={cn(
+						"flex min-h-11 items-center rounded-full border px-3.5 text-sm",
+						active === view
+							? "border-foreground bg-foreground font-semibold text-background"
+							: "border-border bg-background font-medium text-foreground",
+					)}
+				>
+					{view === "actividad" ? "Actividad" : "Movimientos"}
+				</Link>
+			))}
+		</nav>
+	);
+}
+
 function Movements({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
+	const { vista } = useSearch({ from: "/_app/movements" });
 	const [filterId, setFilterId] = useState<(typeof FILTERS)[number]["id"]>("all");
 	const filter = FILTERS.find((item) => item.id === filterId) ?? FILTERS[0];
 	const ensureOpen = useEnsureOpenCycle(space, today);
@@ -52,6 +77,19 @@ function Movements({ today }: { today: string }) {
 	const home = useQuery(
 		convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space, today } : "skip"),
 	);
+
+	if (space === "household" && vista === "actividad") {
+		return (
+			<>
+				<header>
+					<h1 className="font-heading text-4xl font-medium tracking-tight">Movimientos</h1>
+					<p className="mt-2 text-sm text-muted-foreground">Nuestro espacio · quién cambió qué.</p>
+				</header>
+				<ViewTabs active="actividad" />
+				<ActivityPage today={today} />
+			</>
+		);
+	}
 
 	if (ensureOpen.isError || list.isError || home.isError) {
 		return (
@@ -96,6 +134,8 @@ function Movements({ today }: { today: string }) {
 					antiguo
 				</p>
 			</header>
+
+			{space === "household" ? <ViewTabs active="movimientos" /> : null}
 
 			<div role="tablist" aria-label="Filtro" className="mt-6 flex flex-wrap gap-2">
 				{FILTERS.map((item) => (

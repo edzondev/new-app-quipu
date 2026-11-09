@@ -11,6 +11,7 @@ import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
 import { ACTION } from "#/lib/typography";
+import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import {
 	type CommitmentItem,
 	canPay,
@@ -193,6 +194,7 @@ export function CommitmentRow({
 	space: "personal" | "household";
 }) {
 	const [paying, setPaying] = useState(false);
+	const gate = useReadOnlyGate();
 	const badge = item.status === "overdue" || item.status === "upcoming" ? BADGE[item.status] : null;
 
 	return (
@@ -209,6 +211,7 @@ export function CommitmentRow({
 						className={cn(ACTION, "h-11 w-full sm:h-[34px] sm:w-auto")}
 						aria-expanded={paying}
 						onClick={() => setPaying((open) => !open)}
+						{...gate}
 					>
 						Ya pagué
 					</Button>

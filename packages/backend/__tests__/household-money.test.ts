@@ -192,6 +192,10 @@ test("either of the two renames the household; 41 characters or blank is refused
 test("changing the household cycle keeps the open cycle and sets the next one; Personal stays", async () => {
 	const { ana, luis } = await joinedCouple();
 	await luis.as.mutation(api.household.updateCycle, { cadence: "biweekly", cycleStartDay: 3 });
+	expect((await ana.as.query(api.household.get, {}))?.cycle).toEqual({
+		cadence: "biweekly",
+		cycleStartDay: 3,
+	});
 	const home = await ana.as.query(api.balances.getHome, { space: household, today: TODAY });
 	expect([home.startDate, home.endDate]).toEqual(["2026-10-20", "2026-11-14"]);
 

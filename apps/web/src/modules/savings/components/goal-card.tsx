@@ -4,6 +4,7 @@ import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { ACTION } from "#/lib/typography";
+import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { formatTargetMonth, progressPercent } from "../progress";
 
 export type Goal = FunctionReturnType<typeof api.goals.list>[number];
@@ -17,6 +18,7 @@ export function GoalCard({
 	onContribute: () => void;
 	onEdit: () => void;
 }) {
+	const gate = useReadOnlyGate();
 	const percent = progressPercent(goal.savedCents, goal.targetCents);
 	const reached = goal.savedCents >= goal.targetCents;
 
@@ -48,11 +50,11 @@ export function GoalCard({
 						Lista
 					</span>
 				) : (
-					<button type="button" className={ACTION} onClick={onContribute}>
+					<button type="button" className={ACTION} onClick={onContribute} {...gate}>
 						+ Aportar
 					</button>
 				)}
-				<button type="button" className={ACTION} onClick={onEdit}>
+				<button type="button" className={ACTION} onClick={onEdit} {...gate}>
 					Editar meta
 				</button>
 			</div>

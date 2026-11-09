@@ -3,6 +3,7 @@ import {
 	dayInMonth,
 	formatDayHeading,
 	formatDaysLeft,
+	formatLimaTime,
 	formatPastDay,
 	formatRangeWithYear,
 	formatRecentDay,
@@ -261,4 +262,9 @@ describe("getNextCycleRange", () => {
 			endDate: "2026-11-04",
 		});
 	});
+});
+
+test("formatLimaTime shows the hour in Lima, not in UTC", () => {
+	expect(formatLimaTime(Date.parse("2026-11-09T15:42:00.000Z"))).toBe("10:42");
+	expect(formatLimaTime(Date.parse("2026-11-10T04:05:00.000Z"))).toBe("23:05");
 });

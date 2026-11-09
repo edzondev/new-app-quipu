@@ -40,13 +40,14 @@ export function JoinPage({
 	const profile = useQuery(convexQuery(api.profiles.myProfile, isAuthenticated ? {} : "skip"));
 	const info = useInviteInfo(code);
 	const joinHousehold = useConvexMutation(api.household.joinHousehold);
-	const join = useMutation({
-		mutationFn: () => joinHousehold({ code }),
-		onSuccess: (result) => {
-			if (result.ok) {
-				void navigate({ to: "/home", search: { space: "household", joined: true } });
-			}
-		},
+	function onJoined(result: { ok: boolean }) {
+		if (result.ok) void navigate({ to: "/home", search: { space: "household", joined: true } });
+	}
+	const join = useMutation({ mutationFn: () => joinHousehold({ code }), onSuccess: onJoined });
+	// Only for who already has a household of their own with nothing in it.
+	const replace = useMutation({
+		mutationFn: () => joinHousehold({ code, replaceEmpty: true }),
+		onSuccess: onJoined,
 	});
 
 	const reason = join.data && !join.data.ok ? join.data.reason : null;
@@ -73,7 +74,13 @@ export function JoinPage({
 	const canJoin = view === "valid" || view === "rate";
 	const showCard = initialCode !== "" && !edited && (canJoin || view === "loading");
 	// Already in a space: while joining, the profile flips first and must not hide the card.
-	const alreadyIn = profile.data?.hasHousehold && !join.isPending && !join.isSuccess;
+	const alreadyIn =
+		profile.data?.hasHousehold &&
+		!join.isPending &&
+		!join.isSuccess &&
+		!replace.isPending &&
+		!replace.isSuccess;
+	const mine = useQuery(convexQuery(api.household.get, alreadyIn ? {} : "skip"));
 
 	function writeAnother() {
 		setCode("");
@@ -131,6 +138,22 @@ export function JoinPage({
 				>
 					Ir a mi espacio
 				</Button>
+				{mine.data?.isEmpty && canJoin ? (
+					<Button
+						variant="outline"
+						size="xl"
+						className="mt-3 w-full rounded-full"
+						loading={replace.isPending}
+						onClick={() => replace.mutate()}
+					>
+						Borrar el mío y unirme
+					</Button>
+				) : null}
+				{replace.isError ? (
+					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+						{readError(replace.error)}
+					</p>
+				) : null}
 			</>
 		);
 	} else if (showCard) {

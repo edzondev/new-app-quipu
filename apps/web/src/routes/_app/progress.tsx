@@ -11,6 +11,8 @@ export const Route = createFileRoute("/_app/progress")({
 		}
 	},
 	loader: async ({ context }) => {
+		// Without a personal plan Personal has nothing to load.
+		if (context.space === "personal" && !context.hasPlan) return;
 		await Promise.all([
 			context.queryClient.query(convexQuery(api.progress.streak, {})),
 			context.queryClient.query(convexQuery(api.progress.list, {})),
