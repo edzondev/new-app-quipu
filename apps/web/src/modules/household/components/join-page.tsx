@@ -11,6 +11,7 @@ import { Input } from "#/components/ui/input";
 import { Skeleton } from "#/components/ui/skeleton";
 import { readError } from "#/lib/read-error";
 import { inviteState } from "../invite-state";
+import { useInviteInfo } from "../use-invite-info";
 
 function Message({ title, children }: { title: string; children: ReactNode }) {
 	return (
@@ -37,9 +38,7 @@ export function JoinPage({
 	const [now] = useState(Date.now);
 
 	const profile = useQuery(convexQuery(api.profiles.myProfile, isAuthenticated ? {} : "skip"));
-	const info = useQuery(
-		convexQuery(api.household.inviteInfo, code.length === 6 ? { code } : "skip"),
-	);
+	const info = useInviteInfo(code);
 	const joinHousehold = useConvexMutation(api.household.joinHousehold);
 	const join = useMutation({
 		mutationFn: () => joinHousehold({ code }),

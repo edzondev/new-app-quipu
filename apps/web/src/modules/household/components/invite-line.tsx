@@ -1,9 +1,7 @@
-import { convexQuery } from "@convex-dev/react-query";
-import { api } from "@quipu/backend/convex/_generated/api";
 import { extractCode } from "@quipu/backend/shared/household";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { inviteState } from "../invite-state";
+import { useInviteInfo } from "../use-invite-info";
 
 const INVITE_PATH = "/unirme/";
 
@@ -11,9 +9,7 @@ const INVITE_PATH = "/unirme/";
 export function InviteLine({ redirect, action }: { redirect: string; action: string }) {
 	const code = redirect.startsWith(INVITE_PATH) ? extractCode(redirect) : "";
 	const [now] = useState(Date.now);
-	const { data } = useQuery(
-		convexQuery(api.household.inviteInfo, code.length === 6 ? { code } : "skip"),
-	);
+	const { data } = useInviteInfo(code);
 	if (!data || inviteState(data, now) !== "valid") return null;
 	return (
 		<p className="mb-5 text-sm text-muted-foreground">
