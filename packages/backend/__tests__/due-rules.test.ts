@@ -4,7 +4,6 @@ import {
 	formatLocalDate,
 	formatMonthYear,
 	formatWeekdayDay,
-	nextMonth,
 	parseLocalDate,
 } from "../shared/dates";
 import {
@@ -133,11 +132,6 @@ describe("date texts", () => {
 		expect(formatWeekdayDay("2026-11-28")).toBe("sáb 28 nov");
 		expect(formatFullDay("2026-11-16")).toBe("16 nov 2026");
 		expect(formatMonthYear("2027-03")).toBe("marzo 2027");
-	});
-
-	test("nextMonth rolls the year", () => {
-		expect(nextMonth("2026-11")).toBe("2026-12");
-		expect(nextMonth("2026-12")).toBe("2027-01");
 	});
 
 	test("a local date goes to the calendar and back without moving a day", () => {

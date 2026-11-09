@@ -5,11 +5,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { type ComponentProps, useState } from "react";
 import { Button } from "#/components/ui/button";
-import { Stale } from "#/components/stale";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
-import { spaceQuery } from "#/lib/space-query";
 import { Toast } from "#/components/toast";
 import { useNotice } from "#/modules/household/use-notice";
 import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
@@ -60,7 +58,7 @@ function Commitments({ today }: { today: string }) {
 	const [notice, setNotice] = useNotice();
 	const ensureOpen = useEnsureOpenCycle(space, today);
 	const list = useQuery(
-		spaceQuery(convexQuery(api.commitments.list, ensureOpen.isSuccess ? { space, today } : "skip")),
+		convexQuery(api.commitments.list, ensureOpen.isSuccess ? { space, today } : "skip"),
 	);
 
 	if (ensureOpen.isError || list.isError) {
@@ -107,7 +105,7 @@ function Commitments({ today }: { today: string }) {
 	);
 
 	return (
-		<Stale active={list.isPlaceholderData}>
+		<>
 			<header className="flex flex-wrap items-end gap-4">
 				<div className="min-w-0 flex-1 basis-64">
 					<h1 className="font-heading text-4xl font-medium tracking-tight">Compromisos</h1>
@@ -153,6 +151,6 @@ function Commitments({ today }: { today: string }) {
 
 			<CommitmentDialog target={dialog} today={today} onClose={() => setDialog(null)} />
 			<Toast message={notice} />
-		</Stale>
+		</>
 	);
 }

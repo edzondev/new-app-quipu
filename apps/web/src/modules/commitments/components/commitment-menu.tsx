@@ -2,7 +2,12 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { es } from "@daypicker/react/locale";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { dueDateFor, type DueRule } from "@quipu/backend/shared/commitments";
-import { formatLocalDate, monthName, nextMonth, parseLocalDate } from "@quipu/backend/shared/dates";
+import {
+	formatLocalDate,
+	monthName,
+	parseLocalDate,
+	shiftMonth,
+} from "@quipu/backend/shared/dates";
 import { useMutation } from "@tanstack/react-query";
 import { MoreHorizontalIcon } from "lucide-react";
 import { useState } from "react";
@@ -45,7 +50,7 @@ const TRIGGER_CLASS = "size-11 shrink-0 rounded-full";
 /** "Solo cambia noviembre. En diciembre vuelve al 28." with the month and the rule of the item. */
 function dueMonthText(item: CommitmentItem, rule: DueRule) {
 	const month = item.dueDate.slice(0, 7);
-	const following = nextMonth(month);
+	const following = shiftMonth(month, 1);
 	const backTo = Number(dueDateFor(rule, undefined, following).slice(8));
 	return `Solo cambia ${monthName(month)}. En ${monthName(following)} vuelve al ${backTo}.`;
 }

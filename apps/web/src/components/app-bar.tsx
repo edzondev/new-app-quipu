@@ -62,6 +62,12 @@ function NavLinks({ onSelect }: { onSelect?: () => void }) {
 	));
 }
 
+/**
+ * One pill that slides: the indicator follows whichever item has `aria-current`. `exact` matters:
+ * without it the Personal link, whose search is empty, is "active" in every space and the pill
+ * stays put. `preload="render"` loads the data of the other space as soon as the bar shows, so
+ * switching is instant.
+ */
 function SpaceSwitch({ onSelect }: { onSelect?: () => void }) {
 	const { space } = useSearch({ from: "/_app" });
 
@@ -80,6 +86,8 @@ function SpaceSwitch({ onSelect }: { onSelect?: () => void }) {
 						aria-selected={!space}
 						aria-current={space ? undefined : "page"}
 						search={(prev) => ({ ...prev, space: undefined })}
+						activeOptions={{ exact: true }}
+						preload="render"
 						onClick={onSelect}
 					/>
 				}
@@ -95,6 +103,8 @@ function SpaceSwitch({ onSelect }: { onSelect?: () => void }) {
 						aria-selected={space === "household"}
 						aria-current={space === "household" ? "page" : undefined}
 						search={(prev) => ({ ...prev, space: "household" })}
+						activeOptions={{ exact: true }}
+						preload="render"
 						onClick={onSelect}
 					/>
 				}

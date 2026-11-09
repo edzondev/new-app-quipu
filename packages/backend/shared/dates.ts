@@ -111,10 +111,38 @@ export function formatFullDay(date: string): string {
 	return `${formatDay(date)} ${date.slice(0, 4)}`;
 }
 
-/** The month after "2026-12", which is "2027-01". */
-export function nextMonth(month: string): string {
+/** The month `delta` months from `month` ("2026-11" and 3 is "2027-02"; negative goes back). */
+export function shiftMonth(month: string, delta: number): string {
 	const [year, monthNumber] = month.split("-").map(Number);
-	return dayInMonth(year, monthNumber, 1).slice(0, 7);
+	return dayInMonth(year, monthNumber - 1 + delta, 1).slice(0, 7);
+}
+
+export type MonthCell = {
+	month: string;
+	/** "ene" to "dic". */
+	short: string;
+	/** "marzo 2027". */
+	label: string;
+	/** A month before this one: it cannot be chosen. */
+	past: boolean;
+	current: boolean;
+	selected: boolean;
+};
+
+/** The 12 months of `year` for a month picker: which are past, which is this one and which is chosen. */
+export function monthsOfYear(year: number, today: string, selected: string): MonthCell[] {
+	const thisMonth = today.slice(0, 7);
+	return MONTHS.map((short, index) => {
+		const month = `${year}-${String(index + 1).padStart(2, "0")}`;
+		return {
+			month,
+			short,
+			label: formatMonthYear(month),
+			past: month < thisMonth,
+			current: month === thisMonth,
+			selected: month === selected,
+		};
+	});
 }
 
 /** "marzo 2027" for "2027-03". */
