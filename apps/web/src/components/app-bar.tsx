@@ -41,12 +41,15 @@ const navLink = "flex h-11 items-center rounded-[22px] px-[18px] text-[15px] fon
 const NAV_LINKS = [
 	{ to: "/home", label: "Inicio" },
 	{ to: "/movements", label: "Movimientos" },
+	{ to: "/progress", label: "Progreso" },
 	{ to: "/savings", label: "Ahorros" },
 	{ to: "/commitments", label: "Compromisos" },
 ] as const;
 
 function NavLinks({ onSelect }: { onSelect?: () => void }) {
-	return NAV_LINKS.map(({ to, label }) => (
+	const { space } = useSearch({ from: "/_app" });
+	// Progreso only knows Personal: in Nuestro espacio the link would change space without saying so.
+	return NAV_LINKS.filter(({ to }) => to !== "/progress" || !space).map(({ to, label }) => (
 		<Link
 			key={to}
 			to={to}

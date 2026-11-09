@@ -4,7 +4,7 @@ import { addDays, getFirstCycleRange, getLimaDate, getNextCycleRange } from "../
 import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { type CloseSummary, summarizeClose } from "./close-summary";
+import { type CloseSummary, summarizeClose } from "./closeSummary";
 import { requireOwnerProfile, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -78,7 +78,11 @@ export async function getOrCreateNextCycle(
 	const pending = space.kind === "personal" ? profile.nextPlan : undefined;
 	const applied = pending ?? plan;
 	const { endDate } = getNextCycleRange(applied.cadence, applied.cycleStartDay, startDate);
-	if (pending) await ctx.db.patch("profiles", profile._id, { plan: pending, nextPlan: undefined });
+	if (pending)
+		await ctx.db.patch("profiles", profile._id, {
+			plan: pending,
+			nextPlan: undefined,
+		});
 	const id = await ctx.db.insert("cycles", {
 		spaceId: space._id,
 		startDate,
@@ -101,7 +105,10 @@ async function moveEarlyIncomes(ctx: MutationCtx, fromId: Id<"cycles">, toId: Id
 	let moved = ZERO_AMOUNTS;
 	for (let row = await nextEarly(); row?.kind === "income"; row = await nextEarly()) {
 		moved = addAmounts(moved, row.allocation);
-		await ctx.db.patch("transactions", row._id, { cycleId: toId, forNextCycle: undefined });
+		await ctx.db.patch("transactions", row._id, {
+			cycleId: toId,
+			forNextCycle: undefined,
+		});
 	}
 	return moved;
 }
@@ -163,7 +170,10 @@ export async function closeCycle(
 		// Never block the close: record it so it is not mistaken for a cycle closed before summaries.
 		console.error("Cycle close summary does not add up", cycle._id);
 	}
-	await ctx.db.patch("cycles", cycle._id, { closedAt: Date.now(), closeSummary: summary });
+	await ctx.db.patch("cycles", cycle._id, {
+		closedAt: Date.now(),
+		closeSummary: summary,
+	});
 	const closedNext = await ctx.db.get("cycles", next._id);
 	if (!closedNext) throw new ConvexError("No encontramos tu ciclo.");
 	return closedNext;

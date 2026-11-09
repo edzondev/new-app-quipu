@@ -108,6 +108,15 @@ export function formatRange(startDate: string, endDate: string): string {
 	return `${formatDay(startDate)} → ${formatDay(endDate)}`;
 }
 
+/** A range with its year: "1 sep → 30 sep 2026", or both years when it crosses one. */
+export function formatRangeWithYear(startDate: string, endDate: string): string {
+	const startYear = startDate.slice(0, 4);
+	const endYear = endDate.slice(0, 4);
+	return startYear === endYear
+		? `${formatRange(startDate, endDate)} ${endYear}`
+		: `${formatDay(startDate)} ${startYear} → ${formatDay(endDate)} ${endYear}`;
+}
+
 /** How a recent movement dates itself: "hoy", "ayer", a weekday inside the week, else "12 oct". */
 export function formatRecentDay(date: string, today: string): string {
 	const daysAgo = daysBetween(date, today);
