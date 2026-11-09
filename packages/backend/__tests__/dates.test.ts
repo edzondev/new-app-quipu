@@ -4,6 +4,7 @@ import {
 	formatDayHeading,
 	formatDaysLeft,
 	formatPastDay,
+	formatRangeWithYear,
 	formatRecentDay,
 	isEarlyIncomeWindow,
 	monthName,
@@ -179,6 +180,16 @@ describe("formatPastDay", () => {
 
 	test("a day of another year carries it", () => {
 		expect(formatPastDay("2026-12-31", "2027-01-02")).toBe("31 dic 2026");
+	});
+});
+
+describe("formatRangeWithYear", () => {
+	test("inside one year the year is written once, at the end", () => {
+		expect(formatRangeWithYear("2026-09-01", "2026-09-30")).toBe("1 set → 30 set 2026");
+	});
+
+	test("across two years each end carries its own", () => {
+		expect(formatRangeWithYear("2026-12-15", "2027-01-14")).toBe("15 dic 2026 → 14 ene 2027");
 	});
 });
 

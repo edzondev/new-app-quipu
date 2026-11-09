@@ -26,6 +26,7 @@
 	--color-popover: var(--popover);
 	--color-foreground: var(--foreground);
 	--color-background: var(--background);
+	--color-over: var(--over);
 	--color-warning-foreground: var(--warning-foreground);
 	--color-warning: var(--warning);
 	--color-success-foreground: var(--success-foreground);
@@ -84,6 +85,7 @@
 	/* cau / caut */
 	--warning: oklch(0.66 0.115 72.6);
 	--warning-foreground: oklch(0.549 0.1 70.4);
+	--over: #9a4a12;
 	/* pos */
 	--success: oklch(0.499 0.078 165.2);
 	--success-foreground: oklch(0.4 0.078 165.2);
@@ -126,6 +128,7 @@
 	/* cau / caut (same in dark) */
 	--warning: oklch(0.791 0.133 79.3);
 	--warning-foreground: oklch(0.791 0.133 79.3);
+	--over: oklch(0.791 0.133 79.3);
 	/* pos dark: light pos hue/chroma, L raised toward aho (design omitted pos) */
 	--success: oklch(0.69 0.078 165.2);
 	--success-foreground: oklch(0.78 0.078 165.2);
