@@ -15,9 +15,10 @@ import {
 	getCommitmentPayments,
 	getCommitmentStates,
 } from "./model/commitments";
-import { requireOpenCycle } from "./model/cycles";
+import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
 import { parseInput } from "./model/input";
-import { requireSpace, type SpaceKind } from "./model/spaces";
+import { requireWritableSpace } from "./model/plus";
+import { type SpaceKind } from "./model/spaces";
 import { spaceKind, spendable } from "./schema";
 
 const NOT_FOUND = "No encontramos este dato.";
@@ -37,7 +38,7 @@ const schedule = v.union(
 type Schedule = Infer<typeof schedule>;
 
 async function requireOwnCommitment(ctx: MutationCtx, kind: SpaceKind, id: Id<"commitments">) {
-	const { userId, space } = await requireSpace(ctx, kind);
+	const { userId, space } = await requireWritableSpace(ctx, kind);
 	const row = await ctx.db.get("commitments", id);
 	if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 	return { userId, space, row };
@@ -82,7 +83,7 @@ export const add = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, name, amountCents, envelope, schedule: when }) => {
-		const { space } = await requireSpace(ctx, kind);
+		const { space } = await requireWritableSpace(ctx, kind);
 		parseInput(centsSchema, amountCents);
 		await ctx.db.insert(
 			"commitments",
@@ -275,7 +276,7 @@ export const markPaid = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, amountCents }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		const row = await ctx.db.get("commitments", id);
 		if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 

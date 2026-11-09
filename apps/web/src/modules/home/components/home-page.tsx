@@ -13,7 +13,7 @@ import { useLimaDate } from "#/hooks/use-lima-date";
 import { EYEBROW } from "#/lib/typography";
 import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import type { Movement } from "#/modules/register/movement-draft";
-import { firstName } from "#/modules/household/first-name";
+import { firstName } from "@quipu/backend/shared/household";
 import { EmptyHousehold } from "#/modules/household/components/empty-household";
 import { InviteStrip } from "#/modules/household/components/invite-strip";
 import { JoinedNotice } from "#/modules/household/components/joined-notice";

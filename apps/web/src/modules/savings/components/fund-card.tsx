@@ -19,7 +19,7 @@ export function FundCard({
 	onWithdraw: () => void;
 	onEditGoal: () => void;
 }) {
-	const { fundCents, fundGoalCents, isOwner } = fund;
+	const { fundCents, fundGoalCents } = fund;
 	const [whole, decimals] = formatCents(fundCents).split(".");
 	const percent = fundGoalCents ? progressPercent(fundCents, fundGoalCents) : 0;
 
@@ -37,21 +37,19 @@ export function FundCard({
 						<p className="mt-2.5 text-sm text-muted-foreground">
 							Meta S/ {formatCents(fundGoalCents)} ·{" "}
 							{percent >= 100 ? "Meta alcanzada" : `${percent}% de tu meta`}
-							{isOwner ? (
-								<button
-									type="button"
-									className={cn(ACTION, "ml-2.5 align-middle")}
-									onClick={onEditGoal}
-								>
-									Editar meta
-								</button>
-							) : null}
+							<button
+								type="button"
+								className={cn(ACTION, "ml-2.5 align-middle")}
+								onClick={onEditGoal}
+							>
+								Editar meta
+							</button>
 						</p>
-					) : isOwner ? (
+					) : (
 						<button type="button" className={cn(ACTION, "mt-2.5")} onClick={onEditGoal}>
 							Definir meta
 						</button>
-					) : null}
+					)}
 				</div>
 
 				<div className="flex items-center gap-2.5">

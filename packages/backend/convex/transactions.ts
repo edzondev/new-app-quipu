@@ -10,10 +10,11 @@ import {
 	ZERO_AMOUNTS,
 } from "../shared/budget";
 import { addDays, isEarlyIncomeWindow, isoDateSchema } from "../shared/dates";
+import { firstName } from "../shared/household";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
-import { requireOpenCycle } from "./model/cycles";
+import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
 import { requirePlan } from "./model/spaces";
 import { parseInput } from "./model/input";
 import { extraType, movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
@@ -31,7 +32,7 @@ async function requireOwnOpenRow(
 	id: Id<"transactions">,
 	expected: TxKind,
 ) {
-	const open = await requireOpenCycle(ctx, kind);
+	const open = await requireWritableOpenCycle(ctx, kind);
 	const row = await ctx.db.get("transactions", id);
 	if (
 		!row ||
@@ -71,7 +72,7 @@ export const addExpense = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, envelope, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsSchema, amountCents);
 		const key = AMOUNT_KEYS[envelope];
 		await ctx.db.insert("transactions", {
@@ -147,7 +148,7 @@ export const addIncome = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, extra, forNextCycle: chosen, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsSchema, amountCents);
 		const plan = await requirePlan(ctx, space);
 		const forNextCycle =
@@ -230,7 +231,7 @@ export const addSaving = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, goalId, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsAtMost(cycle.envelopes.savingsCents), amountCents);
 		if (goalId !== undefined) {
 			const goal = await ctx.db.get("goals", goalId);
@@ -267,7 +268,7 @@ export const withdrawSaving = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, reason, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsAtMost(space.fundCents), amountCents);
 		await ctx.db.insert("transactions", {
 			kind: "withdrawal",
@@ -334,7 +335,7 @@ export const list = query({
 			await Promise.all(
 				authorIds.map(async (authorId) => {
 					const user = await authComponent.getAnyUserById(ctx, authorId);
-					whoByUser.set(authorId, user?.name ?? null);
+					whoByUser.set(authorId, user ? firstName(user.name) : null);
 				}),
 			);
 		}

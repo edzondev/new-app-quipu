@@ -7,7 +7,7 @@ import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { getCycleAt } from "./model/cycles";
 import { parseInput } from "./model/input";
-import { requirePlus } from "./model/plus";
+import { requirePlus, requireWritableSpace } from "./model/plus";
 import { requirePlan, requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind } from "./schema";
 
@@ -21,7 +21,7 @@ const goalFieldsSchema = z.object({
 });
 
 async function requireOwnGoal(ctx: MutationCtx, kind: SpaceKind, id: Id<"goals">) {
-	const { userId, space } = await requireSpace(ctx, kind);
+	const { userId, space } = await requireWritableSpace(ctx, kind);
 	const row = await ctx.db.get("goals", id);
 	if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 	return { userId, space, row };
@@ -80,11 +80,10 @@ export const fund = query({
 		fundCents: v.number(),
 		fundGoalCents: v.union(v.number(), v.null()),
 		suggestedFundGoalCents: v.union(v.number(), v.null()),
-		isOwner: v.boolean(),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
 		parseInput(isoDateSchema, today);
-		const { userId, space } = await requireSpace(ctx, kind);
+		const { space } = await requireSpace(ctx, kind);
 		const cycle = await getCycleAt(ctx, space._id, today);
 		const suggested =
 			cycle && cycle.endDate >= today
@@ -94,7 +93,6 @@ export const fund = query({
 			fundCents: space.fundCents,
 			fundGoalCents: space.fundGoalCents ?? null,
 			suggestedFundGoalCents: suggested,
-			isOwner: space.ownerId === userId,
 		};
 	},
 });
@@ -104,11 +102,8 @@ export const setFundGoal = mutation({
 	args: { space: spaceKind, targetCents: v.union(v.number(), v.null()) },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, targetCents }) => {
-		const { userId, space } = await requireSpace(ctx, kind);
+		const { space } = await requireWritableSpace(ctx, kind);
 		parseInput(z.nullable(centsSchema), targetCents);
-		if (space.ownerId !== userId) {
-			throw new ConvexError("Solo quien creó el hogar define la meta del fondo.");
-		}
 		await ctx.db.patch("spaces", space._id, { fundGoalCents: targetCents ?? undefined });
 		return null;
 	},
@@ -123,7 +118,7 @@ export const add = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, name, targetCents, targetMonth }) => {
-		const { userId, space } = await requireSpace(ctx, kind);
+		const { userId, space } = await requireWritableSpace(ctx, kind);
 		const fields = parseInput(goalFieldsSchema, { name, targetCents, targetMonth });
 		const existing = await ctx.db
 			.query("goals")

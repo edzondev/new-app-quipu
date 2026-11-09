@@ -129,7 +129,6 @@ test("saving S/ 50 and setting the goal to S/ 4,200 shows the fund and its goal"
 		fundCents: 5_000,
 		fundGoalCents: 420_000,
 		suggestedFundGoalCents: 225_000,
-		isOwner: true,
 	});
 });
 
@@ -141,7 +140,6 @@ test("without a fund goal, fund reads fundGoalCents as null", async () => {
 		fundCents: 0,
 		fundGoalCents: null,
 		suggestedFundGoalCents: 225_000,
-		isOwner: true,
 	});
 });
 
@@ -157,7 +155,6 @@ test("removing the fund goal keeps the money in the fund", async () => {
 		fundCents: 5_000,
 		fundGoalCents: null,
 		suggestedFundGoalCents: 225_000,
-		isOwner: true,
 	});
 });
 
@@ -197,7 +194,7 @@ test("a fund goal of 0, negative or with decimals fails and keeps the old one", 
 	expect(fundGoalCents).toBe(420_000);
 });
 
-test("in a household only who created it sets the fund goal; both read it", async () => {
+async function householdPair() {
 	const t = harness();
 	const ana = await anaOnOct20(t);
 	await ana.mutation(api.household.createHousehold, { name: "Casa" });
@@ -205,12 +202,13 @@ test("in a household only who created it sets the fund goal; both read it", asyn
 	const luis = await signIn(t, "luis@correo.com", "Luis");
 	await luis.mutation(api.profiles.completeOnboarding, onboard);
 	await luis.mutation(api.household.joinHousehold, { code });
+	return { ana, luis };
+}
 
-	await expect(
-		luis.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 }),
-	).rejects.toThrow("Solo quien creó el hogar define la meta del fondo.");
-	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 });
+test("in a household both set, change and remove the fund goal, and both read it", async () => {
+	const { ana, luis } = await householdPair();
 
+	await luis.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 });
 	for (const member of [ana, luis]) {
 		const { fundGoalCents } = await member.query(api.goals.fund, {
 			space: "household",
@@ -218,37 +216,15 @@ test("in a household only who created it sets the fund goal; both read it", asyn
 		});
 		expect(fundGoalCents).toBe(420_000);
 	}
-});
 
-test("in a household only who created it sees isOwner and can remove the fund goal", async () => {
-	const t = harness();
-	const ana = await anaOnOct20(t);
-	await ana.mutation(api.household.createHousehold, { name: "Casa" });
-	const { code } = await ana.mutation(api.household.createInvite, {});
-	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.mutation(api.profiles.completeOnboarding, onboard);
-	await luis.mutation(api.household.joinHousehold, { code });
-	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: 420_000 });
-
-	expect((await ana.query(api.goals.fund, { space: "household", today: TODAY })).isOwner).toBe(
-		true,
-	);
-	expect((await luis.query(api.goals.fund, { space: "household", today: TODAY })).isOwner).toBe(
-		false,
-	);
-
-	await expect(
-		luis.mutation(api.goals.setFundGoal, { space: "household", targetCents: null }),
-	).rejects.toThrow("Solo quien creó el hogar define la meta del fondo.");
-	expect(
-		(await luis.query(api.goals.fund, { space: "household", today: TODAY })).fundGoalCents,
-	).toBe(420_000);
-
-	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: null });
+	await ana.mutation(api.goals.setFundGoal, { space: "household", targetCents: 500_000 });
+	await luis.mutation(api.goals.setFundGoal, { space: "household", targetCents: null });
 	for (const member of [ana, luis]) {
-		expect(
-			(await member.query(api.goals.fund, { space: "household", today: TODAY })).fundGoalCents,
-		).toBeNull();
+		const { fundGoalCents } = await member.query(api.goals.fund, {
+			space: "household",
+			today: TODAY,
+		});
+		expect(fundGoalCents).toBeNull();
 	}
 });
 

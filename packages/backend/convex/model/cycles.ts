@@ -5,6 +5,7 @@ import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { type CloseSummary, summarizeClose } from "./closeSummary";
+import { requireWritable } from "./plus";
 import { requireOwnerProfile, requirePlan, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -198,4 +199,11 @@ export async function ensureOpenCycle(
 		cycle = await closeCycle(ctx, space, cycle, userId);
 	}
 	return cycle;
+}
+
+/** `requireOpenCycle` for a write: a household without Plus is read-only. */
+export async function requireWritableOpenCycle(ctx: Ctx, kind: SpaceKind, today = getLimaDate()) {
+	const open = await requireOpenCycle(ctx, kind, today);
+	await requireWritable(ctx, open.space);
+	return open;
 }

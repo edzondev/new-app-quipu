@@ -74,3 +74,12 @@ export async function requirePlan(ctx: Ctx, space: Doc<"spaces">): Promise<Plan>
 	}
 	return (await requireOwnerProfile(ctx, space)).plan;
 }
+
+/** A household has at most 2 members; only `joinHousehold` inserts them. */
+export async function getMemberIds(ctx: Ctx, spaceId: Id<"spaces">) {
+	const members = await ctx.db
+		.query("spaceMembers")
+		.withIndex("by_spaceId", (q) => q.eq("spaceId", spaceId))
+		.take(2);
+	return members.map((member) => member.userId);
+}

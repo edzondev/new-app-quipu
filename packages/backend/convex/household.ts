@@ -1,19 +1,25 @@
 import { ConvexError, v } from "convex/values";
-import { getLimaDate } from "../shared/dates";
+import { nameSchema } from "../shared/budget";
+import { getLimaDate, isoDateSchema } from "../shared/dates";
+import { firstName } from "../shared/household";
+import { isValidPlan } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
+import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
-import { createFirstCycle } from "./model/cycles";
-import { requirePlus } from "./model/plus";
+import { createFirstCycle, getCycleAt } from "./model/cycles";
+import { parseInput } from "./model/input";
+import { householdHasPlus, requirePlus, requireWritableSpace } from "./model/plus";
 import {
 	checkAccess,
 	getHousehold,
+	getMemberIds,
 	getPersonalSpace,
 	requirePlan,
 	requireSpace,
 	requireUser,
 } from "./model/spaces";
 import { limitHouseholdJoin } from "./rateLimits";
+import { plan } from "./schema";
 
 const NOT_FOUND = "No encontramos este dato.";
 const NEED_HOUSEHOLD = "Aún no tienes un hogar.";
@@ -44,16 +50,6 @@ function randomCode() {
 }
 
 const normalizeCode = (code: string) => code.replace(/\s/g, "").toUpperCase();
-const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
-
-/** A household has at most 2 members; only `joinHousehold` inserts them. */
-async function memberIds(ctx: QueryCtx, spaceId: Id<"spaces">) {
-	const members = await ctx.db
-		.query("spaceMembers")
-		.withIndex("by_spaceId", (q) => q.eq("spaceId", spaceId))
-		.take(2);
-	return members.map((member) => member.userId);
-}
 
 /** Replaces any earlier code, so a resend kills the old one. */
 async function issueInvite(ctx: MutationCtx, spaceId: Id<"spaces">) {
@@ -107,7 +103,7 @@ export const createInvite = mutation({
 	handler: async (ctx) => {
 		const { userId, space } = await requireSpace(ctx, "household");
 		if (space.ownerId !== userId) throw new ConvexError(NOT_FOUND);
-		if ((await memberIds(ctx, space._id)).length >= 2) throw new ConvexError(FULL);
+		if ((await getMemberIds(ctx, space._id)).length >= 2) throw new ConvexError(FULL);
 		return await issueInvite(ctx, space._id);
 	},
 });
@@ -137,7 +133,7 @@ export const joinHousehold = mutation({
 			return { ok: false as const, reason: "expired" as const };
 		}
 
-		if ((await memberIds(ctx, space._id)).length >= 2)
+		if ((await getMemberIds(ctx, space._id)).length >= 2)
 			return { ok: false as const, reason: "full" as const };
 
 		await ctx.db.insert("spaceMembers", {
@@ -168,6 +164,31 @@ export const leaveHousehold = mutation({
 	},
 });
 
+/** Both can rename the household. */
+export const rename = mutation({
+	args: { name: v.string() },
+	returns: v.null(),
+	handler: async (ctx, { name }) => {
+		const { space } = await requireWritableSpace(ctx, "household");
+		await ctx.db.patch("spaces", space._id, { name: parseInput(nameSchema, name) });
+		return null;
+	},
+});
+
+/** The open cycle keeps its dates: the new cycle only applies when the next one is created. */
+export const updateCycle = mutation({
+	args: { cadence: plan.fields.cadence, cycleStartDay: plan.fields.cycleStartDay },
+	returns: v.null(),
+	handler: async (ctx, { cadence, cycleStartDay }) => {
+		const { space } = await requireWritableSpace(ctx, "household");
+		if (!isValidPlan({ cadence, cycleStartDay })) {
+			throw new ConvexError("Revisa los datos e inténtalo otra vez.");
+		}
+		await ctx.db.patch("spaces", space._id, { cadence, cycleStartDay });
+		return null;
+	},
+});
+
 export const get = query({
 	args: {},
 	returns: v.union(
@@ -179,6 +200,8 @@ export const get = query({
 			// Only for who created the household, while nobody has joined. The page decides if it expired:
 			// a query does not run again when time passes.
 			invite: v.union(v.object({ code: v.string(), expiresAt: v.number() }), v.null()),
+			// A household without Plus can be read but not written. `payerName` is null when it is me.
+			plus: v.object({ active: v.boolean(), payerName: v.union(v.string(), v.null()) }),
 		}),
 	),
 	handler: async (ctx) => {
@@ -187,10 +210,12 @@ export const get = query({
 		const space = await getHousehold(ctx, user._id);
 		if (!space) return null;
 
-		const partnerId = (await memberIds(ctx, space._id)).find((id) => id !== user._id);
+		const partnerId = (await getMemberIds(ctx, space._id)).find((id) => id !== user._id);
 		const partner = partnerId ? await authComponent.getAnyUserById(ctx, partnerId) : null;
 		const { inviteCode, inviteExpiresAt } = space;
 		const isOwner = space.ownerId === user._id;
+		const payer = isOwner ? null : await authComponent.getAnyUserById(ctx, space.ownerId);
+
 		return {
 			name: space.name ?? null,
 			isOwner,
@@ -199,7 +224,35 @@ export const get = query({
 				isOwner && !partnerId && inviteCode && inviteExpiresAt
 					? { code: inviteCode, expiresAt: inviteExpiresAt }
 					: null,
+			plus: {
+				active: await householdHasPlus(ctx, space._id),
+				payerName: payer ? firstName(payer.name) : null,
+			},
 		};
+	},
+});
+
+/** What each one put into this cycle: their direct incomes to the household. */
+export const contributions = query({
+	args: { today: v.string() },
+	returns: v.object({ mineCents: v.number(), partnerCents: v.number() }),
+	handler: async (ctx, { today }) => {
+		parseInput(isoDateSchema, today);
+		const { userId, space } = await requireSpace(ctx, "household");
+		const cycle = await getCycleAt(ctx, space._id, today);
+		const rows = cycle
+			? await ctx.db
+					.query("transactions")
+					.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+					.take(500)
+			: [];
+		const totals = { mineCents: 0, partnerCents: 0 };
+		for (const row of rows) {
+			if (row.kind !== "income" || row.forNextCycle) continue;
+			if (row.userId === userId) totals.mineCents += row.amountCents;
+			else totals.partnerCents += row.amountCents;
+		}
+		return totals;
 	},
 });
 
