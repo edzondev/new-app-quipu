@@ -1,6 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { getLimaDate } from "@quipu/backend/shared/dates";
+import { safeRedirect } from "@quipu/backend/shared/household";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
@@ -10,10 +11,13 @@ import { SplitStep } from "#/modules/onboarding/components/split-step";
 import type { OnboardingValues } from "#/modules/onboarding/schemas";
 
 export const Route = createFileRoute("/onboarding")({
-	beforeLoad: async ({ context }) => {
+	validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+		redirect: safeRedirect(search.redirect),
+	}),
+	beforeLoad: async ({ context, search }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
 		const profile = await context.queryClient.query(convexQuery(api.profiles.myProfile, {}));
-		if (profile?.plan) throw redirect({ to: "/home" });
+		if (profile?.plan) throw redirect({ to: search.redirect ?? "/home" });
 	},
 	head: () => ({
 		meta: [
@@ -36,6 +40,7 @@ const defaultValues: OnboardingValues = {
 };
 
 function OnboardingPage() {
+	const { redirect = "/home" } = Route.useSearch();
 	const [step, setStep] = useState<Step>("cycle");
 	const [values, setValues] = useState(defaultValues);
 	const [today] = useState(() => getLimaDate());
@@ -86,6 +91,7 @@ function OnboardingPage() {
 					<SplitStep
 						defaultValues={values.splitStep}
 						cycleStep={values.cycleStep}
+						redirect={redirect}
 						onBack={(splitStep) => goTo("cycle", { splitStep })}
 					/>
 				)}

@@ -93,6 +93,7 @@ function SpaceSwitch({ onSelect }: { onSelect?: () => void }) {
 }
 
 export function AppBar() {
+	const { space } = useSearch({ from: "/_app" });
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const signOut = useSignOut("current");
 	const theme = useTheme();
@@ -135,7 +136,7 @@ export function AppBar() {
 								<DrawerTitle>Menú</DrawerTitle>
 							</DrawerHeader>
 							<DrawerPanel className="flex flex-col gap-4">
-								{profile.data?.hasHousehold ? <SpaceSwitch onSelect={closeMenu} /> : null}
+								<SpaceSwitch onSelect={closeMenu} />
 								<nav aria-label="Secciones" className="flex flex-col gap-1">
 									<NavLinks onSelect={closeMenu} />
 								</nav>
@@ -155,15 +156,16 @@ export function AppBar() {
 				</div>
 
 				<div className="flex items-center gap-2.5">
-					{profile.data?.hasHousehold ? (
-						<div className="hidden lg:block">
-							<SpaceSwitch />
-						</div>
-					) : null}
+					<div className="hidden lg:block">
+						<SpaceSwitch />
+					</div>
 
-					<Button type="button" onClick={() => openRegister()} className="rounded-full">
-						+ Registrar
-					</Button>
+					{/* Hidden, not off, in Nuestro espacio until U12b. */}
+					{space ? null : (
+						<Button type="button" onClick={() => openRegister()} className="rounded-full">
+							+ Registrar
+						</Button>
+					)}
 
 					<Menu>
 						<MenuTrigger

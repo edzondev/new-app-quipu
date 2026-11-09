@@ -12,11 +12,13 @@ import { clearAuthTokenCache } from "#/lib/auth-token";
 import { emailStepSchema } from "#/modules/auth/schemas";
 
 type Props = {
+	/** Where a passkey sign-in goes. */
+	redirect: string;
 	defaultEmail: string;
 	onSent: (email: string) => void;
 };
 
-export function EmailStep({ defaultEmail, onSent }: Props) {
+export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
@@ -30,10 +32,10 @@ export function EmailStep({ defaultEmail, onSent }: Props) {
 			.then(({ data }) => {
 				if (!data) return;
 				clearAuthTokenCache(queryClient);
-				void navigate({ to: "/home" });
+				void navigate({ to: redirect });
 			})
 			.catch(() => {});
-	}, [navigate, queryClient]);
+	}, [navigate, queryClient, redirect]);
 
 	async function signInWithPasskey() {
 		setError(null);
@@ -45,7 +47,7 @@ export function EmailStep({ defaultEmail, onSent }: Props) {
 			return;
 		}
 		clearAuthTokenCache(queryClient);
-		await navigate({ to: "/home" });
+		await navigate({ to: redirect });
 	}
 
 	const form = useForm({
