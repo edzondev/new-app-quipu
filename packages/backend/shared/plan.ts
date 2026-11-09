@@ -31,8 +31,9 @@ const MONTH_FACTOR: Record<Cadence, { times: number; per: number }> = {
 };
 const FUND_GOAL_MONTHS = 3;
 
-/** Plan income x Needs share, taken to one month, times 3. Rounded down to the cent. */
+/** Plan income x Needs share, taken to one month, times 3. Rounded down to the cent. Null without a usual income. */
 export function suggestFundGoalCents(plan: Pick<Plan, "cadence" | "incomeCents">, split: Split) {
+	if (plan.incomeCents === undefined) return null;
 	const { times, per } = MONTH_FACTOR[plan.cadence];
 	return Math.floor((plan.incomeCents * split.needs * times * FUND_GOAL_MONTHS) / (100 * per));
 }
@@ -71,5 +72,8 @@ export function cycleLabel({ cadence, cycleStartDay }: Pick<Plan, "cadence" | "c
 }
 
 export function isValidPlan({ cadence, cycleStartDay, incomeCents }: Plan): boolean {
-	return centsSchema.safeParse(incomeCents).success && isValidStartDay(cadence, cycleStartDay);
+	return (
+		(incomeCents === undefined || centsSchema.safeParse(incomeCents).success) &&
+		isValidStartDay(cadence, cycleStartDay)
+	);
 }

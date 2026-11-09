@@ -347,6 +347,10 @@ test("weekly income counts 52/12 a month and rounds down to the cent", async () 
 	);
 });
 
+test("without a usual income there is no suggestion, not S/ 0", async () => {
+	expect(await suggestedFor({ incomeCents: undefined })).toBeNull();
+});
+
 test("without an open cycle for today there is no suggestion", async () => {
 	const t = harness();
 	const ana = await anaOnOct20(t);

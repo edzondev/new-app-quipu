@@ -4,8 +4,9 @@ import * as z from "zod/mini";
 
 export const cadenceSchema = z.enum(["monthly", "biweekly", "weekly"]);
 
-const positiveMoney = (message: string) =>
-	z.string().check(z.refine((v) => toCents(v) > 0, message));
+// Optional: empty is fine, anything typed must be a positive amount.
+const optionalPositiveMoney = (message: string) =>
+	z.string().check(z.refine((v) => v.trim() === "" || toCents(v) > 0, message));
 
 // Empty or invalid strings become 0 via toCents; require a typed non-negative amount.
 const nonNegativeMoney = (message: string) =>
@@ -19,8 +20,8 @@ const nonNegativeMoney = (message: string) =>
 export const cycleStepSchema = z.object({
 	cadence: cadenceSchema,
 	startDay: z.string(),
-	todayAmount: nonNegativeMoney("Escribe cuánto tienes hoy (puede ser 0)."),
-	cycleIncome: positiveMoney("Escribe cuánto ganas por ciclo."),
+	todayAmount: nonNegativeMoney("Escribe cuánto tienes hoy."),
+	cycleIncome: optionalPositiveMoney("Escribe cuánto te pagan normalmente o déjalo vacío."),
 });
 
 export const splitSchema = z

@@ -347,6 +347,20 @@ test("a cycle change stays pending and leaves the current cycle, number and earl
 	expect(profile?.nextPlan).toEqual(WEEKLY_MONDAY);
 });
 
+test("a person without a usual income can change the cycle, and the pending plan has none either", async () => {
+	const t = harness();
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, incomeCents: undefined });
+	const weekly = { cadence: "weekly" as const, cycleStartDay: 1 };
+
+	await ana.mutation(api.settings.updatePlan, weekly);
+
+	const profile = await ana.query(api.profiles.myProfile, {});
+	expect(profile?.nextPlan).toEqual(weekly);
+	expect(profile?.nextPlan).not.toHaveProperty("incomeCents");
+});
+
 test("going back to the current plan removes the pending change", async () => {
 	const t = harness();
 	const ana = await startAna(t);

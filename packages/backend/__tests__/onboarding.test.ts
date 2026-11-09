@@ -234,6 +234,73 @@ test("S/ 0 today creates the cycle with no income movement", async () => {
 	expect(snap.txs).toHaveLength(0);
 });
 
+test("without a usual income the plan is saved without the key and Inicio reports null", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, {
+		cadence: "monthly",
+		cycleStartDay: 1,
+		todayCents: 0,
+		split: { needs: 50, wants: 30, savings: 20 },
+	});
+
+	const plan = await t.run(async (ctx) => (await ctx.db.query("profiles").take(1))[0].plan);
+	expect(plan).toEqual({ cadence: "monthly", cycleStartDay: 1 });
+	expect(plan).not.toHaveProperty("incomeCents");
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(home.planIncomeCents).toBeNull();
+});
+
+test("payday today starts a full cycle with the income in it", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-01T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, { ...good, cycleStartDay: 1 });
+
+	const snap = await t.run(async (ctx) => ({
+		cycle: (await ctx.db.query("cycles").take(1))[0],
+		incomes: await ctx.db.query("transactions").take(5),
+	}));
+	expect(snap.cycle).toMatchObject({ startDate: "2026-10-01", endDate: "2026-10-31" });
+	expect(snap.incomes).toHaveLength(1);
+	expect(snap.incomes[0]).toMatchObject({
+		kind: "income",
+		cycleId: snap.cycle._id,
+		date: "2026-10-01",
+		amountCents: good.todayCents,
+	});
+});
+
+test("a repeated call keeps one space, one cycle and one income, and the first plan", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	await ana.mutation(api.profiles.completeOnboarding, good);
+	await ana.mutation(api.profiles.completeOnboarding, good);
+	await ana.mutation(api.profiles.completeOnboarding, {
+		...good,
+		cadence: "weekly",
+		cycleStartDay: 0,
+		incomeCents: 1_000,
+	});
+
+	const snap = await t.run(async (ctx) => ({
+		spaces: await ctx.db.query("spaces").take(5),
+		cycles: await ctx.db.query("cycles").take(5),
+		txs: await ctx.db.query("transactions").take(5),
+		plan: (await ctx.db.query("profiles").take(1))[0].plan,
+	}));
+	expect(snap.spaces).toHaveLength(1);
+	expect(snap.cycles).toHaveLength(1);
+	expect(snap.txs).toHaveLength(1);
+	expect(snap.plan).toEqual(planOnly);
+});
+
+test("anonymous cannot onboard", async () => {
+	const t = harness();
+	await expect(t.mutation(api.profiles.completeOnboarding, good)).rejects.toThrow();
+});
+
 test("rejects invalid values", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");

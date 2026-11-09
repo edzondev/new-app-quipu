@@ -42,7 +42,7 @@ export const getHome = query({
 		dailyCents: v.number(),
 		daysLeft: v.number(),
 		pendingCents: v.number(),
-		planIncomeCents: v.number(),
+		planIncomeCents: v.union(v.number(), v.null()),
 		empty: v.boolean(),
 		earlyWindow: v.boolean(),
 		earlyIncome: v.union(v.object({ amountCents: v.number(), startsOn: v.string() }), v.null()),
@@ -58,7 +58,7 @@ export const getHome = query({
 			split: cycle.split,
 			startDate: cycle.startDate,
 			endDate: cycle.endDate,
-			planIncomeCents: plan.incomeCents,
+			planIncomeCents: plan.incomeCents ?? null,
 			earlyWindow: isEarlyIncomeWindow(plan.cadence, today, cycle.endDate),
 			earlyIncome:
 				earlyCents > 0 ? { amountCents: earlyCents, startsOn: addDays(cycle.endDate, 1) } : null,

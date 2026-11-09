@@ -225,9 +225,9 @@ function Formula({ home }: { home: HomeData }) {
 	);
 }
 
-function EmptyCycle({ planIncomeCents }: { planIncomeCents: number }) {
+function EmptyCycle({ planIncomeCents }: { planIncomeCents: number | null }) {
 	const openRegister = useRegister();
-	const preset = planIncomeCents > 0 ? (planIncomeCents / 100).toFixed(2) : "";
+	const preset = planIncomeCents === null ? "" : (planIncomeCents / 100).toFixed(2);
 
 	return (
 		<section className="mt-10 pb-16 sm:mt-14">
@@ -238,7 +238,7 @@ function EmptyCycle({ planIncomeCents }: { planIncomeCents: number }) {
 				Registra un ingreso y Quipu reparte tu dinero en tus sobres.
 			</p>
 			<div className="mt-8 flex flex-col items-start gap-3">
-				{preset ? (
+				{planIncomeCents !== null ? (
 					<>
 						<p className="text-sm text-muted-foreground">
 							¿Ya te pagaron{" "}
