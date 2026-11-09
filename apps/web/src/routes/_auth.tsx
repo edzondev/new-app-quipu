@@ -1,11 +1,15 @@
+import { safeRedirect } from "@quipu/backend/shared/household";
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { QuipuHeader } from "#/components/quipu-header";
 import { Button } from "#/components/ui/button";
 
 export const Route = createFileRoute("/_auth")({
-	beforeLoad: ({ context }) => {
-		if (context.isAuthenticated) throw redirect({ to: "/home" });
+	validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+		redirect: safeRedirect(search.redirect),
+	}),
+	beforeLoad: ({ context, search }) => {
+		if (context.isAuthenticated) throw redirect({ to: safeRedirect(search.redirect) });
 	},
 	component: RouteComponent,
 });

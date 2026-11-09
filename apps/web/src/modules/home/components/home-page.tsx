@@ -42,7 +42,7 @@ function Home({ today }: { today: string }) {
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	// No household yet: its queries would fail, so none of them runs.
 	if (space === "household" && profile.data && !profile.data.hasHousehold) {
-		const [firstName = ""] = profile.data.name.trim().split(/s+/);
+		const [firstName = ""] = profile.data.name.trim().split(/\s+/);
 		return <EmptyHousehold firstName={firstName} hasPlus={profile.data.hasPlus} />;
 	}
 	return <SpaceHome space={space} today={today} />;
