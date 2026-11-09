@@ -6,12 +6,14 @@ type Ctx = QueryCtx | MutationCtx;
 const NEED_PLUS = "Esto requiere Quipu Plus.";
 
 /** Plus for now = trial still open. Subscriptions land later (Polar / RevenueCat). */
-export async function requirePlus(ctx: Ctx, userId: string) {
+export async function hasPlus(ctx: Ctx, userId: string) {
 	const profile = await ctx.db
 		.query("profiles")
 		.withIndex("by_userId", (q) => q.eq("userId", userId))
 		.unique();
-	if (profile?.trialEndsAt === undefined || profile.trialEndsAt <= Date.now()) {
-		throw new ConvexError(NEED_PLUS);
-	}
+	return profile?.trialEndsAt !== undefined && profile.trialEndsAt > Date.now();
+}
+
+export async function requirePlus(ctx: Ctx, userId: string) {
+	if (!(await hasPlus(ctx, userId))) throw new ConvexError(NEED_PLUS);
 }

@@ -5,7 +5,7 @@ import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { type CloseSummary, summarizeClose } from "./closeSummary";
-import { requireOwnerProfile, requireSpace, type SpaceKind } from "./spaces";
+import { requireOwnerProfile, requirePlan, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -74,11 +74,12 @@ export async function getOrCreateNextCycle(
 	const existing = await getCycleStarting(ctx, space._id, startDate);
 	if (existing) return existing;
 
-	const { profile, plan } = await requireOwnerProfile(ctx, space);
-	const pending = space.kind === "personal" ? profile.nextPlan : undefined;
-	const applied = pending ?? plan;
+	const profile =
+		space.kind === "personal" ? (await requireOwnerProfile(ctx, space)).profile : undefined;
+	const pending = profile?.nextPlan;
+	const applied = pending ?? (await requirePlan(ctx, space));
 	const { endDate } = getNextCycleRange(applied.cadence, applied.cycleStartDay, startDate);
-	if (pending)
+	if (profile && pending)
 		await ctx.db.patch("profiles", profile._id, {
 			plan: pending,
 			nextPlan: undefined,
