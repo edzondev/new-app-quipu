@@ -13,6 +13,7 @@ import { useLimaDate } from "#/hooks/use-lima-date";
 import { EYEBROW } from "#/lib/typography";
 import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import type { Movement } from "#/modules/register/movement-draft";
+import { firstName } from "#/modules/household/first-name";
 import { EmptyHousehold } from "#/modules/household/components/empty-household";
 import { InviteStrip } from "#/modules/household/components/invite-strip";
 import { JoinedNotice } from "#/modules/household/components/joined-notice";
@@ -42,8 +43,9 @@ function Home({ today }: { today: string }) {
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	// No household yet: its queries would fail, so none of them runs.
 	if (space === "household" && profile.data && !profile.data.hasHousehold) {
-		const [firstName = ""] = profile.data.name.trim().split(/\s+/);
-		return <EmptyHousehold firstName={firstName} hasPlus={profile.data.hasPlus} />;
+		return (
+			<EmptyHousehold firstName={firstName(profile.data.name)} hasPlus={profile.data.hasPlus} />
+		);
 	}
 	return <SpaceHome space={space} today={today} />;
 }
@@ -154,14 +156,14 @@ function Overview({
 	space: Space;
 	today: string;
 }) {
-	const [firstName = name] = name.trim().split(/\s+/);
+	const first = firstName(name);
 	const [whole, decimals] = formatCents(home.dailyCents).split(".");
 
 	return (
 		<>
 			<header>
 				<h1 className="font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
-					{space === "household" ? "Nuestro espacio" : firstName ? `Hola, ${firstName}` : "Hola"}
+					{space === "household" ? "Nuestro espacio" : first ? `Hola, ${first}` : "Hola"}
 				</h1>
 				<p className="mt-1.5 truncate text-sm leading-normal text-muted-foreground">
 					{household?.partnerName ? `Con ${household.partnerName} · ciclo` : "Ciclo"}{" "}
@@ -169,7 +171,7 @@ function Overview({
 				</p>
 			</header>
 
-			{household?.invite ? <InviteStrip invite={household.invite} firstName={firstName} /> : null}
+			{household?.invite ? <InviteStrip invite={household.invite} firstName={first} /> : null}
 
 			{home.earlyIncome ? (
 				<p role="status" className="mt-4 rounded-2xl bg-muted px-4 py-3 text-sm">

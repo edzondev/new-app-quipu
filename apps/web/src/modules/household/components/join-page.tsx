@@ -56,9 +56,11 @@ export function JoinPage({
 			? "missing"
 			: code.length < 6
 				? "typing"
-				: info.data === undefined
-					? "loading"
-					: inviteState(info.data, now);
+				: info.isError
+					? "error"
+					: info.data === undefined
+						? "loading"
+						: inviteState(info.data, now);
 	const view =
 		reason === "rate_limited"
 			? "rate"
@@ -175,7 +177,22 @@ export function JoinPage({
 						className="w-full border-0 border-b border-input bg-transparent has-focus-visible:border-foreground [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-3.5 [&_[data-slot=input]]:font-mono [&_[data-slot=input]]:text-lg [&_[data-slot=input]]:tracking-widest"
 					/>
 				</Field>
-				{view === "missing" ? (
+				{view === "error" ? (
+					<div className="mt-6 space-y-4">
+						<p role="alert" className="text-sm font-semibold">
+							No pudimos cargar la invitación.
+						</p>
+						<Button
+							variant="outline"
+							size="xl"
+							className="rounded-full"
+							loading={info.isFetching}
+							onClick={() => void info.refetch()}
+						>
+							Reintentar
+						</Button>
+					</div>
+				) : view === "missing" ? (
 					<div className="mt-6 space-y-4">
 						<Message title="Ese código no existe.">Revísalo o pide uno nuevo.</Message>
 						<Button variant="outline" size="xl" className="rounded-full" onClick={writeAnother}>
