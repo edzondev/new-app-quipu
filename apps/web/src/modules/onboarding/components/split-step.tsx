@@ -27,7 +27,8 @@ export function SplitStep({ defaultValues, cycleStep, onBack }: Props) {
 	const completeOnboarding = useConvexMutation(api.profiles.completeOnboarding);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const todayCents = toCents(cycleStep.todayAmount);
-	const cycleIncomeCents = toCents(cycleStep.cycleIncome);
+	// Left empty, the usual income is omitted from the plan instead of saved as 0.
+	const cycleIncomeCents = toCents(cycleStep.cycleIncome) || undefined;
 
 	const form = useForm({
 		defaultValues,
@@ -73,25 +74,26 @@ export function SplitStep({ defaultValues, cycleStep, onBack }: Props) {
 							amounts={splitIncome(todayCents, field.state.value)}
 							onChange={(key, percent) => form.setFieldValue(`split.${key}`, percent)}
 							error={field.state.meta.isValid ? undefined : field.state.meta.errors[0]?.message}
-						/>
+						>
+							<p className="text-xs text-muted-foreground">
+								Puedes cambiarlo cuando quieras en tus sobres.
+							</p>
+							{saveError ? (
+								<p role="alert" className="text-xs text-warning-foreground">
+									{saveError}
+								</p>
+							) : null}
+						</SplitFields>
 					)}
 				</form.Field>
-				<p className="mt-5 text-xs text-muted-foreground">
-					Puedes cambiarlo cuando quieras en tus sobres.
-				</p>
-				{saveError ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
-						{saveError}
-					</p>
-				) : null}
 				<Button
 					type="submit"
 					variant="default"
 					size="xl"
 					disabled={isSubmitting}
-					className="mt-10 rounded-full px-8"
+					className="mt-6 rounded-full px-8"
 				>
-					{isSubmitting ? "Guardando…" : "Empezar"}
+					{isSubmitting ? "Guardando…" : "Empezar mi ciclo"}
 				</Button>
 			</form>
 		</>

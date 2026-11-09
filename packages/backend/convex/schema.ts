@@ -4,7 +4,7 @@ import { v } from "convex/values";
 export const plan = v.object({
 	cadence: v.union(v.literal("monthly"), v.literal("biweekly"), v.literal("weekly")),
 	cycleStartDay: v.union(v.number(), v.literal("last")),
-	incomeCents: v.number(),
+	incomeCents: v.optional(v.number()),
 });
 
 export const split = v.object({

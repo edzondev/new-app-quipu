@@ -17,10 +17,12 @@ type Props = {
 	amounts: EnvelopeAmounts;
 	onChange: (key: keyof Split, percent: number) => void;
 	error?: string;
+	/** Notes under the rows, grouped with the error. */
+	children?: React.ReactNode;
 };
 
 /** The three percentage rows of Primeros pasos and of the split editor. */
-export function SplitFields({ value, amounts, onChange, error }: Props) {
+export function SplitFields({ value, amounts, onChange, error, children }: Props) {
 	return (
 		<>
 			<div className="border-t border-border">
@@ -65,12 +67,17 @@ export function SplitFields({ value, amounts, onChange, error }: Props) {
 					</Field>
 				))}
 			</div>
-			{error ? (
-				<Field name="split" invalid>
-					<FieldError match className="mt-3 text-xs text-warning-foreground">
-						{error}
-					</FieldError>
-				</Field>
+			{error || children ? (
+				<div className="mt-4 flex flex-col gap-2">
+					{error ? (
+						<Field name="split" invalid>
+							<FieldError match className="text-xs text-warning-foreground">
+								{error}
+							</FieldError>
+						</Field>
+					) : null}
+					{children}
+				</div>
 			) : null}
 		</>
 	);
