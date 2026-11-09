@@ -1,10 +1,16 @@
 import { ConvexError } from "convex/values";
+import type { Plan } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { authComponent } from "../auth";
 
 type Ctx = QueryCtx | MutationCtx;
 export type SpaceKind = Doc<"spaces">["kind"];
+
+// Named for @convex-dev/require-access-control on public queries. Null when signed out.
+export function checkAccess(ctx: QueryCtx) {
+	return authComponent.safeGetAuthUser(ctx);
+}
 
 export function requireUser(ctx: MutationCtx) {
 	return authComponent.getAuthUser(ctx);
@@ -58,6 +64,13 @@ export async function requireOwnerProfile(ctx: Ctx, space: Doc<"spaces">) {
 	return { profile, plan: profile.plan };
 }
 
-export async function requirePlan(ctx: Ctx, space: Doc<"spaces">) {
+/** A household has its own cycle (set when created); a personal space follows its owner's plan. */
+export async function requirePlan(ctx: Ctx, space: Doc<"spaces">): Promise<Plan> {
+	if (space.kind === "household") {
+		if (space.cadence === undefined || space.cycleStartDay === undefined) {
+			throw new ConvexError("No encontramos tu ciclo.");
+		}
+		return { cadence: space.cadence, cycleStartDay: space.cycleStartDay };
+	}
 	return (await requireOwnerProfile(ctx, space)).plan;
 }

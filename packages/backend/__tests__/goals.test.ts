@@ -359,18 +359,15 @@ test("without an open cycle for today there is no suggestion", async () => {
 	expect(fund.suggestedFundGoalCents).toBeNull();
 });
 
-test("in a household the suggestion uses the household split", async () => {
+// A household has no usual income of its own, and copying the creator's would leak a personal figure.
+test("in a household there is no fund goal suggestion", async () => {
 	const t = harness();
 	const ana = await anaOnOct20(t);
 	await ana.mutation(api.household.createHousehold, { name: "Casa" });
-	await ana.mutation(api.settings.updateSplit, {
-		space: "household",
-		split: { needs: 60, wants: 20, savings: 20 },
-	});
 
 	const household = await ana.query(api.goals.fund, { space: "household", today: TODAY });
 	const personal = await ana.query(api.goals.fund, { space: "personal", today: TODAY });
-	expect(household.suggestedFundGoalCents).toBe(270_000);
+	expect(household.suggestedFundGoalCents).toBeNull();
 	expect(personal.suggestedFundGoalCents).toBe(225_000);
 });
 

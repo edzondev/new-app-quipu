@@ -4,10 +4,10 @@ import { applyIncome, ZERO_AMOUNTS } from "../shared/budget";
 import { getLimaDate } from "../shared/dates";
 import { isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation, type QueryCtx, query } from "./_generated/server";
-import { authComponent } from "./auth";
 import { createFirstCycle } from "./model/cycles";
 import { BAD_INPUT, parseInput } from "./model/input";
-import { getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
+import { hasPlus } from "./model/plus";
+import { checkAccess, getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
 
 function getProfile(ctx: QueryCtx, userId: string) {
@@ -15,11 +15,6 @@ function getProfile(ctx: QueryCtx, userId: string) {
 		.query("profiles")
 		.withIndex("by_userId", (q) => q.eq("userId", userId))
 		.unique();
-}
-
-// Named for @convex-dev/require-access-control on public queries.
-function checkAccess(ctx: QueryCtx) {
-	return authComponent.safeGetAuthUser(ctx);
 }
 
 export const myProfile = query({
@@ -31,6 +26,7 @@ export const myProfile = query({
 			plan: v.union(plan, v.null()),
 			nextPlan: v.union(plan, v.null()),
 			hasHousehold: v.boolean(),
+			hasPlus: v.boolean(),
 		}),
 	),
 	handler: async (ctx) => {
@@ -43,6 +39,7 @@ export const myProfile = query({
 			plan: profile.plan ?? null,
 			nextPlan: profile.nextPlan ?? null,
 			hasHousehold: (await getHousehold(ctx, user._id)) !== null,
+			hasPlus: await hasPlus(ctx, user._id),
 		};
 	},
 });
