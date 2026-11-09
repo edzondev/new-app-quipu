@@ -19,6 +19,7 @@ import { Route as AppMovementsRouteImport } from './routes/_app/movements'
 import { Route as AppProgressRouteImport } from './routes/_app/progress'
 import { Route as AppSavingsRouteImport } from './routes/_app/savings'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppSpaceRouteImport } from './routes/_app/space'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as UnirmeIndexRouteImport } from './routes/unirme/index'
@@ -73,6 +74,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSpaceRoute = AppSpaceRouteImport.update({
+  id: '/space',
+  path: '/space',
+  getParentRoute: () => AppRoute,
+} as any)
 const AuthSignInRoute = AuthSignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/progress': typeof AppProgressRoute
   '/savings': typeof AppSavingsRoute
   '/settings': typeof AppSettingsRoute
+  '/space': typeof AppSpaceRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/unirme/$code': typeof UnirmeCodeRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/progress': typeof AppProgressRoute
   '/savings': typeof AppSavingsRoute
   '/settings': typeof AppSettingsRoute
+  '/space': typeof AppSpaceRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/unirme/$code': typeof UnirmeCodeRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_app/progress': typeof AppProgressRoute
   '/_app/savings': typeof AppSavingsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/space': typeof AppSpaceRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/unirme/$code': typeof UnirmeCodeRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/savings'
     | '/settings'
+    | '/space'
     | '/sign-in'
     | '/sign-up'
     | '/unirme/$code'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/savings'
     | '/settings'
+    | '/space'
     | '/sign-in'
     | '/sign-up'
     | '/unirme/$code'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/_app/progress'
     | '/_app/savings'
     | '/_app/settings'
+    | '/_app/space'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
     | '/unirme/$code'
@@ -279,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/space': {
+      id: '/_app/space'
+      path: '/space'
+      fullPath: '/space'
+      preLoaderRoute: typeof AppSpaceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_auth/sign-in': {
       id: '/_auth/sign-in'
       path: '/sign-in'
@@ -324,6 +343,7 @@ interface AppRouteChildren {
   AppProgressRoute: typeof AppProgressRoute
   AppSavingsRoute: typeof AppSavingsRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSpaceRoute: typeof AppSpaceRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -333,6 +353,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProgressRoute: AppProgressRoute,
   AppSavingsRoute: AppSavingsRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSpaceRoute: AppSpaceRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

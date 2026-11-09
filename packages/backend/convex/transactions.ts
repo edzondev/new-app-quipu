@@ -10,10 +10,13 @@ import {
 	ZERO_AMOUNTS,
 } from "../shared/budget";
 import { addDays, isEarlyIncomeWindow, isoDateSchema } from "../shared/dates";
+import { moneyLabel, rowLabel } from "../shared/activity";
+import { firstName } from "../shared/household";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
-import { requireOpenCycle } from "./model/cycles";
+import { logEvent } from "./model/events";
+import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
 import { requirePlan } from "./model/spaces";
 import { parseInput } from "./model/input";
 import { extraType, movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
@@ -31,7 +34,7 @@ async function requireOwnOpenRow(
 	id: Id<"transactions">,
 	expected: TxKind,
 ) {
-	const open = await requireOpenCycle(ctx, kind);
+	const open = await requireWritableOpenCycle(ctx, kind);
 	const row = await ctx.db.get("transactions", id);
 	if (
 		!row ||
@@ -71,7 +74,7 @@ export const addExpense = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, envelope, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsSchema, amountCents);
 		const key = AMOUNT_KEYS[envelope];
 		await ctx.db.insert("transactions", {
@@ -101,7 +104,7 @@ export const updateExpense = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, amountCents, envelope, note }) => {
-		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "expense");
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "expense");
 		if (row.kind !== "expense") throw new ConvexError(NOT_FOUND);
 		parseInput(centsSchema, amountCents);
 		const oldKey = AMOUNT_KEYS[row.envelope];
@@ -114,6 +117,11 @@ export const updateExpense = mutation({
 			note: parseInput(noteSchema, note),
 		});
 		await ctx.db.patch("cycles", cycle._id, { envelopes });
+		await logEvent(ctx, space, userId, "expense_edited", {
+			detail: row.note,
+			before: moneyLabel(row.amountCents),
+			after: moneyLabel(amountCents),
+		});
 		return null;
 	},
 });
@@ -122,13 +130,16 @@ export const deleteExpense = mutation({
 	args: { space: spaceKind, id: v.id("transactions") },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id }) => {
-		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "expense");
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "expense");
 		if (row.kind !== "expense") throw new ConvexError(NOT_FOUND);
 		const key = AMOUNT_KEYS[row.envelope];
 		await ctx.db.patch("cycles", cycle._id, {
 			envelopes: patchEnvelope(cycle.envelopes, key, row.amountCents),
 		});
 		await ctx.db.delete("transactions", id);
+		await logEvent(ctx, space, userId, "expense_deleted", {
+			detail: rowLabel(row.note, row.amountCents),
+		});
 		return null;
 	},
 });
@@ -147,7 +158,7 @@ export const addIncome = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, extra, forNextCycle: chosen, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsSchema, amountCents);
 		const plan = await requirePlan(ctx, space);
 		const forNextCycle =
@@ -185,7 +196,7 @@ export const updateIncome = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, amountCents, note }) => {
-		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
 		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
 		parseInput(centsSchema, amountCents);
 		const { envelopes, allocation } = applyIncome(
@@ -201,6 +212,11 @@ export const updateIncome = mutation({
 			note: parseInput(noteSchema, note),
 		});
 		if (!row.forNextCycle) await ctx.db.patch("cycles", cycle._id, { envelopes });
+		await logEvent(ctx, space, userId, "income_edited", {
+			detail: row.note,
+			before: moneyLabel(row.amountCents),
+			after: moneyLabel(amountCents),
+		});
 		return null;
 	},
 });
@@ -209,7 +225,7 @@ export const deleteIncome = mutation({
 	args: { space: spaceKind, id: v.id("transactions") },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id }) => {
-		const { cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
 		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
 		if (!row.forNextCycle) {
 			await ctx.db.patch("cycles", cycle._id, {
@@ -217,6 +233,9 @@ export const deleteIncome = mutation({
 			});
 		}
 		await ctx.db.delete("transactions", id);
+		await logEvent(ctx, space, userId, "income_deleted", {
+			detail: rowLabel(row.note, row.amountCents),
+		});
 		return null;
 	},
 });
@@ -230,7 +249,7 @@ export const addSaving = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, goalId, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsAtMost(cycle.envelopes.savingsCents), amountCents);
 		if (goalId !== undefined) {
 			const goal = await ctx.db.get("goals", goalId);
@@ -254,6 +273,11 @@ export const addSaving = mutation({
 				fundCents: space.fundCents + amountCents,
 			});
 		}
+		const goal = goalId === undefined ? null : await ctx.db.get("goals", goalId);
+		await logEvent(ctx, space, userId, "saving_added", {
+			detail: goal?.name ?? "Fondo de emergencia",
+			amountCents,
+		});
 		return null;
 	},
 });
@@ -267,7 +291,7 @@ export const withdrawSaving = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, reason, note }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		parseInput(centsAtMost(space.fundCents), amountCents);
 		await ctx.db.insert("transactions", {
 			kind: "withdrawal",
@@ -285,6 +309,7 @@ export const withdrawSaving = mutation({
 		await ctx.db.patch("spaces", space._id, {
 			fundCents: space.fundCents - amountCents,
 		});
+		await logEvent(ctx, space, userId, "withdrawal", { amountCents });
 		return null;
 	},
 });
@@ -334,7 +359,7 @@ export const list = query({
 			await Promise.all(
 				authorIds.map(async (authorId) => {
 					const user = await authComponent.getAnyUserById(ctx, authorId);
-					whoByUser.set(authorId, user?.name ?? null);
+					whoByUser.set(authorId, user ? firstName(user.name) : null);
 				}),
 			);
 		}

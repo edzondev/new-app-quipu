@@ -23,11 +23,13 @@ type Home = FunctionReturnType<typeof api.balances.getHome>;
 
 const SUM_ERROR = "Los tres sobres tienen que sumar 100%.";
 
-function SplitEditor({ home, onDone }: { home: Home; onDone: () => void }) {
+type Space = "personal" | "household";
+
+function SplitEditor({ home, space, onDone }: { home: Home; space: Space; onDone: () => void }) {
 	const [split, setSplit] = useState<Split>(home.split);
 	const updateSplit = useConvexMutation(api.settings.updateSplit);
 	const save = useMutation({
-		mutationFn: () => updateSplit({ space: "personal", split }),
+		mutationFn: () => updateSplit({ space, split }),
 		onSuccess: onDone,
 	});
 	// The same function the server runs, so what is promised here is what Inicio shows after saving.
@@ -94,10 +96,10 @@ function SplitEditor({ home, onDone }: { home: Home; onDone: () => void }) {
 }
 
 /** Opens the split editor. Used by Ajustes ("Cambiar") and by "Tus sobres" in Inicio ("Editar reparto"). */
-export function SplitDialog({ home, label }: { home: Home; label: string }) {
+export function SplitDialog({ home, space, label }: { home: Home; space: Space; label: string }) {
 	return (
-		<ActionDialog label={label}>
-			{(close) => <SplitEditor home={home} onDone={close} />}
+		<ActionDialog label={label} gated={space === "household"}>
+			{(close) => <SplitEditor home={home} space={space} onDone={close} />}
 		</ActionDialog>
 	);
 }

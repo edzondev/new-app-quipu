@@ -5,6 +5,8 @@ import { CommitmentsPage } from "#/modules/commitments/components/commitments-pa
 
 export const Route = createFileRoute("/_app/commitments")({
 	loader: async ({ context }) => {
+		// Without a personal plan Personal has nothing to load.
+		if (context.space === "personal" && !context.hasPlan) return;
 		await context.queryClient.query(
 			convexQuery(api.commitments.list, {
 				space: context.space,

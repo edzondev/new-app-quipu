@@ -13,8 +13,9 @@ import { useLimaDate } from "#/hooks/use-lima-date";
 import { EYEBROW } from "#/lib/typography";
 import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import type { Movement } from "#/modules/register/movement-draft";
-import { firstName } from "#/modules/household/first-name";
+import { firstName } from "@quipu/backend/shared/household";
 import { EmptyHousehold } from "#/modules/household/components/empty-household";
+import { HouseholdNotices } from "#/modules/household/components/household-notices";
 import { InviteStrip } from "#/modules/household/components/invite-strip";
 import { JoinedNotice } from "#/modules/household/components/joined-notice";
 import { useRegister } from "#/modules/register/register-dialog";
@@ -62,11 +63,11 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 	const movements = useQuery(convexQuery(api.transactions.list, args));
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const household = useQuery(convexQuery(api.household.get, space === "household" ? {} : "skip"));
+	const contributions = useQuery(
+		convexQuery(api.household.contributions, space === "household" ? { today } : "skip"),
+	);
 	const closed = useQuery(
-		convexQuery(
-			api.cycles.getUnseenClosed,
-			ensureOpen.isSuccess && space === "personal" ? { space } : "skip",
-		),
+		convexQuery(api.cycles.getUnseenClosed, ensureOpen.isSuccess ? { space } : "skip"),
 	);
 
 	if (
@@ -76,6 +77,7 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 		movements.isError ||
 		profile.isError ||
 		household.isError ||
+		contributions.isError ||
 		closed.isError
 	) {
 		return (
@@ -95,9 +97,9 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 	}
 	if (!home.data) return <HomeSkeleton />;
 	const notice = closed.data ? (
-		<CloseNotice key={closed.data.cycleId} closed={closed.data} />
+		<CloseNotice key={closed.data.cycleId} closed={closed.data} space={space} />
 	) : null;
-	// Nuestro espacio shows its number (S/ 0.00) even with no income; registering there waits for U12b.
+	// Nuestro espacio shows its number (S/ 0.00) even with no income.
 	if (home.data.empty && space === "personal") {
 		return (
 			<>
@@ -107,13 +109,14 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 		);
 	}
 	if (!commitments.data || !movements.data || !profile.data) return <HomeSkeleton />;
-	if (space === "household" && !household.data) return <HomeSkeleton />;
+	if (space === "household" && (!household.data || !contributions.data)) return <HomeSkeleton />;
 	return (
 		<>
 			{notice}
 			<Overview
 				home={home.data}
 				household={household.data ?? null}
+				contributions={contributions.data ?? null}
 				name={profile.data.name}
 				items={commitments.data.items}
 				rows={movements.data.rows}
@@ -142,6 +145,7 @@ function HomeSkeleton() {
 function Overview({
 	home,
 	household,
+	contributions,
 	name,
 	items,
 	rows,
@@ -150,6 +154,7 @@ function Overview({
 }: {
 	home: HomeData;
 	household: HouseholdData;
+	contributions: FunctionReturnType<typeof api.household.contributions> | null;
 	name: string;
 	items: CommitmentItem[];
 	rows: Movement[];
@@ -171,6 +176,7 @@ function Overview({
 				</p>
 			</header>
 
+			{household ? <HouseholdNotices household={household} /> : null}
 			{household?.invite ? <InviteStrip invite={household.invite} firstName={first} /> : null}
 
 			{home.earlyIncome ? (
@@ -192,6 +198,18 @@ function Overview({
 						<span>{whole}</span>
 						<span className="mt-2 text-[0.41em] text-muted-foreground">.{decimals}</span>
 					</p>
+					{space === "household" ? (
+						<p className="mt-2.5 text-sm text-muted-foreground">
+							Tus sobres personales son privados. Aquí solo se ve lo que aportas y lo que gastan
+							juntos.
+						</p>
+					) : null}
+					{contributions && household?.partnerName ? (
+						<p className="mt-2.5 text-[13px] text-muted-foreground">
+							Aportes del ciclo · Tú S/ {formatCents(contributions.mineCents)} ·{" "}
+							{household.partnerName} S/ {formatCents(contributions.partnerCents)}
+						</p>
+					) : null}
 					{home.dailyCents === 0 ? (
 						<p
 							role="status"

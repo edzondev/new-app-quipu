@@ -1,4 +1,5 @@
 import { ConvexError, type Infer, v } from "convex/values";
+import { rowLabel } from "../shared/activity";
 import { AMOUNT_KEYS, centsSchema, nameSchema } from "../shared/budget";
 import {
 	type CommitmentStatus,
@@ -15,9 +16,11 @@ import {
 	getCommitmentPayments,
 	getCommitmentStates,
 } from "./model/commitments";
-import { requireOpenCycle } from "./model/cycles";
+import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
+import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
-import { requireSpace, type SpaceKind } from "./model/spaces";
+import { requireWritableSpace } from "./model/plus";
+import { type SpaceKind } from "./model/spaces";
 import { spaceKind, spendable } from "./schema";
 
 const NOT_FOUND = "No encontramos este dato.";
@@ -37,7 +40,7 @@ const schedule = v.union(
 type Schedule = Infer<typeof schedule>;
 
 async function requireOwnCommitment(ctx: MutationCtx, kind: SpaceKind, id: Id<"commitments">) {
-	const { userId, space } = await requireSpace(ctx, kind);
+	const { userId, space } = await requireWritableSpace(ctx, kind);
 	const row = await ctx.db.get("commitments", id);
 	if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 	return { userId, space, row };
@@ -82,12 +85,13 @@ export const add = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, name, amountCents, envelope, schedule: when }) => {
-		const { space } = await requireSpace(ctx, kind);
+		const { userId, space } = await requireWritableSpace(ctx, kind);
 		parseInput(centsSchema, amountCents);
-		await ctx.db.insert(
-			"commitments",
-			buildRow(space._id, parseInput(nameSchema, name), amountCents, envelope, when),
-		);
+		const cleanName = parseInput(nameSchema, name);
+		await ctx.db.insert("commitments", buildRow(space._id, cleanName, amountCents, envelope, when));
+		await logEvent(ctx, space, userId, "commitment_added", {
+			detail: rowLabel(cleanName, amountCents),
+		});
 		return null;
 	},
 });
@@ -103,13 +107,17 @@ export const update = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, name, amountCents, envelope, schedule: when }) => {
-		const { row } = await requireOwnCommitment(ctx, kind, id);
+		const { userId, space, row } = await requireOwnCommitment(ctx, kind, id);
 		parseInput(centsSchema, amountCents);
+		const cleanName = parseInput(nameSchema, name);
 		await ctx.db.replace(
 			"commitments",
 			row._id,
-			buildRow(row.spaceId, parseInput(nameSchema, name), amountCents, envelope, when),
+			buildRow(row.spaceId, cleanName, amountCents, envelope, when),
 		);
+		await logEvent(ctx, space, userId, "commitment_edited", {
+			detail: rowLabel(cleanName, amountCents),
+		});
 		return null;
 	},
 });
@@ -119,8 +127,11 @@ export const remove = mutation({
 	args: { space: spaceKind, id: v.id("commitments") },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id }) => {
-		await requireOwnCommitment(ctx, kind, id);
+		const { userId, space, row } = await requireOwnCommitment(ctx, kind, id);
 		await ctx.db.delete("commitments", id);
+		await logEvent(ctx, space, userId, "commitment_removed", {
+			detail: rowLabel(row.name, row.amountCents),
+		});
 		return null;
 	},
 });
@@ -275,7 +286,7 @@ export const markPaid = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, amountCents }) => {
-		const { userId, space, cycle, today } = await requireOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		const row = await ctx.db.get("commitments", id);
 		if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 
@@ -301,6 +312,9 @@ export const markPaid = mutation({
 				...cycle.envelopes,
 				[key]: cycle.envelopes[key] - paidCents,
 			},
+		});
+		await logEvent(ctx, space, userId, "commitment_paid", {
+			detail: rowLabel(row.name, paidCents),
 		});
 		return null;
 	},

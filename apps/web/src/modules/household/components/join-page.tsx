@@ -22,6 +22,24 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
 	);
 }
 
+function ReasonMessage({
+	reason,
+	inviter,
+}: {
+	reason: "invalid" | "expired" | "full" | "rate_limited";
+	inviter: string;
+}) {
+	if (reason === "rate_limited") {
+		return <Message title="Muchos intentos.">Prueba de nuevo en unos minutos.</Message>;
+	}
+	if (reason === "invalid") {
+		return <Message title="Ese código no existe.">Revísalo o pide uno nuevo.</Message>;
+	}
+	return (
+		<Message title="Esta invitación ya no sirve.">Pídele a {inviter} que te envíe otra.</Message>
+	);
+}
+
 /** /unirme and /unirme/$code: one page. The code field shows when there is no code or it does not work. */
 export function JoinPage({
 	initialCode,
@@ -40,16 +58,19 @@ export function JoinPage({
 	const profile = useQuery(convexQuery(api.profiles.myProfile, isAuthenticated ? {} : "skip"));
 	const info = useInviteInfo(code);
 	const joinHousehold = useConvexMutation(api.household.joinHousehold);
-	const join = useMutation({
-		mutationFn: () => joinHousehold({ code }),
-		onSuccess: (result) => {
-			if (result.ok) {
-				void navigate({ to: "/home", search: { space: "household", joined: true } });
-			}
-		},
+	function onJoined(result: { ok: boolean }) {
+		if (result.ok) void navigate({ to: "/home", search: { space: "household", joined: true } });
+	}
+	const join = useMutation({ mutationFn: () => joinHousehold({ code }), onSuccess: onJoined });
+	// Only for who already has a household of their own with nothing in it.
+	const replace = useMutation({
+		mutationFn: () => joinHousehold({ code, replaceEmpty: true }),
+		onSuccess: onJoined,
 	});
 
-	const reason = join.data && !join.data.ok ? join.data.reason : null;
+	// Joining and replacing an empty household answer the same way, so one reading serves both.
+	const result = replace.data ?? join.data;
+	const reason = result && !result.ok ? result.reason : null;
 	// Seven characters never reach the server: there is no such code.
 	const lookup =
 		code.length > 6
@@ -73,12 +94,15 @@ export function JoinPage({
 	const canJoin = view === "valid" || view === "rate";
 	const showCard = initialCode !== "" && !edited && (canJoin || view === "loading");
 	// Already in a space: while joining, the profile flips first and must not hide the card.
-	const alreadyIn = profile.data?.hasHousehold && !join.isPending && !join.isSuccess;
+	const alreadyIn =
+		profile.data?.hasHousehold && !join.isPending && !replace.isPending && result?.ok !== true;
+	const mineIsEmpty = useQuery(convexQuery(api.household.isEmpty, alreadyIn ? {} : "skip"));
 
 	function writeAnother() {
 		setCode("");
 		setEdited(true);
 		join.reset();
+		replace.reset();
 		inputRef.current?.focus();
 	}
 
@@ -131,6 +155,23 @@ export function JoinPage({
 				>
 					Ir a mi espacio
 				</Button>
+				{reason ? <ReasonMessage reason={reason} inviter={inviter} /> : null}
+				{mineIsEmpty.data && canJoin ? (
+					<Button
+						variant="outline"
+						size="xl"
+						className="mt-3 w-full rounded-full"
+						loading={replace.isPending}
+						onClick={() => replace.mutate()}
+					>
+						Borrar el mío y unirme
+					</Button>
+				) : null}
+				{replace.isError ? (
+					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+						{readError(replace.error)}
+					</p>
+				) : null}
 			</>
 		);
 	} else if (showCard) {
@@ -172,6 +213,7 @@ export function JoinPage({
 							setCode(extractCode(event.target.value));
 							setEdited(true);
 							join.reset();
+							replace.reset();
 						}}
 						unstyled
 						className="w-full border-0 border-b border-input bg-transparent has-focus-visible:border-foreground [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-3.5 [&_[data-slot=input]]:font-mono [&_[data-slot=input]]:text-lg [&_[data-slot=input]]:tracking-widest"

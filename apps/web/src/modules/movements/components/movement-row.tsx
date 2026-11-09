@@ -3,6 +3,7 @@ import { formatDay, monthName } from "@quipu/backend/shared/dates";
 import { cn } from "cn";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { canEdit, editDraft, type Movement } from "#/modules/register/movement-draft";
+import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { useRegister } from "#/modules/register/register-dialog";
 
 const KIND = {
@@ -21,6 +22,7 @@ function incomeLabel(row: Movement, when?: string) {
 
 export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 	const openRegister = useRegister();
+	const gate = useReadOnlyGate();
 	const { name, adds } = KIND[row.kind];
 	const isSaving = row.kind === "saving";
 	const envelope = isSaving
@@ -28,8 +30,8 @@ export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 		: row.envelope
 			? ENVELOPE_LABELS[row.envelope]
 			: incomeLabel(row, when);
-	// Personal leaves who null; household sends the author name and we swap mine → Tú here.
-	const whoLabel = row.mine && row.who !== null ? "Tú" : row.who;
+	// Personal leaves who null; household sends the author's first name. Only the author changes a row.
+	const whoLabel = row.who === null ? null : row.mine ? "Tú" : `Anotó ${row.who}`;
 	const detail = [envelope, whoLabel, when].filter(Boolean).join(" · ");
 	const amount = formatCents(row.amountCents);
 	const signedAmount = isSaving ? `S/ ${amount}` : `${adds ? "+" : "−"} S/ ${amount}`;
@@ -66,6 +68,7 @@ export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 				<button
 					type="button"
 					onClick={() => openRegister(editDraft(row))}
+					{...gate}
 					className="flex min-h-[60px] w-full items-center justify-between gap-4 py-2.5 text-left"
 				>
 					{text}

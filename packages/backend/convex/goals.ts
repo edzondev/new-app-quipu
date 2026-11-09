@@ -1,13 +1,15 @@
 import { ConvexError, v } from "convex/values";
 import * as z from "zod/mini";
+import { moneyLabel } from "../shared/activity";
 import { centsSchema, nameSchema } from "../shared/budget";
 import { isoDateSchema } from "../shared/dates";
 import { suggestFundGoalCents } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { getCycleAt } from "./model/cycles";
+import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
-import { requirePlus } from "./model/plus";
+import { requirePlus, requireWritableSpace } from "./model/plus";
 import { requirePlan, requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind } from "./schema";
 
@@ -21,7 +23,7 @@ const goalFieldsSchema = z.object({
 });
 
 async function requireOwnGoal(ctx: MutationCtx, kind: SpaceKind, id: Id<"goals">) {
-	const { userId, space } = await requireSpace(ctx, kind);
+	const { userId, space } = await requireWritableSpace(ctx, kind);
 	const row = await ctx.db.get("goals", id);
 	if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 	return { userId, space, row };
@@ -80,11 +82,10 @@ export const fund = query({
 		fundCents: v.number(),
 		fundGoalCents: v.union(v.number(), v.null()),
 		suggestedFundGoalCents: v.union(v.number(), v.null()),
-		isOwner: v.boolean(),
 	}),
 	handler: async (ctx, { space: kind, today }) => {
 		parseInput(isoDateSchema, today);
-		const { userId, space } = await requireSpace(ctx, kind);
+		const { space } = await requireSpace(ctx, kind);
 		const cycle = await getCycleAt(ctx, space._id, today);
 		const suggested =
 			cycle && cycle.endDate >= today
@@ -94,7 +95,6 @@ export const fund = query({
 			fundCents: space.fundCents,
 			fundGoalCents: space.fundGoalCents ?? null,
 			suggestedFundGoalCents: suggested,
-			isOwner: space.ownerId === userId,
 		};
 	},
 });
@@ -104,12 +104,15 @@ export const setFundGoal = mutation({
 	args: { space: spaceKind, targetCents: v.union(v.number(), v.null()) },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, targetCents }) => {
-		const { userId, space } = await requireSpace(ctx, kind);
+		const { userId, space } = await requireWritableSpace(ctx, kind);
 		parseInput(z.nullable(centsSchema), targetCents);
-		if (space.ownerId !== userId) {
-			throw new ConvexError("Solo quien creó el hogar define la meta del fondo.");
-		}
 		await ctx.db.patch("spaces", space._id, { fundGoalCents: targetCents ?? undefined });
+		const label = (cents: number | undefined) =>
+			cents === undefined ? "Sin meta" : moneyLabel(cents);
+		const before = label(space.fundGoalCents);
+		const after = label(targetCents ?? undefined);
+		if (before !== after)
+			await logEvent(ctx, space, userId, "fund_goal_changed", { before, after });
 		return null;
 	},
 });
@@ -123,15 +126,19 @@ export const add = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, name, targetCents, targetMonth }) => {
-		const { userId, space } = await requireSpace(ctx, kind);
+		const { userId, space } = await requireWritableSpace(ctx, kind);
 		const fields = parseInput(goalFieldsSchema, { name, targetCents, targetMonth });
 		const existing = await ctx.db
 			.query("goals")
 			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
 			.take(FREE_GOAL_CAP + 1);
-		if (existing.length >= FREE_GOAL_CAP) await requirePlus(ctx, userId);
+		// The limit is a Personal one; a household is already Plus (writing needs it).
+		if (space.kind === "personal" && existing.length >= FREE_GOAL_CAP) {
+			await requirePlus(ctx, userId);
+		}
 
 		await ctx.db.insert("goals", { spaceId: space._id, ...fields });
+		await logEvent(ctx, space, userId, "goal_added", { detail: fields.name });
 		return null;
 	},
 });
@@ -146,9 +153,21 @@ export const update = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, name, targetCents, targetMonth }) => {
-		const { row } = await requireOwnGoal(ctx, kind, id);
+		const { userId, space, row } = await requireOwnGoal(ctx, kind, id);
 		const fields = parseInput(goalFieldsSchema, { name, targetCents, targetMonth });
 		await ctx.db.patch("goals", row._id, fields);
+		const unchanged =
+			row.name === fields.name &&
+			row.targetCents === fields.targetCents &&
+			row.targetMonth === fields.targetMonth;
+		if (!unchanged) {
+			await logEvent(ctx, space, userId, "goal_edited", {
+				detail: fields.name,
+				...(row.targetCents === fields.targetCents
+					? {}
+					: { before: moneyLabel(row.targetCents), after: moneyLabel(fields.targetCents) }),
+			});
+		}
 		return null;
 	},
 });
@@ -158,7 +177,7 @@ export const remove = mutation({
 	args: { space: spaceKind, id: v.id("goals") },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id }) => {
-		const { space, row } = await requireOwnGoal(ctx, kind, id);
+		const { userId, space, row } = await requireOwnGoal(ctx, kind, id);
 		const savedCents = await savedCentsFor(ctx, row._id, space._id);
 		if (savedCents > 0) {
 			await ctx.db.patch("spaces", space._id, {
@@ -183,6 +202,7 @@ export const remove = mutation({
 			}
 		}
 		await ctx.db.delete("goals", row._id);
+		await logEvent(ctx, space, userId, "goal_removed", { detail: row.name });
 		return null;
 	},
 });

@@ -27,6 +27,7 @@ import {
 	MenuTrigger,
 } from "#/components/ui/menu";
 import { useSignOut } from "#/hooks/use-sign-out";
+import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
 import { setTheme, THEMES, useTheme } from "#/lib/theme";
 import { useRegister } from "#/modules/register/register-dialog";
@@ -93,11 +94,14 @@ function SpaceSwitch({ onSelect }: { onSelect?: () => void }) {
 }
 
 export function AppBar() {
-	const { space } = useSearch({ from: "/_app" });
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const signOut = useSignOut("current");
 	const theme = useTheme();
 	const openRegister = useRegister();
+	const gate = useReadOnlyGate();
+	const { space } = useSearch({ from: "/_app" });
+	// Personal without a plan has no sobres to register in.
+	const canRegister = space === "household" || profile.data?.plan !== null;
 	// The menu is open only for the address it was opened on, so back and forward close it
 	// without an effect. Choosing the page you are already on has to close it by hand.
 	const href = useRouterState({ select: (state) => state.location.href });
@@ -160,12 +164,11 @@ export function AppBar() {
 						<SpaceSwitch />
 					</div>
 
-					{/* Hidden, not off, in Nuestro espacio until U12b. */}
-					{space ? null : (
-						<Button type="button" onClick={() => openRegister()} className="rounded-full">
+					{canRegister ? (
+						<Button type="button" onClick={() => openRegister()} className="rounded-full" {...gate}>
 							+ Registrar
 						</Button>
-					)}
+					) : null}
 
 					<Menu>
 						<MenuTrigger

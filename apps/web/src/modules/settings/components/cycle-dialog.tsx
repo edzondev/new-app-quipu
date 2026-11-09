@@ -19,25 +19,37 @@ import { getJoinedCycleText } from "../cycle-summary";
 import { ActionDialog } from "./action-dialog";
 
 type Props = {
+	/** Whose cycle it is: the household changes straight away for its next cycle, Personal keeps a pending plan. */
+	space: "personal" | "household";
 	plan: Plan;
 	nextPlan: Plan | null;
 	/** Last day of the cycle that is open now. */
 	currentEnd: string;
 };
 
-function CycleEditor({ plan, nextPlan, currentEnd, onDone }: Props & { onDone: () => void }) {
+function CycleEditor({
+	space,
+	plan,
+	nextPlan,
+	currentEnd,
+	onDone,
+}: Props & { onDone: () => void }) {
 	// Starts from the pending change if there is one: that is what the person is editing.
 	const base = nextPlan ?? plan;
 	const [cadence, setCadence] = useState<Cadence>(base.cadence);
 	const [startDay, setStartDay] = useState(String(base.cycleStartDay));
 	const updatePlan = useConvexMutation(api.settings.updatePlan);
+	const updateCycle = useConvexMutation(api.household.updateCycle);
 	const candidate: Plan = {
 		cadence,
 		cycleStartDay: parseStartDay(startDay),
 		incomeCents: plan.incomeCents,
 	};
 	const save = useMutation({
-		mutationFn: () => updatePlan(candidate),
+		mutationFn: () =>
+			space === "household"
+				? updateCycle({ cadence: candidate.cadence, cycleStartDay: candidate.cycleStartDay })
+				: updatePlan(candidate),
 		onSuccess: onDone,
 	});
 	// Going back to the current plan clears the pending change, so there is nothing to explain.
@@ -91,7 +103,7 @@ function CycleEditor({ plan, nextPlan, currentEnd, onDone }: Props & { onDone: (
 
 export function CycleDialog(props: Props) {
 	return (
-		<ActionDialog label="Cambiar">
+		<ActionDialog label="Cambiar" gated={props.space === "household"}>
 			{(close) => <CycleEditor {...props} onDone={close} />}
 		</ActionDialog>
 	);

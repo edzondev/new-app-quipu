@@ -135,6 +135,8 @@ test("the notice carries what the close moved: leftover N+G into the new cycle, 
 		newCycleStart: "2026-11-01",
 		carriedCents: 40_000,
 		fundedCents: 10_000,
+		surplusCents: 0,
+		shortfallCents: 0,
 	});
 	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-11-01" });
 	expect(home.needsCents + home.wantsCents).toBe(40_000);

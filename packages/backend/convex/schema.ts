@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { EVENT_TYPES } from "../shared/activity";
 
 export const plan = v.object({
 	cadence: v.union(v.literal("monthly"), v.literal("biweekly"), v.literal("weekly")),
@@ -39,6 +40,13 @@ export const closeSummary = v.union(
 export const envelope = v.union(v.literal("needs"), v.literal("wants"), v.literal("savings"));
 export const spendable = v.union(v.literal("needs"), v.literal("wants"));
 export const spaceKind = v.union(v.literal("personal"), v.literal("household"));
+
+const [firstEvent, secondEvent, ...otherEvents] = EVENT_TYPES;
+export const eventType = v.union(
+	v.literal(firstEvent),
+	v.literal(secondEvent),
+	...otherEvents.map((type) => v.literal(type)),
+);
 
 export const extraType = v.union(
 	v.literal("gratification"),
@@ -85,6 +93,10 @@ export default defineSchema({
 		// A cycle change waits here and becomes `plan` when the next personal cycle is created.
 		nextPlan: v.optional(plan),
 		lastSeenClosedCycleId: v.optional(v.id("cycles")),
+		// The same for the household's closes: each person dismisses their own notice.
+		lastSeenHouseholdClosedCycleId: v.optional(v.id("cycles")),
+		// Withdrawals from the household fund by the other person up to this time were already seen.
+		seenWithdrawalAt: v.optional(v.number()),
 		// Quipu Plus trial end (ms). Set by us on the server for 14 days, no card.
 		// Polar (web) and RevenueCat (mobile) only charge.
 		trialEndsAt: v.optional(v.number()),
@@ -98,6 +110,8 @@ export default defineSchema({
 		cycleStartDay: v.optional(plan.fields.cycleStartDay),
 		inviteCode: v.optional(v.string()),
 		inviteExpiresAt: v.optional(v.number()),
+		// Set when the other person leaves; the one who stays dismisses it.
+		partnerLeft: v.optional(v.object({ name: v.string() })),
 		fundGoalCents: v.optional(v.number()),
 		// Emergency fund cash. Updated on fund saves/withdrawals (not goal saves).
 		fundCents: v.number(),
@@ -108,6 +122,7 @@ export default defineSchema({
 	spaceMembers: defineTable({
 		spaceId: v.id("spaces"),
 		userId: v.string(),
+		joinedAt: v.optional(v.number()),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_spaceId", ["spaceId"]),
@@ -182,6 +197,21 @@ export default defineSchema({
 			}),
 		),
 	).index("by_spaceId", ["spaceId"]),
+
+	// Who changed what in a household: every shared change and every fund withdrawal. Never written for Personal.
+	spaceEvents: defineTable({
+		spaceId: v.id("spaces"),
+		userId: v.string(),
+		type: eventType,
+		detail: v.optional(v.string()),
+		before: v.optional(v.string()),
+		after: v.optional(v.string()),
+		amountCents: v.optional(v.number()),
+	})
+		// Activity lists every type in time order; by_space_type only finds one type.
+		// eslint-disable-next-line @convex-dev/no-duplicate-indexes
+		.index("by_spaceId", ["spaceId"])
+		.index("by_space_type", ["spaceId", "type"]),
 
 	goals: defineTable({
 		spaceId: v.id("spaces"),

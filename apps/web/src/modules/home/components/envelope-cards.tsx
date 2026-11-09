@@ -45,8 +45,7 @@ export function EnvelopeCards({ home, space }: { home: Home; space: "personal" |
 		<section>
 			<SectionHeading
 				title="Tus sobres"
-				// The split belongs to Personal; Nuestro espacio has its own rules, still pending.
-				action={space === "personal" ? <SplitDialog home={home} label="Editar reparto" /> : null}
+				action={<SplitDialog home={home} space={space} label="Editar reparto" />}
 			/>
 			<ul>
 				{ORDER.map((envelope) => {

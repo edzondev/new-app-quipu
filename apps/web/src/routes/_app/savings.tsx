@@ -5,6 +5,8 @@ import { SavingsPage } from "#/modules/savings/components/savings-page";
 
 export const Route = createFileRoute("/_app/savings")({
 	loader: async ({ context }) => {
+		// Without a personal plan Personal has nothing to load.
+		if (context.space === "personal" && !context.hasPlan) return;
 		await Promise.all([
 			context.queryClient.query(
 				convexQuery(api.goals.fund, { space: context.space, today: context.today }),
