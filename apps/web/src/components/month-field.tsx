@@ -119,12 +119,14 @@ export function MonthField({
 	today: string;
 }) {
 	const [open, setOpen] = useState(false);
+	const field = useRef<HTMLButtonElement>(null);
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger
 				render={
 					<Button
+						ref={field}
 						type="button"
 						variant="outline"
 						size="xl"
@@ -136,7 +138,7 @@ export function MonthField({
 				<CalendarIcon aria-hidden />
 				{value ? formatMonthYear(value) : <span className="text-muted-foreground">{LABEL}</span>}
 			</PopoverTrigger>
-			<PopoverPopup align="start">
+			<PopoverPopup align="start" finalFocus={field}>
 				<MonthGrid
 					value={value}
 					today={today}
