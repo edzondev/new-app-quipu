@@ -2,11 +2,12 @@ import { ConvexError, v } from "convex/values";
 import { nameSchema } from "../shared/budget";
 import { getLimaDate, isoDateSchema } from "../shared/dates";
 import { firstName } from "../shared/household";
-import { isValidPlan } from "../shared/plan";
+import { cycleLabel, isValidPlan } from "../shared/plan";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { createFirstCycle, getCycleAt, getLatestClosed } from "./model/cycles";
+import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
 import { householdHasPlus, requirePlus, requireWritableSpace } from "./model/plus";
 import {
@@ -28,6 +29,8 @@ const ALREADY_IN = "Ya formas parte de un hogar.";
 const ALONE = "Tu pareja aún no entra.";
 const NOT_EMPTY = "Tu hogar ya tiene movimientos. No lo podemos borrar desde aquí.";
 const MAX_EMPTY_CYCLES = 120;
+const MAX_EMPTY_EVENTS = 200;
+const DEFAULT_NAME = "Nuestro espacio";
 const FULL = "Nuestro espacio ya tiene dos personas.";
 const INVITE_MS = 7 * 24 * 60 * 60 * 1000;
 const HOUSEHOLD_SPLIT = { needs: 50, wants: 30, savings: 20 };
@@ -82,6 +85,21 @@ async function isEmptyHousehold(ctx: QueryCtx, space: Doc<"spaces">) {
 	return true;
 }
 
+/** The latest fund withdrawal by the other person that this person has not dismissed. */
+async function unseenPartnerWithdrawal(ctx: QueryCtx, spaceId: Id<"spaces">, userId: string) {
+	const profile = await ctx.db
+		.query("profiles")
+		.withIndex("by_userId", (q) => q.eq("userId", userId))
+		.unique();
+	const latest = await ctx.db
+		.query("spaceEvents")
+		.withIndex("by_space_type", (q) => q.eq("spaceId", spaceId).eq("type", "withdrawal"))
+		.order("desc")
+		.take(5);
+	const theirs = latest.find((event) => event.userId !== userId);
+	return theirs && theirs._creationTime > (profile?.seenWithdrawalAt ?? 0) ? theirs : null;
+}
+
 /** Deletes an empty household: its cycles, its member and the space. */
 async function deleteEmptyHousehold(ctx: MutationCtx, space: Doc<"spaces">) {
 	const cycles = await ctx.db
@@ -89,6 +107,11 @@ async function deleteEmptyHousehold(ctx: MutationCtx, space: Doc<"spaces">) {
 		.withIndex("by_space_start", (q) => q.eq("spaceId", space._id))
 		.take(MAX_EMPTY_CYCLES);
 	for (const cycle of cycles) await ctx.db.delete("cycles", cycle._id);
+	const events = await ctx.db
+		.query("spaceEvents")
+		.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+		.take(MAX_EMPTY_EVENTS);
+	for (const event of events) await ctx.db.delete("spaceEvents", event._id);
 	for (const member of await getMembers(ctx, space._id)) {
 		await ctx.db.delete("spaceMembers", member._id);
 	}
@@ -200,9 +223,10 @@ export const joinHousehold = mutation({
 			.query("profiles")
 			.withIndex("by_userId", (q) => q.eq("userId", user._id))
 			.unique();
-		if (latestClosed && profile) {
+		if (profile) {
 			await ctx.db.patch("profiles", profile._id, {
-				lastSeenHouseholdClosedCycleId: latestClosed._id,
+				seenWithdrawalAt: Date.now(),
+				...(latestClosed ? { lastSeenHouseholdClosedCycleId: latestClosed._id } : {}),
 			});
 		}
 		// Invalidate the code without clearing optional fields (patch can't unset).
@@ -235,6 +259,23 @@ export const leaveHousehold = mutation({
 	},
 });
 
+export const dismissWithdrawalNotice = mutation({
+	args: {},
+	returns: v.null(),
+	handler: async (ctx) => {
+		const { userId, space } = await requireSpace(ctx, "household");
+		const profile = await ctx.db
+			.query("profiles")
+			.withIndex("by_userId", (q) => q.eq("userId", userId))
+			.unique();
+		const event = await unseenPartnerWithdrawal(ctx, space._id, userId);
+		if (profile && event) {
+			await ctx.db.patch("profiles", profile._id, { seenWithdrawalAt: event._creationTime });
+		}
+		return null;
+	},
+});
+
 export const dismissPartnerLeft = mutation({
 	args: {},
 	returns: v.null(),
@@ -250,8 +291,13 @@ export const rename = mutation({
 	args: { name: v.string() },
 	returns: v.null(),
 	handler: async (ctx, { name }) => {
-		const { space } = await requireWritableSpace(ctx, "household");
-		await ctx.db.patch("spaces", space._id, { name: parseInput(nameSchema, name) });
+		const { userId, space } = await requireWritableSpace(ctx, "household");
+		const cleanName = parseInput(nameSchema, name);
+		await ctx.db.patch("spaces", space._id, { name: cleanName });
+		await logEvent(ctx, space, userId, "renamed", {
+			before: space.name ?? DEFAULT_NAME,
+			after: cleanName,
+		});
 		return null;
 	},
 });
@@ -261,11 +307,16 @@ export const updateCycle = mutation({
 	args: { cadence: plan.fields.cadence, cycleStartDay: plan.fields.cycleStartDay },
 	returns: v.null(),
 	handler: async (ctx, { cadence, cycleStartDay }) => {
-		const { space } = await requireWritableSpace(ctx, "household");
+		const { userId, space } = await requireWritableSpace(ctx, "household");
 		if (!isValidPlan({ cadence, cycleStartDay })) {
 			throw new ConvexError("Revisa los datos e inténtalo otra vez.");
 		}
+		const before = await requirePlan(ctx, space);
 		await ctx.db.patch("spaces", space._id, { cadence, cycleStartDay });
+		await logEvent(ctx, space, userId, "cycle_changed", {
+			before: cycleLabel(before),
+			after: cycleLabel({ cadence, cycleStartDay }),
+		});
 		return null;
 	},
 });
@@ -282,6 +333,8 @@ export const get = query({
 			partnerLeft: v.union(v.string(), v.null()),
 			// Alone and with nothing recorded: it can be deleted to join another household.
 			isEmpty: v.boolean(),
+			// The other person's latest withdrawal from the fund, until this person dismisses it.
+			withdrawalNotice: v.union(v.object({ name: v.string(), amountCents: v.number() }), v.null()),
 			// Only for who created the household, while nobody has joined. The page decides if it expired:
 			// a query does not run again when time passes.
 			invite: v.union(v.object({ code: v.string(), expiresAt: v.number() }), v.null()),
@@ -300,6 +353,7 @@ export const get = query({
 		const partner = partnerId ? await authComponent.getAnyUserById(ctx, partnerId) : null;
 		const { inviteCode, inviteExpiresAt } = space;
 		const isOwner = space.ownerId === user._id;
+		const withdrawal = await unseenPartnerWithdrawal(ctx, space._id, user._id);
 		const payer = isOwner ? null : await authComponent.getAnyUserById(ctx, space.ownerId);
 
 		return {
@@ -309,6 +363,9 @@ export const get = query({
 			partnerJoinedAt: partnerMember?.joinedAt ?? null,
 			partnerLeft: space.partnerLeft?.name ?? null,
 			isEmpty: await isEmptyHousehold(ctx, space),
+			withdrawalNotice: withdrawal
+				? { name: partner ? firstName(partner.name) : "", amountCents: withdrawal.amountCents ?? 0 }
+				: null,
 			invite:
 				isOwner && !partnerId && inviteCode && inviteExpiresAt
 					? { code: inviteCode, expiresAt: inviteExpiresAt }

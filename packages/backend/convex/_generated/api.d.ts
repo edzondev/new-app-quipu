@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as activity from "../activity.js";
 import type * as auth from "../auth.js";
 import type * as balances from "../balances.js";
 import type * as commitments from "../commitments.js";
@@ -19,6 +20,7 @@ import type * as model_budget from "../model/budget.js";
 import type * as model_closeSummary from "../model/closeSummary.js";
 import type * as model_commitments from "../model/commitments.js";
 import type * as model_cycles from "../model/cycles.js";
+import type * as model_events from "../model/events.js";
 import type * as model_input from "../model/input.js";
 import type * as model_plus from "../model/plus.js";
 import type * as model_progress from "../model/progress.js";
@@ -36,6 +38,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  activity: typeof activity;
   auth: typeof auth;
   balances: typeof balances;
   commitments: typeof commitments;
@@ -47,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   "model/closeSummary": typeof model_closeSummary;
   "model/commitments": typeof model_commitments;
   "model/cycles": typeof model_cycles;
+  "model/events": typeof model_events;
   "model/input": typeof model_input;
   "model/plus": typeof model_plus;
   "model/progress": typeof model_progress;

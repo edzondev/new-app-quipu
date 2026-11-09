@@ -1,9 +1,11 @@
 import { ConvexError, v } from "convex/values";
 import { addAmounts, reallocateFree, subtractAmounts, ZERO_AMOUNTS } from "../shared/budget";
+import { splitLabel } from "../shared/activity";
 import { isSamePlan, isValidPlan, isValidSplit } from "../shared/plan";
 import { mutation } from "./_generated/server";
 import { getReserved } from "./model/budget";
 import { requireWritableOpenCycle } from "./model/cycles";
+import { logEvent } from "./model/events";
 import { BAD_INPUT } from "./model/input";
 import { requireUser } from "./model/spaces";
 import { plan, spaceKind, split } from "./schema";
@@ -38,7 +40,7 @@ export const updateSplit = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, split: splitValue }) => {
-		const { space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
+		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
 		if (!isValidSplit(splitValue)) throw new ConvexError(BAD_INPUT);
 		// Spent money already left the envelopes; money held for commitments still due stays where it is.
 		const reserved = await getReserved(ctx, space._id, cycle.endDate, today);
@@ -50,6 +52,10 @@ export const updateSplit = mutation({
 				cycle.reallocated ?? ZERO_AMOUNTS,
 				subtractAmounts(envelopes, cycle.envelopes),
 			),
+		});
+		await logEvent(ctx, space, userId, "split_changed", {
+			before: splitLabel(cycle.split),
+			after: splitLabel(splitValue),
 		});
 		return null;
 	},

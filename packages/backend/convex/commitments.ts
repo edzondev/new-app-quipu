@@ -1,4 +1,5 @@
 import { ConvexError, type Infer, v } from "convex/values";
+import { rowLabel } from "../shared/activity";
 import { AMOUNT_KEYS, centsSchema, nameSchema } from "../shared/budget";
 import {
 	type CommitmentStatus,
@@ -16,6 +17,7 @@ import {
 	getCommitmentStates,
 } from "./model/commitments";
 import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
+import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
 import { requireWritableSpace } from "./model/plus";
 import { type SpaceKind } from "./model/spaces";
@@ -83,12 +85,13 @@ export const add = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, name, amountCents, envelope, schedule: when }) => {
-		const { space } = await requireWritableSpace(ctx, kind);
+		const { userId, space } = await requireWritableSpace(ctx, kind);
 		parseInput(centsSchema, amountCents);
-		await ctx.db.insert(
-			"commitments",
-			buildRow(space._id, parseInput(nameSchema, name), amountCents, envelope, when),
-		);
+		const cleanName = parseInput(nameSchema, name);
+		await ctx.db.insert("commitments", buildRow(space._id, cleanName, amountCents, envelope, when));
+		await logEvent(ctx, space, userId, "commitment_added", {
+			detail: rowLabel(cleanName, amountCents),
+		});
 		return null;
 	},
 });
@@ -104,13 +107,17 @@ export const update = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id, name, amountCents, envelope, schedule: when }) => {
-		const { row } = await requireOwnCommitment(ctx, kind, id);
+		const { userId, space, row } = await requireOwnCommitment(ctx, kind, id);
 		parseInput(centsSchema, amountCents);
+		const cleanName = parseInput(nameSchema, name);
 		await ctx.db.replace(
 			"commitments",
 			row._id,
-			buildRow(row.spaceId, parseInput(nameSchema, name), amountCents, envelope, when),
+			buildRow(row.spaceId, cleanName, amountCents, envelope, when),
 		);
+		await logEvent(ctx, space, userId, "commitment_edited", {
+			detail: rowLabel(cleanName, amountCents),
+		});
 		return null;
 	},
 });
@@ -120,8 +127,11 @@ export const remove = mutation({
 	args: { space: spaceKind, id: v.id("commitments") },
 	returns: v.null(),
 	handler: async (ctx, { space: kind, id }) => {
-		await requireOwnCommitment(ctx, kind, id);
+		const { userId, space, row } = await requireOwnCommitment(ctx, kind, id);
 		await ctx.db.delete("commitments", id);
+		await logEvent(ctx, space, userId, "commitment_removed", {
+			detail: rowLabel(row.name, row.amountCents),
+		});
 		return null;
 	},
 });
@@ -302,6 +312,9 @@ export const markPaid = mutation({
 				...cycle.envelopes,
 				[key]: cycle.envelopes[key] - paidCents,
 			},
+		});
+		await logEvent(ctx, space, userId, "commitment_paid", {
+			detail: rowLabel(row.name, paidCents),
 		});
 		return null;
 	},
