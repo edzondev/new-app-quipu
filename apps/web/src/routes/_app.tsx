@@ -13,18 +13,23 @@ export const Route = createFileRoute("/_app")({
 	search: {
 		middlewares: [retainSearchParams(["space"])],
 	},
-	beforeLoad: async ({ context, search }) => {
+	beforeLoad: async ({ context, search, location }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
 		const profile = await context.queryClient.query(convexQuery(api.profiles.myProfile, {}));
 		if (!profile?.plan) throw redirect({ to: "/onboarding" });
-		if (search.space === "household" && !profile.hasHousehold) {
-			throw redirect({ search: (prev) => ({ ...prev, space: undefined }) });
-		}
 		const space: "household" | "personal" = search.space === "household" ? "household" : "personal";
+		const { hasHousehold } = profile;
 		const today = getLimaDate();
+		// Without a household only Inicio can show Nuestro espacio (the invite screen); other pages go back to Personal.
+		if (space === "household" && !hasHousehold) {
+			if (location.pathname !== "/home") {
+				throw redirect({ search: (prev) => ({ ...prev, space: undefined }) });
+			}
+			return { space, today, hasHousehold };
+		}
 		// Must run before child loaders that read requireOpenCycle data.
 		await ensureOpenCycle(context.queryClient, context.convexQueryClient, space, today);
-		return { space, today };
+		return { space, today, hasHousehold };
 	},
 	component: AppLayout,
 });

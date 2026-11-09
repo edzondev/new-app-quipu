@@ -1,15 +1,14 @@
-import { useNavigate } from "@tanstack/react-router";
 import { Fingerprint } from "lucide-react";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { authClient } from "#/lib/auth-client";
 
 type Props = {
-	next: "/home" | "/onboarding";
+	/** Where to go once the key is made or skipped. */
+	onDone: () => Promise<void>;
 };
 
-export function PasskeyStep({ next }: Props) {
-	const navigate = useNavigate();
+export function PasskeyStep({ onDone }: Props) {
 	const [isPending, setIsPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +21,7 @@ export function PasskeyStep({ next }: Props) {
 			setError("No pudimos crear tu llave. Inténtalo otra vez o sigue sin ella.");
 			return;
 		}
-		await navigate({ to: next });
+		await onDone();
 	}
 
 	return (
@@ -50,7 +49,7 @@ export function PasskeyStep({ next }: Props) {
 					variant="secondary"
 					className="h-12 flex-1 rounded-full px-4"
 					disabled={isPending}
-					onClick={() => navigate({ to: next })}
+					onClick={onDone}
 				>
 					Ahora no
 				</Button>

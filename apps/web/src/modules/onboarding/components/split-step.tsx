@@ -18,11 +18,13 @@ import {
 type Props = {
 	defaultValues: SplitStepValues;
 	cycleStep: CycleStepValues;
+	/** Where to go when the plan is saved. */
+	redirect: string;
 	/** Back keeps what was typed, even if it doesn't add up to 100 yet. */
 	onBack: (value: SplitStepValues) => void;
 };
 
-export function SplitStep({ defaultValues, cycleStep, onBack }: Props) {
+export function SplitStep({ defaultValues, cycleStep, redirect, onBack }: Props) {
 	const navigate = useNavigate();
 	const completeOnboarding = useConvexMutation(api.profiles.completeOnboarding);
 	const [saveError, setSaveError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function SplitStep({ defaultValues, cycleStep, onBack }: Props) {
 					todayCents,
 					split: value.split,
 				});
-				await navigate({ to: "/home", replace: true });
+				await navigate({ to: redirect, replace: true });
 			} catch (error) {
 				setSaveError(
 					error instanceof ConvexError

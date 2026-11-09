@@ -13,6 +13,9 @@ import { useLimaDate } from "#/hooks/use-lima-date";
 import { EYEBROW } from "#/lib/typography";
 import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import type { Movement } from "#/modules/register/movement-draft";
+import { EmptyHousehold } from "#/modules/household/components/empty-household";
+import { InviteStrip } from "#/modules/household/components/invite-strip";
+import { JoinedNotice } from "#/modules/household/components/joined-notice";
 import { useRegister } from "#/modules/register/register-dialog";
 import { CloseNotice } from "./close-notice";
 import { EnvelopeCards } from "./envelope-cards";
@@ -21,6 +24,7 @@ import { UpcomingCommitments } from "./upcoming-commitments";
 
 type HomeData = FunctionReturnType<typeof api.balances.getHome>;
 type Space = "personal" | "household";
+type HouseholdData = FunctionReturnType<typeof api.household.get>;
 
 export function HomePage() {
 	const today = useLimaDate();
@@ -30,6 +34,16 @@ export function HomePage() {
 
 function Home({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
+	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
+	// No household yet: its queries would fail, so none of them runs.
+	if (space === "household" && profile.data && !profile.data.hasHousehold) {
+		const [firstName = ""] = profile.data.name.trim().split(/s+/);
+		return <EmptyHousehold firstName={firstName} hasPlus={profile.data.hasPlus} />;
+	}
+	return <SpaceHome space={space} today={today} />;
+}
+
+function SpaceHome({ space, today }: { space: Space; today: string }) {
 	const queryClient = useQueryClient();
 	const ensureOpen = useEnsureOpenCycle(space, today);
 	const args: { space: Space; today: string } | "skip" = ensureOpen.isSuccess
@@ -40,6 +54,8 @@ function Home({ today }: { today: string }) {
 	const commitments = useQuery(convexQuery(api.commitments.list, args));
 	const movements = useQuery(convexQuery(api.transactions.list, args));
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
+	const household = useQuery(convexQuery(api.household.get, space === "household" ? {} : "skip"));
+	const joined = useSearch({ from: "/_app/home" }).joined;
 	const closed = useQuery(
 		convexQuery(
 			api.cycles.getUnseenClosed,
@@ -53,6 +69,7 @@ function Home({ today }: { today: string }) {
 		commitments.isError ||
 		movements.isError ||
 		profile.isError ||
+		household.isError ||
 		closed.isError
 	) {
 		return (
@@ -74,7 +91,8 @@ function Home({ today }: { today: string }) {
 	const notice = closed.data ? (
 		<CloseNotice key={closed.data.cycleId} closed={closed.data} />
 	) : null;
-	if (home.data.empty) {
+	// Nuestro espacio shows its number (S/ 0.00) even with no income; registering there waits for U12b.
+	if (home.data.empty && space === "personal") {
 		return (
 			<>
 				{notice}
@@ -83,11 +101,14 @@ function Home({ today }: { today: string }) {
 		);
 	}
 	if (!commitments.data || !movements.data || !profile.data) return <HomeSkeleton />;
+	if (space === "household" && !household.data) return <HomeSkeleton />;
 	return (
 		<>
 			{notice}
 			<Overview
 				home={home.data}
+				household={household.data ?? null}
+				joined={joined === true}
 				name={profile.data.name}
 				items={commitments.data.items}
 				rows={movements.data.rows}
@@ -115,6 +136,8 @@ function HomeSkeleton() {
 
 function Overview({
 	home,
+	household,
+	joined,
 	name,
 	items,
 	rows,
@@ -122,6 +145,8 @@ function Overview({
 	today,
 }: {
 	home: HomeData;
+	household: HouseholdData;
+	joined: boolean;
 	name: string;
 	items: CommitmentItem[];
 	rows: Movement[];
@@ -133,14 +158,20 @@ function Overview({
 
 	return (
 		<>
+			{joined && household?.partnerName ? (
+				<JoinedNotice partnerName={household.partnerName} />
+			) : null}
 			<header>
 				<h1 className="font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
 					{space === "household" ? "Nuestro espacio" : firstName ? `Hola, ${firstName}` : "Hola"}
 				</h1>
-				<p className="mt-1.5 text-sm leading-normal text-muted-foreground">
-					Ciclo {formatRange(home.startDate, home.endDate)} · {formatDaysLeft(home.daysLeft)}
+				<p className="mt-1.5 truncate text-sm leading-normal text-muted-foreground">
+					{household?.partnerName ? `Con ${household.partnerName} · ciclo` : "Ciclo"}{" "}
+					{formatRange(home.startDate, home.endDate)} · {formatDaysLeft(home.daysLeft)}
 				</p>
 			</header>
+
+			{household?.invite ? <InviteStrip invite={household.invite} firstName={firstName} /> : null}
 
 			{home.earlyIncome ? (
 				<p role="status" className="mt-4 rounded-2xl bg-muted px-4 py-3 text-sm">

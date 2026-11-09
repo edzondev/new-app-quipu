@@ -15,6 +15,8 @@ type Props = {
 	email: string;
 	/** Only sign-up sends a name; without it the server refuses to create a new account. */
 	name?: string;
+	/** Carried to Crear cuenta when the email has no account. */
+	redirect?: string;
 	onChangeEmail: () => void;
 	onVerified: () => void;
 };
@@ -23,7 +25,7 @@ function toOtpDigits(raw: string): string {
 	return raw.replace(/\D/g, "").slice(0, 6);
 }
 
-export function OtpStep({ email, name, onChangeEmail, onVerified }: Props) {
+export function OtpStep({ email, name, redirect, onChangeEmail, onVerified }: Props) {
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<AuthError>(null);
 	const [isResending, setIsResending] = useState(false);
@@ -108,7 +110,11 @@ export function OtpStep({ email, name, onChangeEmail, onVerified }: Props) {
 					<p role="alert" className="mt-3 text-xs text-warning-foreground">
 						{getAuthErrorMessage(error)}{" "}
 						{error.code === "USER_NOT_FOUND" ? (
-							<Link to="/sign-up" search={{ email }} className="underline underline-offset-4">
+							<Link
+								to="/sign-up"
+								search={{ email, redirect }}
+								className="underline underline-offset-4"
+							>
 								Crear mi cuenta
 							</Link>
 						) : null}

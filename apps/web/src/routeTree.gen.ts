@@ -21,6 +21,8 @@ import { Route as AppSavingsRouteImport } from './routes/_app/savings'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
+import { Route as UnirmeIndexRouteImport } from './routes/unirme.index'
+import { Route as UnirmeCodeRouteImport } from './routes/unirme.$code'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -81,6 +83,16 @@ const AuthSignUpRoute = AuthSignUpRouteImport.update({
   path: '/sign-up',
   getParentRoute: () => AuthRoute,
 } as any)
+const UnirmeIndexRoute = UnirmeIndexRouteImport.update({
+  id: '/unirme/',
+  path: '/unirme/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnirmeCodeRoute = UnirmeCodeRouteImport.update({
+  id: '/$code',
+  path: '/$code',
+  getParentRoute: () => UnirmeRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -98,6 +110,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/unirme/$code': typeof UnirmeCodeRoute
+  '/unirme/': typeof UnirmeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -111,6 +125,8 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/unirme/$code': typeof UnirmeCodeRoute
+  '/unirme': typeof UnirmeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -127,6 +143,8 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
+  '/unirme/$code': typeof UnirmeCodeRoute
+  '/unirme/': typeof UnirmeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -142,6 +160,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/unirme/$code'
+    | '/unirme/'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -155,6 +175,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/unirme/$code'
+    | '/unirme'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -170,6 +192,8 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
+    | '/unirme/$code'
+    | '/unirme/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -178,6 +202,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  UnirmeIndexRoute: typeof UnirmeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -267,6 +292,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignUpRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/unirme/': {
+      id: '/unirme/'
+      path: '/unirme'
+      fullPath: '/unirme/'
+      preLoaderRoute: typeof UnirmeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/unirme/$code': {
+      id: '/unirme/$code'
+      path: '/$code'
+      fullPath: '/unirme/$code'
+      preLoaderRoute: typeof UnirmeCodeRouteImport
+      parentRoute: typeof UnirmeRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -314,6 +353,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  UnirmeIndexRoute: UnirmeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
