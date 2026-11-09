@@ -38,11 +38,18 @@ export function CyclesPage({ before }: { before?: string }) {
 	return (
 		<>
 			{cycles.length > 0 ? (
-				<ul className="mt-2">
-					{cycles.map((cycle, index) => (
-						<CycleRow key={cycle.id} cycle={cycle} defaultOpen={index === firstWithDetail} />
-					))}
-				</ul>
+				<>
+					{isFirstPage ? (
+						<h2 className="mt-10 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
+							Ciclos cerrados
+						</h2>
+					) : null}
+					<ul className="mt-2">
+						{cycles.map((cycle, index) => (
+							<CycleRow key={cycle.id} cycle={cycle} defaultOpen={index === firstWithDetail} />
+						))}
+					</ul>
+				</>
 			) : next === null ? (
 				<p className="pt-4 text-sm text-muted-foreground">{emptyMessage(isFirstPage, hidden)}</p>
 			) : null}

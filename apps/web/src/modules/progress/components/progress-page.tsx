@@ -50,11 +50,6 @@ function Progress({ today }: { today: string }) {
 				<h1 className="font-heading text-4xl font-medium tracking-tight">Progreso</h1>
 				{streak.data.hasActive ? <Streak {...streak.data} /> : null}
 			</header>
-			{streak.data.hasActive ? (
-				<h2 className="mt-10 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
-					Ciclos cerrados
-				</h2>
-			) : null}
 			<CyclesPage />
 		</div>
 	);
