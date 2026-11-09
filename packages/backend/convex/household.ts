@@ -3,8 +3,8 @@ import { nameSchema } from "../shared/budget";
 import { getLimaDate, isoDateSchema } from "../shared/dates";
 import { firstName } from "../shared/household";
 import { isValidPlan } from "../shared/plan";
-import type { Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation, query } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { createFirstCycle, getCycleAt, getLatestClosed } from "./model/cycles";
 import { parseInput } from "./model/input";
@@ -13,6 +13,7 @@ import {
 	checkAccess,
 	getHousehold,
 	getMemberIds,
+	getMembers,
 	getPersonalSpace,
 	requirePlan,
 	requireSpace,
@@ -24,7 +25,9 @@ import { plan } from "./schema";
 const NOT_FOUND = "No encontramos este dato.";
 const NEED_HOUSEHOLD = "Aún no tienes un hogar.";
 const ALREADY_IN = "Ya formas parte de un hogar.";
-const OWNER_LEAVE = "Eres quien creó el hogar, no puedes salir.";
+const ALONE = "Tu pareja aún no entra.";
+const NOT_EMPTY = "Tu hogar ya tiene movimientos. No lo podemos borrar desde aquí.";
+const MAX_EMPTY_CYCLES = 120;
 const FULL = "Nuestro espacio ya tiene dos personas.";
 const INVITE_MS = 7 * 24 * 60 * 60 * 1000;
 const HOUSEHOLD_SPLIT = { needs: 50, wants: 30, savings: 20 };
@@ -50,6 +53,47 @@ function randomCode() {
 }
 
 const normalizeCode = (code: string) => code.replace(/\s/g, "").toUpperCase();
+
+/** Only you, no money in the fund, and nothing recorded in any cycle, commitment or goal. */
+async function isEmptyHousehold(ctx: QueryCtx, space: Doc<"spaces">) {
+	if (space.fundCents !== 0 || (await getMemberIds(ctx, space._id)).length !== 1) return false;
+	const [commitment, goal, cycles] = await Promise.all([
+		ctx.db
+			.query("commitments")
+			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+			.first(),
+		ctx.db
+			.query("goals")
+			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+			.first(),
+		ctx.db
+			.query("cycles")
+			.withIndex("by_space_start", (q) => q.eq("spaceId", space._id))
+			.take(MAX_EMPTY_CYCLES + 1),
+	]);
+	if (commitment || goal || cycles.length > MAX_EMPTY_CYCLES) return false;
+	for (const cycle of cycles) {
+		const row = await ctx.db
+			.query("transactions")
+			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+			.first();
+		if (row) return false;
+	}
+	return true;
+}
+
+/** Deletes an empty household: its cycles, its member and the space. */
+async function deleteEmptyHousehold(ctx: MutationCtx, space: Doc<"spaces">) {
+	const cycles = await ctx.db
+		.query("cycles")
+		.withIndex("by_space_start", (q) => q.eq("spaceId", space._id))
+		.take(MAX_EMPTY_CYCLES);
+	for (const cycle of cycles) await ctx.db.delete("cycles", cycle._id);
+	for (const member of await getMembers(ctx, space._id)) {
+		await ctx.db.delete("spaceMembers", member._id);
+	}
+	await ctx.db.delete("spaces", space._id);
+}
 
 /** Replaces any earlier code, so a resend kills the old one. */
 async function issueInvite(ctx: MutationCtx, spaceId: Id<"spaces">) {
@@ -91,7 +135,7 @@ export const createHousehold = mutation({
 			cycleStartDay: plan.cycleStartDay,
 			...(trimmed ? { name: trimmed } : {}),
 		});
-		await ctx.db.insert("spaceMembers", { spaceId, userId: user._id });
+		await ctx.db.insert("spaceMembers", { spaceId, userId: user._id, joinedAt: Date.now() });
 		await createFirstCycle(ctx, spaceId, plan, HOUSEHOLD_SPLIT, getLimaDate());
 		return await issueInvite(ctx, spaceId);
 	},
@@ -109,9 +153,10 @@ export const createInvite = mutation({
 });
 
 export const joinHousehold = mutation({
-	args: { code: v.string() },
+	// `replaceEmpty`: leave and delete your own household if it is empty, then join this one.
+	args: { code: v.string(), replaceEmpty: v.optional(v.boolean()) },
 	returns: joinResult,
-	handler: async (ctx, { code }) => {
+	handler: async (ctx, { code, replaceEmpty }) => {
 		const user = await requireUser(ctx);
 		// Consume the attempt first so a soft failure still counts toward the limit.
 		if (!(await limitHouseholdJoin(ctx, user._id))) {
@@ -120,7 +165,8 @@ export const joinHousehold = mutation({
 
 		const normalized = normalizeCode(code);
 		if (normalized.length !== 6) return { ok: false as const, reason: "invalid" as const };
-		if (await getHousehold(ctx, user._id)) throw new ConvexError(ALREADY_IN);
+		const mine = await getHousehold(ctx, user._id);
+		if (mine && !replaceEmpty) throw new ConvexError(ALREADY_IN);
 
 		const space = await ctx.db
 			.query("spaces")
@@ -136,9 +182,17 @@ export const joinHousehold = mutation({
 		if ((await getMemberIds(ctx, space._id)).length >= 2)
 			return { ok: false as const, reason: "full" as const };
 
+		// The code is good: only now can anything be deleted.
+		if (mine) {
+			if (mine._id === space._id) throw new ConvexError(ALREADY_IN);
+			if (!(await isEmptyHousehold(ctx, mine))) throw new ConvexError(NOT_EMPTY);
+			await deleteEmptyHousehold(ctx, mine);
+		}
+
 		await ctx.db.insert("spaceMembers", {
 			spaceId: space._id,
 			userId: user._id,
+			joinedAt: Date.now(),
 		});
 		// Closes before this person arrived are not news for them.
 		const latestClosed = await getLatestClosed(ctx, space._id);
@@ -152,7 +206,7 @@ export const joinHousehold = mutation({
 			});
 		}
 		// Invalidate the code without clearing optional fields (patch can't unset).
-		await ctx.db.patch("spaces", space._id, { inviteExpiresAt: 0 });
+		await ctx.db.patch("spaces", space._id, { inviteExpiresAt: 0, partnerLeft: undefined });
 		return { ok: true as const };
 	},
 });
@@ -169,8 +223,24 @@ export const leaveHousehold = mutation({
 		if (!membership) throw new ConvexError(NEED_HOUSEHOLD);
 		const space = await ctx.db.get("spaces", membership.spaceId);
 		if (!space) throw new ConvexError(NEED_HOUSEHOLD);
-		if (space.ownerId === user._id) throw new ConvexError(OWNER_LEAVE);
+		const partnerId = (await getMemberIds(ctx, space._id)).find((id) => id !== user._id);
+		if (!partnerId) throw new ConvexError(ALONE);
 		await ctx.db.delete("spaceMembers", membership._id);
+		// What was shared stays with who stays, who also takes over inviting.
+		await ctx.db.patch("spaces", space._id, {
+			partnerLeft: { name: firstName(user.name) },
+			...(space.ownerId === user._id ? { ownerId: partnerId } : {}),
+		});
+		return null;
+	},
+});
+
+export const dismissPartnerLeft = mutation({
+	args: {},
+	returns: v.null(),
+	handler: async (ctx) => {
+		const { space } = await requireSpace(ctx, "household");
+		await ctx.db.patch("spaces", space._id, { partnerLeft: undefined });
 		return null;
 	},
 });
@@ -208,6 +278,10 @@ export const get = query({
 			name: v.union(v.string(), v.null()),
 			isOwner: v.boolean(),
 			partnerName: v.union(v.string(), v.null()),
+			partnerJoinedAt: v.union(v.number(), v.null()),
+			partnerLeft: v.union(v.string(), v.null()),
+			// Alone and with nothing recorded: it can be deleted to join another household.
+			isEmpty: v.boolean(),
 			// Only for who created the household, while nobody has joined. The page decides if it expired:
 			// a query does not run again when time passes.
 			invite: v.union(v.object({ code: v.string(), expiresAt: v.number() }), v.null()),
@@ -221,7 +295,8 @@ export const get = query({
 		const space = await getHousehold(ctx, user._id);
 		if (!space) return null;
 
-		const partnerId = (await getMemberIds(ctx, space._id)).find((id) => id !== user._id);
+		const partnerMember = (await getMembers(ctx, space._id)).find((m) => m.userId !== user._id);
+		const partnerId = partnerMember?.userId;
 		const partner = partnerId ? await authComponent.getAnyUserById(ctx, partnerId) : null;
 		const { inviteCode, inviteExpiresAt } = space;
 		const isOwner = space.ownerId === user._id;
@@ -231,6 +306,9 @@ export const get = query({
 			name: space.name ?? null,
 			isOwner,
 			partnerName: partner ? firstName(partner.name) : null,
+			partnerJoinedAt: partnerMember?.joinedAt ?? null,
+			partnerLeft: space.partnerLeft?.name ?? null,
+			isEmpty: await isEmptyHousehold(ctx, space),
 			invite:
 				isOwner && !partnerId && inviteCode && inviteExpiresAt
 					? { code: inviteCode, expiresAt: inviteExpiresAt }

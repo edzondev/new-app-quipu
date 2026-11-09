@@ -100,6 +100,8 @@ export default defineSchema({
 		cycleStartDay: v.optional(plan.fields.cycleStartDay),
 		inviteCode: v.optional(v.string()),
 		inviteExpiresAt: v.optional(v.number()),
+		// Set when the other person leaves; the one who stays dismisses it.
+		partnerLeft: v.optional(v.object({ name: v.string() })),
 		fundGoalCents: v.optional(v.number()),
 		// Emergency fund cash. Updated on fund saves/withdrawals (not goal saves).
 		fundCents: v.number(),
@@ -110,6 +112,7 @@ export default defineSchema({
 	spaceMembers: defineTable({
 		spaceId: v.id("spaces"),
 		userId: v.string(),
+		joinedAt: v.optional(v.number()),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_spaceId", ["spaceId"]),
