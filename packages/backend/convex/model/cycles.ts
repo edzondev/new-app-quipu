@@ -63,7 +63,8 @@ export async function requireOpenCycle(ctx: Ctx, kind: SpaceKind, today = getLim
 
 /**
  * The next cycle is where a pending plan change takes effect. In the personal space the pending
- * plan (`nextPlan`) becomes `plan` here; a household reads the owner's current plan and leaves it.
+ * plan (`nextPlan`) becomes `plan` here; a household uses its own cycle (`cadence` and
+ * `cycleStartDay` on the space) and never reads the owner's profile.
  */
 export async function getOrCreateNextCycle(
 	ctx: MutationCtx,

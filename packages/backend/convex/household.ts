@@ -174,6 +174,7 @@ export const get = query({
 		v.null(),
 		v.object({
 			name: v.union(v.string(), v.null()),
+			isOwner: v.boolean(),
 			partnerName: v.union(v.string(), v.null()),
 			// Only for who created the household, while nobody has joined. The page decides if it expired:
 			// a query does not run again when time passes.
@@ -189,11 +190,13 @@ export const get = query({
 		const partnerId = (await memberIds(ctx, space._id)).find((id) => id !== user._id);
 		const partner = partnerId ? await authComponent.getAnyUserById(ctx, partnerId) : null;
 		const { inviteCode, inviteExpiresAt } = space;
+		const isOwner = space.ownerId === user._id;
 		return {
 			name: space.name ?? null,
+			isOwner,
 			partnerName: partner ? firstName(partner.name) : null,
 			invite:
-				space.ownerId === user._id && !partnerId && inviteCode && inviteExpiresAt
+				isOwner && !partnerId && inviteCode && inviteExpiresAt
 					? { code: inviteCode, expiresAt: inviteExpiresAt }
 					: null,
 		};

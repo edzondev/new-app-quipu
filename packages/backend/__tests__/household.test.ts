@@ -244,6 +244,14 @@ test("each partner sees the other's real first name; the code leaves once they j
 	expect((await luis.query(api.profiles.myProfile, {}))?.hasHousehold).toBe(true);
 });
 
+test("only who created the household is its owner", async () => {
+	const { ana, luis, code } = await couple();
+	await luis.mutation(api.household.joinHousehold, { code });
+
+	expect((await ana.query(api.household.get, {}))?.isOwner).toBe(true);
+	expect((await luis.query(api.household.get, {}))?.isOwner).toBe(false);
+});
+
 test("a double tap on join enters once", async () => {
 	const { ana, luis, code } = await couple();
 	const results = await Promise.allSettled([
