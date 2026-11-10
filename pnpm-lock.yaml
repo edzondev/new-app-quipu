@@ -173,7 +173,7 @@ importers:
     devDependencies:
       '@convex-dev/eslint-plugin':
         specifier: 5.0.0
-        version: 5.0.0(convex@1.47.0(react@19.3.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@7.0.2)
+        version: 5.0.0(convex@1.49.0(react@19.3.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@7.0.2)
       lefthook:
         specifier: 2.2.2
         version: 2.2.2
@@ -200,10 +200,10 @@ importers:
         version: 1.7.18(@better-auth/core@1.7.18(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.15)(kysely@0.29.8)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5)
       '@convex-dev/better-auth':
         specifier: 0.13.0
-        version: 0.13.0(@standard-schema/spec@1.1.0)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)
+        version: 0.13.0(@standard-schema/spec@1.1.0)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)
       '@convex-dev/react-query':
         specifier: 0.1.0
-        version: 0.1.0(@tanstack/react-query@5.104.4(@types/react@19.3.0)(react@19.3.1))(convex@1.47.0(react@19.3.1))
+        version: 0.1.0(@tanstack/react-query@5.104.4(@types/react@19.3.0)(react@19.3.1))(convex@1.49.0(react@19.3.1))
       '@daypicker/react':
         specifier: ^10.0.2
         version: 10.0.2(@types/react@19.3.0)(react@19.3.1)
@@ -250,8 +250,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.2
       convex:
-        specifier: 1.47.0
-        version: 1.47.0(react@19.3.1)
+        specifier: 1.49.0
+        version: 1.49.0(react@19.3.1)
       lucide-react:
         specifier: ^1.61.0
         version: 1.66.0(@types/react@19.3.0)(react@19.3.1)
@@ -315,22 +315,22 @@ importers:
         version: 1.7.18(@better-auth/core@1.7.18(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.15)(kysely@0.29.8)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5)
       '@convex-dev/better-auth':
         specifier: 0.13.0
-        version: 0.13.0(@standard-schema/spec@1.1.0)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)
+        version: 0.13.0(@standard-schema/spec@1.1.0)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)
       '@convex-dev/rate-limiter':
         specifier: 0.4.2
-        version: 0.4.2(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+        version: 0.4.2(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
       '@convex-dev/resend':
         specifier: 0.2.9
-        version: 0.2.9(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+        version: 0.2.9(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
       better-auth:
         specifier: 1.7.18
         version: 1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))
       convex:
-        specifier: 1.47.0
-        version: 1.47.0(react@19.3.1)
+        specifier: 1.49.0
+        version: 1.49.0(react@19.3.1)
       convex-helpers:
         specifier: 0.1.128
-        version: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+        version: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -340,7 +340,7 @@ importers:
         version: 5.0.0
       convex-test:
         specifier: 0.0.62
-        version: 0.0.62(convex@1.47.0(react@19.3.1))
+        version: 0.0.62(convex@1.49.0(react@19.3.1))
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -2919,9 +2919,9 @@ packages:
     peerDependencies:
       convex: ^1.43.0
 
-  convex@1.47.0:
-    resolution: {integrity: sha512-B1z/lOmex7i09NASq8+2WG9rZLzGXXOSkpwGOpaNIvOs4awyW4RMgpVBjt8r2wvvHwhEBEsOr2pGYpulnmAxYQ==}
-    engines: {node: '>=20.0.0', npm: '>=7.0.0'}
+  convex@1.49.0:
+    resolution: {integrity: sha512-mkr9oXF8/arkCI1kvYyGytWd62oVXNABh4uwLeI4UQVN6Zuudm4DlmSzNUJKF63djk6f/uUXC+6ffuVSkPLvzA==}
+    engines: {node: '>=22.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:
       '@auth0/auth0-react': ^2.0.1
@@ -4839,10 +4839,10 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20261012.1':
     optional: true
 
-  '@convex-dev/batch-worker@0.3.5(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
+  '@convex-dev/batch-worker@0.3.5(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
     dependencies:
-      convex: 1.47.0(react@19.3.1)
-      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      convex: 1.49.0(react@19.3.1)
+      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
     transitivePeerDependencies:
       - '@standard-schema/spec'
       - hono
@@ -4850,10 +4850,10 @@ snapshots:
       - typescript
       - zod
 
-  '@convex-dev/batch-worker@0.3.6(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
+  '@convex-dev/batch-worker@0.3.6(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
     dependencies:
-      convex: 1.47.0(react@19.3.1)
-      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      convex: 1.49.0(react@19.3.1)
+      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
     transitivePeerDependencies:
       - '@standard-schema/spec'
       - hono
@@ -4861,13 +4861,13 @@ snapshots:
       - typescript
       - zod
 
-  '@convex-dev/better-auth@0.13.0(@standard-schema/spec@1.1.0)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)':
+  '@convex-dev/better-auth@0.13.0(@standard-schema/spec@1.1.0)(better-auth@1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))))(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)':
     dependencies:
       '@better-fetch/fetch': 1.3.3
       better-auth: 1.7.18(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)))
       common-tags: 1.8.2
-      convex: 1.47.0(react@19.3.1)
-      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      convex: 1.49.0(react@19.3.1)
+      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
       jose: 6.2.15
       react: 19.3.1
       semver: 7.8.5
@@ -4878,26 +4878,26 @@ snapshots:
       - hono
       - typescript
 
-  '@convex-dev/eslint-plugin@5.0.0(convex@1.47.0(react@19.3.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@7.0.2)':
+  '@convex-dev/eslint-plugin@5.0.0(convex@1.49.0(react@19.3.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@7.0.2)':
     dependencies:
       '@typescript-eslint/types': 8.58.2
       '@typescript-eslint/utils': 8.58.2(eslint@10.14.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@7.0.2)
-      convex: 1.47.0(react@19.3.1)
+      convex: 1.49.0(react@19.3.1)
     transitivePeerDependencies:
       - eslint
       - supports-color
       - typescript
 
-  '@convex-dev/rate-limiter@0.3.2(convex@1.47.0(react@19.3.1))(react@19.3.1)':
+  '@convex-dev/rate-limiter@0.3.2(convex@1.49.0(react@19.3.1))(react@19.3.1)':
     dependencies:
-      convex: 1.47.0(react@19.3.1)
+      convex: 1.49.0(react@19.3.1)
     optionalDependencies:
       react: 19.3.1
 
-  '@convex-dev/rate-limiter@0.4.2(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
+  '@convex-dev/rate-limiter@0.4.2(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
     dependencies:
-      '@convex-dev/batch-worker': 0.3.5(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
-      convex: 1.47.0(react@19.3.1)
+      '@convex-dev/batch-worker': 0.3.5(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      convex: 1.49.0(react@19.3.1)
     optionalDependencies:
       react: 19.3.1
     transitivePeerDependencies:
@@ -4906,17 +4906,17 @@ snapshots:
       - typescript
       - zod
 
-  '@convex-dev/react-query@0.1.0(@tanstack/react-query@5.104.4(@types/react@19.3.0)(react@19.3.1))(convex@1.47.0(react@19.3.1))':
+  '@convex-dev/react-query@0.1.0(@tanstack/react-query@5.104.4(@types/react@19.3.0)(react@19.3.1))(convex@1.49.0(react@19.3.1))':
     dependencies:
       '@tanstack/react-query': 5.104.4(@types/react@19.3.0)(react@19.3.1)
-      convex: 1.47.0(react@19.3.1)
+      convex: 1.49.0(react@19.3.1)
 
-  '@convex-dev/resend@0.2.9(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
+  '@convex-dev/resend@0.2.9(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
     dependencies:
-      '@convex-dev/rate-limiter': 0.3.2(convex@1.47.0(react@19.3.1))(react@19.3.1)
-      '@convex-dev/workpool': 0.4.15(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
-      convex: 1.47.0(react@19.3.1)
-      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      '@convex-dev/rate-limiter': 0.3.2(convex@1.49.0(react@19.3.1))(react@19.3.1)
+      '@convex-dev/workpool': 0.4.15(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      convex: 1.49.0(react@19.3.1)
+      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
       remeda: 2.58.0
       resend: 6.37.0
       svix: 1.99.1
@@ -4928,11 +4928,11 @@ snapshots:
       - typescript
       - zod
 
-  '@convex-dev/workpool@0.4.15(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
+  '@convex-dev/workpool@0.4.15(@standard-schema/spec@1.1.0)(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)':
     dependencies:
-      '@convex-dev/batch-worker': 0.3.6(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
-      convex: 1.47.0(react@19.3.1)
-      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      '@convex-dev/batch-worker': 0.3.6(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      convex: 1.49.0(react@19.3.1)
+      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
     transitivePeerDependencies:
       - '@standard-schema/spec'
       - hono
@@ -6746,20 +6746,20 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7):
+  convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.49.0(react@19.3.1))(react@19.3.1)(typescript@7.0.2)(zod@4.6.7):
     dependencies:
-      convex: 1.47.0(react@19.3.1)
+      convex: 1.49.0(react@19.3.1)
     optionalDependencies:
       '@standard-schema/spec': 1.1.0
       react: 19.3.1
       typescript: 7.0.2
       zod: 4.6.7
 
-  convex-test@0.0.62(convex@1.47.0(react@19.3.1)):
+  convex-test@0.0.62(convex@1.49.0(react@19.3.1)):
     dependencies:
-      convex: 1.47.0(react@19.3.1)
+      convex: 1.49.0(react@19.3.1)
 
-  convex@1.47.0(react@19.3.1):
+  convex@1.49.0(react@19.3.1):
     dependencies:
       esbuild: 0.27.0
       prettier: 3.9.10
