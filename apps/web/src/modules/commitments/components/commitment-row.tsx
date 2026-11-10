@@ -63,7 +63,7 @@ function PayInline({
 				void form.handleSubmit();
 			}}
 		>
-			<p className="text-sm text-muted-foreground">Pagar {item.name}</p>
+			<p className="wrap-break-word text-sm text-muted-foreground">Pagar {item.name}</p>
 			<div className="mt-2 flex flex-wrap items-start gap-3">
 				<div className="min-w-40 flex-1">
 					<form.Field name="amount">
@@ -85,7 +85,7 @@ function PayInline({
 				</Button>
 			</div>
 			{pay.isError ? (
-				<p role="alert" className="mt-2 text-xs text-warning-foreground">
+				<p role="alert" className="wrap-break-word mt-2 text-xs text-warning-foreground">
 					{readError(pay.error)}
 				</p>
 			) : null}

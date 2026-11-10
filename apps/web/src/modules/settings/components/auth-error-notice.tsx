@@ -17,13 +17,13 @@ export function AuthErrorNotice({
 	const signOut = useSignOut("current");
 	if (error.code !== "SESSION_NOT_FRESH") {
 		return (
-			<p role="alert" className="text-xs text-warning-foreground">
+			<p role="alert" className="wrap-break-word text-xs text-warning-foreground">
 				{getAuthErrorMessage(error)}
 			</p>
 		);
 	}
 	return (
-		<div role="alert" className="flex flex-col items-start gap-2">
+		<div role="alert" className="wrap-break-word flex flex-col items-start gap-2">
 			<p className="text-xs text-warning-foreground">
 				Por seguridad, vuelve a iniciar sesión para {goal}
 			</p>

@@ -83,7 +83,7 @@ export function SplitStep({ defaultValues, name, cycleStep, redirect, onBack }: 
 								Puedes cambiarlo cuando quieras en tus sobres.
 							</p>
 							{saveError ? (
-								<p role="alert" className="text-xs text-warning-foreground">
+								<p role="alert" className="wrap-break-word text-xs text-warning-foreground">
 									{saveError}
 								</p>
 							) : null}

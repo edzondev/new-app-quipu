@@ -12,7 +12,7 @@ export function InviteLine({ redirect, action }: { redirect: string; action: str
 	const { data } = useInviteInfo(code);
 	if (!data || inviteState(data, now) !== "valid") return null;
 	return (
-		<p className="mb-5 text-sm text-muted-foreground">
+		<p className="wrap-break-word mb-5 text-sm text-muted-foreground">
 			{action} para unirte al espacio de {data.inviterName}.
 		</p>
 	);

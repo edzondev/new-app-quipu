@@ -27,7 +27,7 @@ export function CadenceToggle({
 				<ToggleGroupItem
 					key={option.value}
 					value={option.value}
-					className="h-8 rounded-full px-3 text-xs before:rounded-full hover:bg-transparent data-pressed:bg-foreground data-pressed:text-background data-pressed:hover:bg-foreground sm:h-8 sm:px-4 sm:text-xs"
+					className="min-h-11 rounded-full px-3 text-xs before:rounded-full hover:bg-transparent data-pressed:bg-foreground data-pressed:text-background data-pressed:hover:bg-foreground sm:h-8 sm:px-4 sm:text-xs"
 				>
 					{option.label}
 				</ToggleGroupItem>
@@ -66,7 +66,7 @@ export function StartDaySelect({
 				value={value}
 				onBlur={onBlur}
 				onChange={(e) => onChange(e.target.value)}
-				className="rounded-full bg-muted px-4 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				className="rounded-full bg-muted px-4 py-2 min-h-11 text-base sm:text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				{getStartDayOptions(cadence).map((option) => (
 					<option key={option.value} value={option.value}>

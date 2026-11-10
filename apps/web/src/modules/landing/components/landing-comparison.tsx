@@ -59,7 +59,7 @@ export function LandingComparison() {
 									{row.values.map((value, index) => (
 										<td
 											key={COMPARISON_COLUMNS[index]}
-											className={`min-w-0 rounded-lg p-2 text-xs wrap-break-word leading-[1.6] sm:px-4.5 sm:py-5 sm:text-xs ${index === 0 ? "bg-background font-semibold text-foreground sm:font-normal" : "text-muted-foreground"} ${last ? "" : "sm:border-b sm:border-border"} ${index === 0 && last ? "sm:rounded-b-2xl" : "sm:rounded-none"}`}
+											className={`min-w-0 rounded-lg p-2 text-xs wrap-break-word leading-[1.6] sm:px-4.5 sm:py-5 ${index === 0 ? "bg-background font-semibold text-foreground sm:font-normal" : "text-muted-foreground"} ${last ? "" : "sm:border-b sm:border-border"} ${index === 0 && last ? "sm:rounded-b-2xl" : "sm:rounded-none"}`}
 										>
 											<span
 												aria-hidden="true"

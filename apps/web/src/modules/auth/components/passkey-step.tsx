@@ -27,18 +27,14 @@ export function PasskeyStep({ onDone }: Props) {
 
 	return (
 		<div className="text-center">
-			<Fingerprint
-				aria-hidden="true"
-				strokeWidth={1.25}
-				className="mx-auto mb-6 size-16 opacity-100"
-			/>
+			<Fingerprint aria-hidden="true" strokeWidth={1.25} className="mx-auto mb-6 size-16" />
 			<h1 className={cn(authTitle, "mb-4")}>Entra más rápido la próxima vez</h1>
 			<p className="mb-6 text-[13px] leading-7 text-muted-foreground">
 				Usa tu huella, rostro o el desbloqueo de tu celular o compu. Sin códigos.
 			</p>
 			{failed ? (
 				<>
-					<p role="alert" className="text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word text-xs text-warning-foreground">
 						No se pudo activar. Puedes hacerlo luego en Ajustes.
 					</p>
 					<Button

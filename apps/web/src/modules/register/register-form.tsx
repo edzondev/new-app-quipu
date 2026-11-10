@@ -269,7 +269,10 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 										/>
 									</div>
 									{message ? (
-										<p role="alert" className="mt-1.5 text-xs text-warning-foreground">
+										<p
+											role="alert"
+											className="wrap-break-word mt-1.5 text-xs text-warning-foreground"
+										>
 											{message}
 										</p>
 									) : null}
@@ -390,7 +393,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 					</Collapsible>
 
 					{error ? (
-						<p role="alert" className="text-xs text-warning-foreground">
+						<p role="alert" className="wrap-break-word text-xs text-warning-foreground">
 							{error}
 						</p>
 					) : null}

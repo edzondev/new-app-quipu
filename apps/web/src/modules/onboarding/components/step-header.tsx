@@ -8,7 +8,7 @@ export function StepHeader({ title, onBack }: { title: string; onBack?: () => vo
 				<Button
 					type="button"
 					variant="ghost"
-					className="mt-6 h-8 gap-2 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+					className="mt-6 min-h-11 gap-2 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
 					onClick={onBack}
 				>
 					<ArrowLeft strokeWidth={1.5} />

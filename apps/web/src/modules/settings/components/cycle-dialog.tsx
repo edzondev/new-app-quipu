@@ -82,7 +82,7 @@ function CycleEditor({
 				<StartDaySelect cadence={cadence} name="startDay" value={startDay} onChange={setStartDay} />
 				{joinedText ? <p className="mt-4 text-sm text-muted-foreground">{joinedText}</p> : null}
 				{save.isError ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						{readError(save.error)}
 					</p>
 				) : null}

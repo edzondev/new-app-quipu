@@ -167,7 +167,7 @@ function Overview({
 	return (
 		<>
 			<header>
-				<h1 className="font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
+				<h1 className="wrap-break-word font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
 					{space === "household" ? "Nuestro espacio" : first ? `Hola, ${first}` : "Hola"}
 				</h1>
 				<p className="mt-1.5 truncate text-sm leading-normal text-muted-foreground">
@@ -205,7 +205,7 @@ function Overview({
 						</p>
 					) : null}
 					{contributions && household?.partnerName ? (
-						<p className="mt-2.5 text-[13px] text-muted-foreground">
+						<p className="wrap-break-word mt-2.5 text-[13px] text-muted-foreground">
 							Aportes del ciclo · Tú S/ {formatCents(contributions.mineCents)} ·{" "}
 							{household.partnerName} S/ {formatCents(contributions.partnerCents)}
 						</p>

@@ -199,7 +199,7 @@ export function DrawerPopup({
 					{showCloseButton && (
 						<DrawerPrimitive.Close
 							aria-label="Close"
-							className="absolute end-2 top-2 z-1"
+							className="absolute end-1 top-1 z-1 min-h-11 min-w-11"
 							render={<Button size="icon" variant="ghost" />}
 						>
 							<XIcon />

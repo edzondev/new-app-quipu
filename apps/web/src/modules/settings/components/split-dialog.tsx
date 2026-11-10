@@ -70,7 +70,7 @@ function SplitEditor({ home, space, onDone }: { home: Home; space: Space; onDone
 					</p>
 				) : null}
 				{save.isError ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						{readError(save.error)}
 					</p>
 				) : null}
