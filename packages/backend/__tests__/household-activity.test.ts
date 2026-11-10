@@ -157,6 +157,36 @@ test("every shared change and every withdrawal leaves its event, with who did it
 		}),
 	);
 
+	const rowId = async (kind: "saving" | "withdrawal") => {
+		const { rows } = await ana.as.query(api.transactions.list, { space: household, today: TODAY });
+		const id = rows.find((row) => row.kind === kind)?.id;
+		if (!id) throw new Error(`missing ${kind}`);
+		return id;
+	};
+	await step("withdrawal_edited", async () =>
+		luis.as.mutation(api.transactions.updateWithdrawal, {
+			space: household,
+			id: await rowId("withdrawal"),
+			amountCents: 1_500,
+			reason: "other",
+		}),
+	);
+	await step("withdrawal_deleted", async () =>
+		luis.as.mutation(api.transactions.deleteWithdrawal, {
+			space: household,
+			id: await rowId("withdrawal"),
+		}),
+	);
+	await step("saving_edited", async () =>
+		ana.as.mutation(api.transactions.updateSaving, {
+			space: household,
+			id: await rowId("saving"),
+			amountCents: 7_000,
+		}),
+	);
+	await step("saving_deleted", async () =>
+		ana.as.mutation(api.transactions.deleteSaving, { space: household, id: await rowId("saving") }),
+	);
 	const events = (await allEvents(pair)).reverse();
 	expect(events.map((event) => event.type)).toEqual(expected);
 	// Every kind of event the household can have is covered by the steps above.
@@ -179,6 +209,23 @@ test("every shared change and every withdrawal leaves its event, with who did it
 	expect(byType("expense_edited")).toMatchObject({ before: "S/ 45.00", after: "S/ 50.00" });
 	expect(byType("commitment_paid")?.detail).toBe("Internet · S/ 95.00");
 	expect(byType("goal_edited")).toMatchObject({ detail: "Viaje", before: "S/ 1,000.00" });
+	expect(byType("withdrawal_edited")).toMatchObject({
+		who: "Renzo",
+		before: "S/ 20.00",
+		after: "S/ 15.00",
+	});
+	expect(byType("withdrawal_deleted")).toMatchObject({ who: "Renzo", detail: "S/ 15.00" });
+	expect(byType("saving_edited")).toMatchObject({
+		who: "Camila",
+		detail: "Fondo de emergencia",
+		before: "S/ 80.00",
+		after: "S/ 70.00",
+	});
+	expect(byType("saving_deleted")).toMatchObject({
+		who: "Camila",
+		detail: "Fondo de emergencia",
+		amountCents: 7_000,
+	});
 });
 
 test("nothing recorded in Personal reaches the household activity", async () => {
@@ -195,7 +242,32 @@ test("nothing recorded in Personal reaches the household activity", async () => 
 		split: { needs: 40, wants: 40, savings: 20 },
 	});
 	await ana.as.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 9_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 1_000,
+		reason: "other",
+	});
+	const { rows } = await ana.as.query(api.transactions.list, { space: "personal", today: TODAY });
+	const saving = rows.find((row) => row.kind === "saving")?.id;
+	const withdrawal = rows.find((row) => row.kind === "withdrawal")?.id;
+	if (!saving || !withdrawal) throw new Error("missing rows");
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: "personal",
+		id: withdrawal,
+		amountCents: 500,
+		reason: "other",
+	});
+	await ana.as.mutation(api.transactions.deleteWithdrawal, { space: "personal", id: withdrawal });
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: "personal",
+		id: saving,
+		amountCents: 4_000,
+	});
+	await ana.as.mutation(api.transactions.deleteSaving, { space: "personal", id: saving });
 	expect(await allEvents(pair)).toEqual([]);
+	// Not even stored: the Personal space keeps no events of its own.
+	expect(await pair.t.run((ctx) => ctx.db.query("spaceEvents").take(1))).toEqual([]);
 });
 
 test("saving without changing anything leaves no event", async () => {
@@ -409,4 +481,37 @@ test("activityText says 'Tú' for what you did and the first name for the other"
 		expect(activityText(type, true, "Ana")).toMatch(/^Tú \S+/);
 		expect(activityText(type, false, "Ana")).toMatch(/^Ana \S+/);
 	}
+});
+
+test("the withdrawal notice shows the amount as edited and drops a withdrawal that was deleted", async () => {
+	const { ana, luis } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 10_000 });
+	const withdraw = (amountCents: number) => {
+		tick();
+		return luis.as.mutation(api.transactions.withdrawSaving, {
+			space: household,
+			amountCents,
+			reason: "other",
+		});
+	};
+	const notice = async () => (await ana.as.query(api.household.get, {}))?.withdrawalNotice;
+	await withdraw(2_500);
+	await withdraw(1_000);
+	const { rows } = await luis.as.query(api.transactions.list, { space: household, today: TODAY });
+	const [latest, first] = rows.filter((row) => row.kind === "withdrawal").map((row) => row.id);
+
+	await luis.as.mutation(api.transactions.updateWithdrawal, {
+		space: household,
+		id: latest,
+		amountCents: 1_200,
+		reason: "other",
+	});
+	expect(await notice()).toEqual({ name: "Renzo", amountCents: 1_200 });
+
+	await luis.as.mutation(api.transactions.deleteWithdrawal, { space: household, id: latest });
+	expect(await notice()).toEqual({ name: "Renzo", amountCents: 2_500 });
+
+	await luis.as.mutation(api.transactions.deleteWithdrawal, { space: household, id: first });
+	expect(await notice()).toBeNull();
 });

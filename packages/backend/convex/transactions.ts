@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import { moneyLabel, rowLabel } from "../shared/activity";
 import {
 	AMOUNT_KEYS,
 	applyIncome,
@@ -10,15 +11,14 @@ import {
 	ZERO_AMOUNTS,
 } from "../shared/budget";
 import { addDays, isEarlyIncomeWindow, isoDateSchema } from "../shared/dates";
-import { moneyLabel, rowLabel } from "../shared/activity";
 import { displayName } from "../shared/household";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
-import { logEvent } from "./model/events";
 import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
-import { requirePlan } from "./model/spaces";
+import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
+import { requirePlan } from "./model/spaces";
 import { extraType, movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
 
 type SpaceKind = Doc<"spaces">["kind"];
@@ -27,6 +27,18 @@ type TxKind = Doc<"transactions">["kind"];
 const NOT_FOUND = "No encontramos este dato.";
 const NOT_AUTHOR = "Solo quien lo registró puede cambiarlo.";
 const INCOME_ALREADY_SAVED = "Ya usaste parte de este ingreso en tu ahorro. Retíralo primero.";
+const SAVING_ALREADY_WITHDRAWN =
+	"Ya retiraste parte de este ahorro del fondo. Borra primero ese retiro.";
+const savingOverAhorro = (max: number) =>
+	`Solo tienes ${moneyLabel(max)} para este ahorro. Baja el monto.`;
+const withdrawalOverFund = (max: number) =>
+	`Solo tienes ${moneyLabel(max)} en el fondo para este retiro. Baja el monto.`;
+
+/** Where a saving went, as the activity shows it: its goal or the fund. */
+async function savingDestination(ctx: MutationCtx, goalId: Id<"goals"> | undefined) {
+	const goal = goalId === undefined ? null : await ctx.db.get("goals", goalId);
+	return goal?.name ?? "Fondo de emergencia";
+}
 
 async function requireOwnOpenRow(
 	ctx: MutationCtx,
@@ -273,9 +285,8 @@ export const addSaving = mutation({
 				fundCents: space.fundCents + amountCents,
 			});
 		}
-		const goal = goalId === undefined ? null : await ctx.db.get("goals", goalId);
 		await logEvent(ctx, space, userId, "saving_added", {
-			detail: goal?.name ?? "Fondo de emergencia",
+			detail: await savingDestination(ctx, goalId),
 			amountCents,
 		});
 		return null;
@@ -314,6 +325,131 @@ export const withdrawSaving = mutation({
 	},
 });
 
+/** Sets a saving to `newCents` (0 deletes it): Ahorro and, if it went to the fund, the fund move by the difference. */
+async function moveSaving(
+	ctx: MutationCtx,
+	space: Doc<"spaces">,
+	cycle: Doc<"cycles">,
+	row: Extract<Doc<"transactions">, { kind: "saving" }>,
+	newCents: number,
+) {
+	const delta = newCents - row.amountCents;
+	const toFund = row.goalId === undefined;
+	if (toFund && space.fundCents + delta < 0) throw new ConvexError(SAVING_ALREADY_WITHDRAWN);
+	await ctx.db.patch("cycles", cycle._id, {
+		envelopes: patchEnvelope(cycle.envelopes, "savingsCents", -delta),
+	});
+	if (toFund)
+		await ctx.db.patch("spaces", space._id, {
+			fundCents: space.fundCents + delta,
+		});
+}
+
+/** Sets a withdrawal to `newCents` (0 deletes it): the fund and Necesidades move by the difference. */
+async function moveWithdrawal(
+	ctx: MutationCtx,
+	space: Doc<"spaces">,
+	cycle: Doc<"cycles">,
+	row: Extract<Doc<"transactions">, { kind: "withdrawal" }>,
+	newCents: number,
+) {
+	const delta = newCents - row.amountCents;
+	await ctx.db.patch("cycles", cycle._id, {
+		envelopes: patchEnvelope(cycle.envelopes, "needsCents", delta),
+	});
+	await ctx.db.patch("spaces", space._id, {
+		fundCents: space.fundCents - delta,
+	});
+}
+
+export const updateSaving = mutation({
+	args: {
+		space: spaceKind,
+		id: v.id("transactions"),
+		amountCents: v.number(),
+		note: v.optional(v.string()),
+	},
+	returns: v.null(),
+	handler: async (ctx, { space: kind, id, amountCents, note }) => {
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "saving");
+		if (row.kind !== "saving") throw new ConvexError(NOT_FOUND);
+		const max = cycle.envelopes.savingsCents + row.amountCents;
+		parseInput(centsSchema, amountCents);
+		if (amountCents > max) throw new ConvexError(savingOverAhorro(max));
+		const cleanNote = parseInput(noteSchema, note);
+		await moveSaving(ctx, space, cycle, row, amountCents);
+		await ctx.db.patch("transactions", id, { amountCents, note: cleanNote });
+		if (amountCents !== row.amountCents || cleanNote !== row.note) {
+			await logEvent(ctx, space, userId, "saving_edited", {
+				detail: await savingDestination(ctx, row.goalId),
+				before: moneyLabel(row.amountCents),
+				after: moneyLabel(amountCents),
+			});
+		}
+		return null;
+	},
+});
+
+export const deleteSaving = mutation({
+	args: { space: spaceKind, id: v.id("transactions") },
+	returns: v.null(),
+	handler: async (ctx, { space: kind, id }) => {
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "saving");
+		if (row.kind !== "saving") throw new ConvexError(NOT_FOUND);
+		await moveSaving(ctx, space, cycle, row, 0);
+		await ctx.db.delete("transactions", id);
+		await logEvent(ctx, space, userId, "saving_deleted", {
+			detail: await savingDestination(ctx, row.goalId),
+			amountCents: row.amountCents,
+		});
+		return null;
+	},
+});
+
+export const updateWithdrawal = mutation({
+	args: {
+		space: spaceKind,
+		id: v.id("transactions"),
+		amountCents: v.number(),
+		reason: withdrawalReason,
+		note: v.optional(v.string()),
+	},
+	returns: v.null(),
+	handler: async (ctx, { space: kind, id, amountCents, reason, note }) => {
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "withdrawal");
+		if (row.kind !== "withdrawal") throw new ConvexError(NOT_FOUND);
+		const max = space.fundCents + row.amountCents;
+		parseInput(centsSchema, amountCents);
+		if (amountCents > max) throw new ConvexError(withdrawalOverFund(max));
+		const cleanNote = parseInput(noteSchema, note);
+		await moveWithdrawal(ctx, space, cycle, row, amountCents);
+		await ctx.db.patch("transactions", id, { amountCents, reason, note: cleanNote });
+		if (amountCents !== row.amountCents || reason !== row.reason || cleanNote !== row.note) {
+			await logEvent(ctx, space, userId, "withdrawal_edited", {
+				detail: row.note,
+				before: moneyLabel(row.amountCents),
+				after: moneyLabel(amountCents),
+			});
+		}
+		return null;
+	},
+});
+
+export const deleteWithdrawal = mutation({
+	args: { space: spaceKind, id: v.id("transactions") },
+	returns: v.null(),
+	handler: async (ctx, { space: kind, id }) => {
+		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "withdrawal");
+		if (row.kind !== "withdrawal") throw new ConvexError(NOT_FOUND);
+		await moveWithdrawal(ctx, space, cycle, row, 0);
+		await ctx.db.delete("transactions", id);
+		await logEvent(ctx, space, userId, "withdrawal_deleted", {
+			detail: rowLabel(row.note, row.amountCents),
+		});
+		return null;
+	},
+});
+
 function listedEnvelope(row: Doc<"transactions">) {
 	if (row.kind === "expense" || row.kind === "contribution") return row.envelope;
 	if (row.kind === "saving" || row.kind === "withdrawal") return "savings" as const;
@@ -337,6 +473,8 @@ export const list = query({
 				date: v.string(),
 				note: v.union(v.string(), v.null()),
 				envelope: v.union(v.literal("needs"), v.literal("wants"), v.literal("savings"), v.null()),
+				goalId: v.union(v.id("goals"), v.null()),
+				reason: v.union(withdrawalReason, v.null()),
 				extra: v.boolean(),
 				startsOn: v.union(v.string(), v.null()),
 				mine: v.boolean(),
@@ -374,6 +512,8 @@ export const list = query({
 				date: row.date,
 				note: row.note ?? null,
 				envelope: listedEnvelope(row),
+				goalId: (row.kind === "saving" && row.goalId) || null,
+				reason: row.kind === "withdrawal" ? row.reason : null,
 				extra: row.kind === "income" && row.extraType !== undefined,
 				startsOn: row.kind === "income" && row.forNextCycle ? addDays(cycle.endDate, 1) : null,
 				mine: row.userId === userId,

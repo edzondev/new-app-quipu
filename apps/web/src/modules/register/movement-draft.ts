@@ -13,11 +13,15 @@ export type Draft = {
 	envelope?: "needs" | "wants";
 };
 
+/** A saving or a withdrawal opens Aportar or Retirar in edit mode, which reads the row itself. */
+export type SavingDraft = { kind: "saving" | "withdrawal"; row: Movement };
+
 export function canEdit(row: Movement) {
-	return row.mine && (row.kind === "expense" || row.kind === "income");
+	return row.mine && row.kind !== "contribution";
 }
 
-export function editDraft(row: Movement): Draft {
+export function editDraft(row: Movement): Draft | SavingDraft {
+	if (row.kind === "saving" || row.kind === "withdrawal") return { kind: row.kind, row };
 	return {
 		kind: row.kind === "income" ? "income" : "expense",
 		amount: (row.amountCents / 100).toFixed(2),

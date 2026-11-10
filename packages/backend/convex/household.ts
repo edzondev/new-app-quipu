@@ -97,12 +97,12 @@ async function unseenPartnerWithdrawal(ctx: QueryCtx, spaceId: Id<"spaces">, use
 		.unique();
 	const seenAt = profile?.seenWithdrawalAt ?? 0;
 	const withdrawals = ctx.db
-		.query("spaceEvents")
-		.withIndex("by_space_type", (q) => q.eq("spaceId", spaceId).eq("type", "withdrawal"))
+		.query("transactions")
+		.withIndex("by_spaceId_kind", (q) => q.eq("spaceId", spaceId).eq("kind", "withdrawal"))
 		.order("desc");
-	for await (const event of withdrawals) {
-		if (event._creationTime <= seenAt) return null;
-		if (event.userId !== userId) return event;
+	for await (const withdrawal of withdrawals) {
+		if (withdrawal._creationTime <= seenAt) return null;
+		if (withdrawal.userId !== userId) return withdrawal;
 	}
 	return null;
 }
@@ -275,9 +275,9 @@ export const dismissWithdrawalNotice = mutation({
 			.query("profiles")
 			.withIndex("by_userId", (q) => q.eq("userId", userId))
 			.unique();
-		const event = await unseenPartnerWithdrawal(ctx, space._id, userId);
-		if (profile && event) {
-			await ctx.db.patch("profiles", profile._id, { seenWithdrawalAt: event._creationTime });
+		const withdrawal = await unseenPartnerWithdrawal(ctx, space._id, userId);
+		if (profile && withdrawal) {
+			await ctx.db.patch("profiles", profile._id, { seenWithdrawalAt: withdrawal._creationTime });
 		}
 		return null;
 	},
@@ -382,7 +382,7 @@ export const get = query({
 			withdrawalNotice: withdrawal
 				? {
 						name: withdrawer ? displayName(withdrawer.name) : "",
-						amountCents: withdrawal.amountCents ?? 0,
+						amountCents: withdrawal.amountCents,
 					}
 				: null,
 			invite:
