@@ -34,6 +34,12 @@ const savingOverAhorro = (max: number) =>
 const withdrawalOverFund = (max: number) =>
 	`Solo tienes ${moneyLabel(max)} en el fondo para este retiro. Baja el monto.`;
 
+/** Where a saving went, as the activity shows it: its goal or the fund. */
+async function savingDestination(ctx: MutationCtx, goalId: Id<"goals"> | undefined) {
+	const goal = goalId === undefined ? null : await ctx.db.get("goals", goalId);
+	return goal?.name ?? "Fondo de emergencia";
+}
+
 async function requireOwnOpenRow(
 	ctx: MutationCtx,
 	kind: SpaceKind,
@@ -279,9 +285,8 @@ export const addSaving = mutation({
 				fundCents: space.fundCents + amountCents,
 			});
 		}
-		const goal = goalId === undefined ? null : await ctx.db.get("goals", goalId);
 		await logEvent(ctx, space, userId, "saving_added", {
-			detail: goal?.name ?? "Fondo de emergencia",
+			detail: await savingDestination(ctx, goalId),
 			amountCents,
 		});
 		return null;
@@ -369,17 +374,15 @@ export const updateSaving = mutation({
 		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "saving");
 		if (row.kind !== "saving") throw new ConvexError(NOT_FOUND);
 		const max = cycle.envelopes.savingsCents + row.amountCents;
-		if (Number.isInteger(amountCents) && amountCents > max) {
-			throw new ConvexError(savingOverAhorro(max));
-		}
 		parseInput(centsSchema, amountCents);
+		if (amountCents > max) throw new ConvexError(savingOverAhorro(max));
 		await moveSaving(ctx, space, cycle, row, amountCents);
 		await ctx.db.patch("transactions", id, {
 			amountCents,
 			note: parseInput(noteSchema, note),
 		});
 		await logEvent(ctx, space, userId, "saving_edited", {
-			detail: row.note,
+			detail: await savingDestination(ctx, row.goalId),
 			before: moneyLabel(row.amountCents),
 			after: moneyLabel(amountCents),
 		});
@@ -396,7 +399,8 @@ export const deleteSaving = mutation({
 		await moveSaving(ctx, space, cycle, row, 0);
 		await ctx.db.delete("transactions", id);
 		await logEvent(ctx, space, userId, "saving_deleted", {
-			detail: rowLabel(row.note, row.amountCents),
+			detail: await savingDestination(ctx, row.goalId),
+			amountCents: row.amountCents,
 		});
 		return null;
 	},
@@ -415,10 +419,8 @@ export const updateWithdrawal = mutation({
 		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "withdrawal");
 		if (row.kind !== "withdrawal") throw new ConvexError(NOT_FOUND);
 		const max = space.fundCents + row.amountCents;
-		if (Number.isInteger(amountCents) && amountCents > max) {
-			throw new ConvexError(withdrawalOverFund(max));
-		}
 		parseInput(centsSchema, amountCents);
+		if (amountCents > max) throw new ConvexError(withdrawalOverFund(max));
 		await moveWithdrawal(ctx, space, cycle, row, amountCents);
 		await ctx.db.patch("transactions", id, {
 			amountCents,

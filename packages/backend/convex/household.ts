@@ -100,9 +100,9 @@ async function unseenPartnerWithdrawal(ctx: QueryCtx, spaceId: Id<"spaces">, use
 		.query("transactions")
 		.withIndex("by_spaceId_kind", (q) => q.eq("spaceId", spaceId).eq("kind", "withdrawal"))
 		.order("desc");
-	for await (const event of withdrawals) {
-		if (event._creationTime <= seenAt) return null;
-		if (event.userId !== userId) return event;
+	for await (const withdrawal of withdrawals) {
+		if (withdrawal._creationTime <= seenAt) return null;
+		if (withdrawal.userId !== userId) return withdrawal;
 	}
 	return null;
 }

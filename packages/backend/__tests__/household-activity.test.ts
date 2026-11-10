@@ -217,10 +217,15 @@ test("every shared change and every withdrawal leaves its event, with who did it
 	expect(byType("withdrawal_deleted")).toMatchObject({ who: "Renzo", detail: "S/ 15.00" });
 	expect(byType("saving_edited")).toMatchObject({
 		who: "Camila",
+		detail: "Fondo de emergencia",
 		before: "S/ 80.00",
 		after: "S/ 70.00",
 	});
-	expect(byType("saving_deleted")).toMatchObject({ who: "Camila", detail: "S/ 70.00" });
+	expect(byType("saving_deleted")).toMatchObject({
+		who: "Camila",
+		detail: "Fondo de emergencia",
+		amountCents: 7_000,
+	});
 });
 
 test("nothing recorded in Personal reaches the household activity", async () => {

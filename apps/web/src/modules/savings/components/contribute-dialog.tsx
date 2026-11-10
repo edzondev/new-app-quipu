@@ -1,3 +1,4 @@
+import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, toCents } from "@quipu/backend/shared/budget";
 import { useForm, useSelector } from "@tanstack/react-form";
@@ -19,7 +20,7 @@ import { CHIP } from "#/lib/typography";
 import { AmountField } from "#/modules/commitments/components/amount-field";
 import { DeleteButton } from "#/modules/register/delete-button";
 import type { Movement } from "#/modules/register/movement-draft";
-import { useSavingActions } from "../use-saving-actions";
+import { useFundActions } from "../use-fund-actions";
 import type { Goal } from "./goal-card";
 
 const QUICK_CENTS = 10_000;
@@ -47,7 +48,24 @@ export function ContributeForm({
 	editing,
 	onClose,
 }: ContributeProps) {
-	const { save, remove, pending, error: saveError } = useSavingActions(space, onClose, editing);
+	const addSaving = useConvexMutation(api.transactions.addSaving);
+	const updateSaving = useConvexMutation(api.transactions.updateSaving);
+	const deleteSaving = useConvexMutation(api.transactions.deleteSaving);
+	const {
+		save,
+		remove,
+		pending,
+		error: saveError,
+	} = useFundActions({
+		add: (value: Pick<FunctionArgs<typeof api.transactions.addSaving>, "amountCents" | "goalId">) =>
+			addSaving({ space, ...value }),
+		// An edit keeps the destination and the note of the row.
+		update: (id, value) =>
+			updateSaving({ space, id, amountCents: value.amountCents, note: editing?.note ?? undefined }),
+		remove: (id) => deleteSaving({ space, id }),
+		onDone: onClose,
+		editing,
+	});
 	const form = useForm({
 		defaultValues: { amount: editing ? (editing.amountCents / 100).toFixed(2) : "" },
 		onSubmit: ({ value }) =>

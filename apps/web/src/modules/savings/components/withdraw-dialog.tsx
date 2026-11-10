@@ -1,3 +1,4 @@
+import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
 import { useForm, useSelector } from "@tanstack/react-form";
@@ -22,7 +23,7 @@ import { EYEBROW } from "#/lib/typography";
 import { AmountField } from "#/modules/commitments/components/amount-field";
 import { DeleteButton } from "#/modules/register/delete-button";
 import type { Movement } from "#/modules/register/movement-draft";
-import { useWithdrawalActions } from "../use-withdrawal-actions";
+import { useFundActions } from "../use-fund-actions";
 
 type Reason = FunctionArgs<typeof api.transactions.withdrawSaving>["reason"];
 
@@ -46,7 +47,17 @@ type WithdrawProps = {
 };
 
 export function WithdrawForm({ space, fundCents, editing, onClose }: WithdrawProps) {
-	const { save, remove, pending, error } = useWithdrawalActions(space, onClose, editing);
+	const withdraw = useConvexMutation(api.transactions.withdrawSaving);
+	const updateWithdrawal = useConvexMutation(api.transactions.updateWithdrawal);
+	const deleteWithdrawal = useConvexMutation(api.transactions.deleteWithdrawal);
+	const { save, remove, pending, error } = useFundActions({
+		add: (value: Omit<FunctionArgs<typeof api.transactions.withdrawSaving>, "space">) =>
+			withdraw({ space, ...value }),
+		update: (id, value) => updateWithdrawal({ space, id, ...value }),
+		remove: (id) => deleteWithdrawal({ space, id }),
+		onDone: onClose,
+		editing,
+	});
 	const defaultValues: WithdrawValues = {
 		amount: editing ? (editing.amountCents / 100).toFixed(2) : "",
 		reason: editing?.reason ?? "emergency",
