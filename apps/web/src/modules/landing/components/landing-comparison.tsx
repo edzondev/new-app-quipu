@@ -59,11 +59,11 @@ export function LandingComparison() {
 									{row.values.map((value, index) => (
 										<td
 											key={COMPARISON_COLUMNS[index]}
-											className={`min-w-0 rounded-lg p-2 text-[10px] wrap-break-word leading-[1.6] sm:px-4.5 sm:py-5 sm:text-xs ${index === 0 ? "bg-background font-semibold text-foreground sm:font-normal" : "text-muted-foreground"} ${last ? "" : "sm:border-b sm:border-border"} ${index === 0 && last ? "sm:rounded-b-2xl" : "sm:rounded-none"}`}
+											className={`min-w-0 rounded-lg p-2 text-xs wrap-break-word leading-[1.6] sm:px-4.5 sm:py-5 sm:text-xs ${index === 0 ? "bg-background font-semibold text-foreground sm:font-normal" : "text-muted-foreground"} ${last ? "" : "sm:border-b sm:border-border"} ${index === 0 && last ? "sm:rounded-b-2xl" : "sm:rounded-none"}`}
 										>
 											<span
 												aria-hidden="true"
-												className={`mb-1.5 block text-[9px] font-bold sm:hidden ${index === 0 ? "text-envelope-savings" : "text-muted-foreground"}`}
+												className={`mb-1.5 block text-xs font-bold sm:hidden ${index === 0 ? "text-envelope-savings" : "text-muted-foreground"}`}
 											>
 												{COMPARISON_COLUMNS[index]}
 											</span>
@@ -75,7 +75,7 @@ export function LandingComparison() {
 						})}
 					</tbody>
 				</table>
-				<p className="mt-4 text-[9px] leading-[1.8] text-muted-foreground sm:text-[10px]">
+				<p className="mt-4 text-xs leading-[1.8] text-muted-foreground">
 					Excel: versión web gratuita, sin fórmulas ni automatizaciones propias. Los avisos de Quipu
 					se ven dentro de la app.
 				</p>

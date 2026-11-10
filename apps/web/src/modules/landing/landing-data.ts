@@ -147,3 +147,5 @@ export const FAQ = [
 ] as const;
 
 export const FOOTER_LINKS = ["Privacidad", "Términos", "Contacto"] as const;
+
+export const HERO_SUBTITLE = "Tu sueldo, repartido y claro hasta el próximo pago.";

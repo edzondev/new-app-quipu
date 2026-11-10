@@ -32,7 +32,7 @@ export function LandingPricing() {
 						className={`relative flex flex-col rounded-3xl border p-6 sm:p-7 md:p-8.5 ${plan.highlight ? "border-foreground bg-foreground text-background" : "border-input bg-background"}`}
 					>
 						{plan.highlight ? (
-							<span className="mb-3 inline-flex self-start rounded-full bg-primary-foreground px-2.5 py-1 text-[9px] font-bold tracking-[0.04em] text-primary">
+							<span className="mb-3 inline-flex self-start rounded-full bg-primary-foreground px-2.5 py-1 text-xs font-bold tracking-[0.04em] text-primary">
 								EL PLAN ANUAL TE SALE MEJOR
 							</span>
 						) : null}
@@ -79,7 +79,7 @@ export function LandingPricing() {
 							{plan.cta}
 						</SignUpButton>
 						<p
-							className={`mt-3 text-center text-[10px] ${plan.highlight ? "text-background/70" : "text-muted-foreground"}`}
+							className={`mt-3 text-center text-xs ${plan.highlight ? "text-background/70" : "text-muted-foreground"}`}
 						>
 							{plan.foot}
 						</p>

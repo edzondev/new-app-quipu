@@ -30,7 +30,7 @@ export function Brand() {
 
 export function Eyebrow({ index, children }: { index?: string; children: React.ReactNode }) {
 	return (
-		<p className="flex items-center gap-2.5 text-[11px] font-bold tracking-[0.15em] text-muted-foreground uppercase">
+		<p className="flex items-center gap-2.5 text-xs font-bold tracking-[0.15em] text-muted-foreground uppercase">
 			{index ? <span className="font-mono font-normal text-primary">{index}</span> : null}
 			{children}
 		</p>
@@ -39,7 +39,7 @@ export function Eyebrow({ index, children }: { index?: string; children: React.R
 
 export function Label({ children }: { children: React.ReactNode }) {
 	return (
-		<p className="text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+		<p className="text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
 			{children}
 		</p>
 	);
@@ -76,9 +76,9 @@ export function EnvelopeRow({ envelope }: { envelope: Envelope }) {
 					<Dot color={envelope.color} />
 					{envelope.name}
 				</span>
-				<span className="font-mono text-[11px] whitespace-nowrap">
+				<span className="font-mono text-xs whitespace-nowrap">
 					{envelope.amount}{" "}
-					<small className="font-sans text-[9px] text-muted-foreground max-sm:hidden">
+					<small className="font-sans text-xs text-muted-foreground max-sm:hidden">
 						{envelope.total}
 					</small>
 				</span>
@@ -108,12 +108,12 @@ export function MiniRow({ color, name, detail, amount, action }: MiniRowProps) {
 				<Dot color={color} />
 				<div className="min-w-0">
 					{name}
-					<small className="block truncate text-[10px] text-muted-foreground">{detail}</small>
+					<small className="block truncate text-xs text-muted-foreground">{detail}</small>
 				</div>
 			</div>
-			<div className="shrink-0 font-mono text-[11px] whitespace-nowrap">
+			<div className="shrink-0 font-mono text-xs whitespace-nowrap">
 				{action ? (
-					<span className="mr-2.5 rounded-full border border-input px-2 py-1 font-sans text-[9px] font-medium">
+					<span className="mr-2.5 rounded-full border border-input px-2 py-1 font-sans text-xs font-medium">
 						{action}
 					</span>
 				) : null}

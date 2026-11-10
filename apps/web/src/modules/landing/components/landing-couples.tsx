@@ -28,7 +28,7 @@ export function LandingCouples() {
 						Tus sobres personales son privados. Aquí solo se ve lo que aportan y lo que gastan
 						juntos.
 					</p>
-					<p className="mt-5 inline-flex rounded-full border border-input px-3 py-1.5 text-[9px] font-semibold text-primary sm:text-[10px]">
+					<p className="mt-5 inline-flex rounded-full border border-input px-3 py-1.5 text-xs font-semibold text-primary">
 						Parte de Quipu Plus · para dos
 					</p>
 					<br />
@@ -50,17 +50,17 @@ export function LandingCouples() {
 					>
 						<div aria-hidden="true">
 							<div className="flex items-center justify-between gap-2.5">
-								<span className="flex gap-1 rounded-full bg-muted p-1 text-[8px] text-muted-foreground sm:text-[10px]">
+								<span className="flex gap-1 rounded-full bg-muted p-1 text-xs text-muted-foreground">
 									<span className="px-2 py-1.5">Personal</span>
 									<b className="rounded-full bg-background px-2 py-1.5 font-semibold text-foreground">
 										Nuestro espacio
 									</b>
 								</span>
 								<span className="flex">
-									<span className="grid size-8 place-items-center rounded-full border-[3px] border-background bg-envelope-savings/15 text-[11px] font-bold text-envelope-savings">
+									<span className="grid size-8 place-items-center rounded-full border-[3px] border-background bg-envelope-savings/15 text-xs font-bold text-envelope-savings">
 										E
 									</span>
-									<span className="-ml-2 grid size-8 place-items-center rounded-full border-[3px] border-background bg-primary/15 text-[11px] font-bold text-primary">
+									<span className="-ml-2 grid size-8 place-items-center rounded-full border-[3px] border-background bg-primary/15 text-xs font-bold text-primary">
 										A
 									</span>
 								</span>
@@ -68,9 +68,7 @@ export function LandingCouples() {
 							<h3 className="mt-5 font-heading text-[26px] font-normal tracking-tight text-foreground">
 								Nuestro espacio
 							</h3>
-							<p className="mt-1 text-[10px] text-muted-foreground sm:text-[11px]">
-								Con Ana · quedan 16 días
-							</p>
+							<p className="mt-1 text-xs text-muted-foreground">Con Ana · quedan 16 días</p>
 							<div className="mt-5">
 								<Label>Pueden gastar hoy juntos</Label>
 							</div>
@@ -87,7 +85,7 @@ export function LandingCouples() {
 								detail="Gustos · Anotaste tú"
 								amount="− S/ 30.00"
 							/>
-							<p className="mt-4 rounded-[10px] bg-muted p-3 text-[9px] leading-[1.7] text-muted-foreground sm:text-[10px]">
+							<p className="mt-4 rounded-[10px] bg-muted p-3 text-xs leading-[1.7] text-muted-foreground">
 								Lo personal se queda contigo.
 								<br />
 								Aquí, solo lo que comparten.

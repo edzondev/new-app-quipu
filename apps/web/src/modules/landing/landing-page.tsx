@@ -18,7 +18,7 @@ export function LandingPage() {
 				Saltar al contenido
 			</a>
 			<LandingNav />
-			<main id="contenido" className="scroll-smooth motion-reduce:scroll-auto">
+			<main id="contenido">
 				<LandingHero />
 				<LandingSteps />
 				<LandingComparison />

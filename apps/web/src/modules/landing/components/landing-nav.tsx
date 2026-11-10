@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MenuIcon, MoonIcon } from "lucide-react";
+import { MenuIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import {
@@ -67,7 +67,8 @@ export function LandingNav() {
 							)
 						}
 					>
-						<MoonIcon />
+						<MoonIcon className="dark:hidden" />
+						<SunIcon className="hidden dark:inline" />
 					</Button>
 					<Drawer position="left" open={open} onOpenChange={setOpen}>
 						<DrawerTrigger

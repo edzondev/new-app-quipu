@@ -7,22 +7,22 @@ const snippet =
 function RegisterSnippet() {
 	return (
 		<div className={`${snippet} -rotate-2`}>
-			<div className="mb-3 flex gap-4 text-[10px] text-muted-foreground">
+			<div className="mb-3 flex gap-4 text-xs text-muted-foreground">
 				<b className="border-b-2 border-primary pb-1.5 text-foreground">Gasto</b>
 				<span>Ingreso</span>
 			</div>
 			<Label>¿Cuánto fue?</Label>
 			<p className="my-2 font-mono text-3xl text-foreground">S/ 25.00</p>
-			<div className="mb-3 flex justify-between gap-3 border-b border-border pb-2 text-[11px]">
+			<div className="mb-3 flex justify-between gap-3 border-b border-border pb-2 text-xs">
 				<span>Mercado</span>
 				<span className="text-muted-foreground">Hoy</span>
 			</div>
 			<div className="flex items-center justify-between">
-				<span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[9px]">
+				<span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-xs">
 					<Dot color="var(--envelope-needs)" />
 					Necesidades
 				</span>
-				<span className="rounded-full bg-foreground px-3.5 py-2 text-[10px] font-semibold text-background">
+				<span className="rounded-full bg-foreground px-3.5 py-2 text-xs font-semibold text-background">
 					Guardar
 				</span>
 			</div>
