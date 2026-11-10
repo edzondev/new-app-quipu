@@ -20,6 +20,8 @@ import { THEME_SCRIPT } from "#/lib/theme";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
+const OG_IMAGE = new URL("/og-image.jpg", SITE_URL).href;
+
 interface MyRouterContext {
 	queryClient: QueryClient;
 	convexQueryClient: ConvexQueryClient;
@@ -61,8 +63,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			{ property: "og:locale", content: "es_PE" },
 			{ property: "og:title", content: SITE_TITLE },
 			{ property: "og:description", content: SITE_DESCRIPTION },
-			{ property: "og:image", content: new URL("/og-image.jpg", SITE_URL).href },
+			{ property: "og:image", content: OG_IMAGE },
 			{ name: "twitter:card", content: "summary_large_image" },
+			{ name: "twitter:title", content: SITE_TITLE },
+			{ name: "twitter:description", content: SITE_DESCRIPTION },
+			{ name: "twitter:image", content: OG_IMAGE },
 		],
 		links: [
 			{

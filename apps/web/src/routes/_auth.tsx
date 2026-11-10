@@ -46,7 +46,7 @@ function RouteComponent() {
 						href={href}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="inline-flex min-h-11 min-w-11 items-center justify-center text-[11px] text-muted-foreground hover:text-foreground"
+						className="inline-flex min-h-11 min-w-11 items-center justify-center text-xs text-muted-foreground hover:text-foreground"
 					>
 						{title}
 					</a>
