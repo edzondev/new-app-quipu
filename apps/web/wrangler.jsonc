@@ -1,7 +1,35 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "quipu-web",
+	"main": "@tanstack/react-start/server-entry",
 	"compatibility_date": "2025-09-02",
 	"compatibility_flags": ["nodejs_compat"],
-	"main": "@tanstack/react-start/server-entry",
+
+	// el top-level no expone nada; siempre despliega develop o production
+	"workers_dev": false,
+	"preview_urls": false,
+
+	// no cachear respuestas ssr autenticadas
+	"cache": { "enabled": false },
+
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+		"traces": { "enabled": true, "head_sampling_rate": 0.05 },
+	},
+
+	"env": {
+		"develop": {
+			"name": "quipu-web-develop",
+			"workers_dev": true,
+			"preview_urls": false,
+			"routes": [],
+		},
+		"production": {
+			"name": "quipu-web-production",
+			"workers_dev": false,
+			"preview_urls": false,
+			"routes": [{ "pattern": "quipu-finance.app", "custom_domain": true }],
+		},
+	},
 }

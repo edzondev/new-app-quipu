@@ -13,7 +13,12 @@
 		"deploy": "pnpm run build && wrangler deploy",
 		"typecheck": "tsc --noEmit",
 		"e2e": "playwright test",
-		"e2e:ui": "playwright test --ui"
+		"e2e:ui": "playwright test --ui",
+		"build:develop": "vite build --mode develop",
+		"build:production": "vite build --mode production",
+		"deploy:develop": "pnpm run build:develop && wrangler deploy",
+		"deploy:production": "pnpm run build:production && wrangler deploy",
+		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.9.0",
