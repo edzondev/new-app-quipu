@@ -201,7 +201,7 @@ export function CommitmentRow({
 	today: string;
 	space: "personal" | "household";
 	/** Only Compromisos has the "⋯" menu; Inicio lists the same rows without it. */
-	menu?: { onEdit: () => void; onNotice: (message: string) => void };
+	menu?: { onEdit: () => void };
 }) {
 	const [paying, setPaying] = useState(false);
 	const gate = useReadOnlyGate();
@@ -217,13 +217,7 @@ export function CommitmentRow({
 			amountCents={item.amountCents}
 			menu={
 				menu ? (
-					<CommitmentMenu
-						item={item}
-						space={space}
-						today={today}
-						onEdit={menu.onEdit}
-						onNotice={menu.onNotice}
-					/>
+					<CommitmentMenu item={item} space={space} today={today} onEdit={menu.onEdit} />
 				) : null
 			}
 			action={

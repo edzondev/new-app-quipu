@@ -24,7 +24,11 @@ export type SaveValues =
 
 type Command = SaveValues | { kind: "delete"; entity: Kind; id: Movement["id"] };
 
-export function useMovementActions(space: "personal" | "household", onDone: () => void) {
+/** `onDone` gets the toast title: "Guardado" or "Eliminado". */
+export function useMovementActions(
+	space: "personal" | "household",
+	onDone: (title: "Guardado" | "Eliminado") => void,
+) {
 	const addExpense = useConvexMutation(api.transactions.addExpense);
 	const updateExpense = useConvexMutation(api.transactions.updateExpense);
 	const deleteExpense = useConvexMutation(api.transactions.deleteExpense);
@@ -56,7 +60,7 @@ export function useMovementActions(space: "personal" | "household", onDone: () =
 				}
 			}
 		},
-		onSuccess: onDone,
+		onSuccess: (_, command) => onDone(command.kind === "delete" ? "Eliminado" : "Guardado"),
 	});
 
 	function remove(entity: Kind, id: Movement["id"]) {
