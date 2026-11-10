@@ -32,13 +32,26 @@ function SignInPage() {
 		else setIsDone(true);
 	}
 
-	// Navigate only once Convex confirms the new session: before that myProfile runs without a token,
-	// returns null and /_app sends the user to /onboarding.
-	if (isDone && isConvexAuthenticated) return <Navigate to={to} />;
+	// Leave only once Convex confirms the new session: before that myProfile runs without a token,
+	// returns null and /_app sends the user to /onboarding. Rendered next to the step, not instead of it,
+	// so the form stays on screen until the next page is ready (no blank frame).
+	const leave = isDone && isConvexAuthenticated ? <Navigate to={to} /> : null;
 	if (step === "otp") {
-		return <OtpStep email={email} onChangeEmail={() => setStep("email")} onVerified={afterCode} />;
+		return (
+			<>
+				<OtpStep email={email} onChangeEmail={() => setStep("email")} onVerified={afterCode} />
+				{leave}
+			</>
+		);
 	}
-	if (step === "passkey") return <PasskeyStep onDone={() => setIsDone(true)} />;
+	if (step === "passkey") {
+		return (
+			<>
+				<PasskeyStep onDone={() => setIsDone(true)} />
+				{leave}
+			</>
+		);
+	}
 	return (
 		<>
 			<InviteLine redirect={to} action="Entra" />
@@ -50,6 +63,7 @@ function SignInPage() {
 					setStep("otp");
 				}}
 			/>
+			{leave}
 		</>
 	);
 }
