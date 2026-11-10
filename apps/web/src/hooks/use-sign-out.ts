@@ -1,6 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { authClient } from "#/lib/auth-client";
+import { useMutation } from "@tanstack/react-query";
+import { authClient, enterApp } from "#/lib/auth-client";
 import type { AuthError } from "#/lib/auth-errors";
 
 const END_SESSIONS = {
@@ -8,18 +7,13 @@ const END_SESSIONS = {
 	all: () => authClient.revokeSessions(),
 };
 
-/** Ends this session or all of them, then drops the cache and goes to sign-in. */
+/** Ends this session or all of them, then reloads into sign-in (see enterApp). */
 export function useSignOut(scope: keyof typeof END_SESSIONS) {
-	const queryClient = useQueryClient();
-	const navigate = useNavigate();
 	return useMutation<void, NonNullable<AuthError>>({
 		mutationFn: async () => {
 			const { error } = await END_SESSIONS[scope]();
 			if (error) throw error;
-		},
-		onSuccess: async () => {
-			queryClient.clear();
-			await navigate({ to: "/sign-in" });
+			await enterApp("/sign-in");
 		},
 	});
 }
