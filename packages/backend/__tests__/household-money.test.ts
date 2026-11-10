@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "../convex/_generated/api";
-import { firstName } from "../shared/household";
+import { displayName, firstName } from "../shared/household";
 import { DAY, joinedCouple, setTrialEnd, TODAY } from "./couple";
 
 afterEach(() => {
@@ -14,6 +14,8 @@ test("firstName keeps only the first word", () => {
 	expect(firstName("  Renzo   Paz ")).toBe("Renzo");
 	expect(firstName("Ana")).toBe("Ana");
 	expect(firstName("   ")).toBe("");
+	expect(displayName("   ")).toBe("Alguien");
+	expect(displayName("Ana Paz")).toBe("Ana");
 });
 
 test("two people writing in turn: the envelopes add up and each row keeps its author", async () => {

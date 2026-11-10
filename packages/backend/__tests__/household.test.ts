@@ -72,12 +72,12 @@ test("Ana invites Luis; Luis spends; Ana cannot delete Luis's expense", async ()
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 
 	const ana = await signIn(t, "ana@correo.com", "Ana");
-	await ana.as.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 	await ana.as.mutation(api.household.createHousehold, { name: "Casa" });
 	const { code } = await ana.as.mutation(api.household.createInvite, {});
 
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.as.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 	expect(await luis.as.mutation(api.household.joinHousehold, { code })).toEqual({ ok: true });
 
 	await luis.as.mutation(api.transactions.addExpense, {
@@ -104,7 +104,7 @@ test("six bad invite codes in a row: the sixth is rate_limited", async () => {
 	const t = harness();
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.as.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 
 	const results = [];
 	for (let i = 0; i < 6; i++) {
@@ -143,7 +143,7 @@ async function startUser(t: ReturnType<typeof harness>, email: string, name: str
 			update: { expiresAt: Date.UTC(2027, 0, 1) },
 		},
 	});
-	await user.as.mutation(api.profiles.completeOnboarding, monthly15);
+	await user.as.mutation(api.profiles.completeOnboarding, { ...monthly15, name });
 	return user.as;
 }
 

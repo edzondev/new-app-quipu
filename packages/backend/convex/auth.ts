@@ -48,22 +48,6 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		trustedOrigins: [siteUrl],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: { enabled: false }, // no passwords
-		databaseHooks: {
-			user: {
-				create: {
-					// Runs after the OTP is verified. Only /sign-up sends a name,
-					// so a new email on /sign-in can't create an account.
-					before: async (user) => {
-						if (!user.name.trim()) {
-							throw new APIError("BAD_REQUEST", {
-								code: "USER_NOT_FOUND",
-								message: "User not found",
-							});
-						}
-					},
-				},
-			},
-		},
 		hooks: {
 			// Before Better Auth replaces the previous code with a new one.
 			before: createAuthMiddleware(async (authCtx) => {

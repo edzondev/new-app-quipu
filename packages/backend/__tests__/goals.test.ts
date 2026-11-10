@@ -73,7 +73,7 @@ test("saving S/ 100 to Viaje a Cusco then deleting the goal moves it to the fund
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 
 	await ana.mutation(api.goals.add, {
 		space: "personal",
@@ -115,7 +115,7 @@ test("saving S/ 100 to Viaje a Cusco then deleting the goal moves it to the fund
 async function anaOnOct20(t: ReturnType<typeof harness>) {
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 	return ana;
 }
 
@@ -200,7 +200,7 @@ async function householdPair() {
 	await ana.mutation(api.household.createHousehold, { name: "Casa" });
 	const { code } = await ana.mutation(api.household.createInvite, {});
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 	await luis.mutation(api.household.joinHousehold, { code });
 	return { ana, luis };
 }
@@ -304,7 +304,7 @@ async function suggestedFor(plan: {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, ...plan });
+	await ana.mutation(api.profiles.completeOnboarding, { name: "Ana", ...onboard, ...plan });
 	return (await ana.query(api.goals.fund, { space: "personal", today: TODAY }))
 		.suggestedFundGoalCents;
 }

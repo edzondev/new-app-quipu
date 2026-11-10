@@ -1,5 +1,6 @@
 import { CheckIcon } from "lucide-react";
 import { Button } from "#/components/ui/button";
+import { Cords } from "./cords";
 import { ENVELOPES, HERO_CHECKS, HERO_SUBTITLE } from "../landing-data";
 import {
 	Brand,
@@ -12,47 +13,6 @@ import {
 	SignUpButton,
 	wrap,
 } from "./preview-parts";
-
-const CORDS = [
-	{
-		id: "n",
-		color: "text-envelope-needs",
-		d: "M-80 100 C200 130 290 360 630 430 S1110 540 1490 720",
-	},
-	{
-		id: "g",
-		color: "text-envelope-wants",
-		d: "M-80 175 C200 200 320 410 650 480 S1140 600 1490 765",
-	},
-	{
-		id: "a",
-		color: "text-envelope-savings",
-		d: "M-80 250 C220 270 350 460 670 530 S1150 665 1490 810",
-	},
-] as const;
-
-function Cords() {
-	return (
-		<svg
-			viewBox="0 0 1400 760"
-			aria-hidden="true"
-			className="pointer-events-none absolute -top-5 left-1/2 h-155 w-215 -translate-x-1/2 overflow-visible sm:-top-7 sm:h-190 sm:w-[calc(100%+240px)] min-[1500px]:w-[1500px]"
-		>
-			{CORDS.map(({ id, color, d }) => (
-				<g key={id} className={color}>
-					<path d={d} fill="none" stroke="currentColor" strokeWidth="22" strokeLinecap="round" />
-					<path
-						d={d}
-						fill="none"
-						className="stroke-background opacity-25"
-						strokeWidth="2"
-						strokeDasharray="2 7"
-					/>
-				</g>
-			))}
-		</svg>
-	);
-}
 
 export function LandingHero() {
 	return (
@@ -111,7 +71,7 @@ export function LandingHero() {
 			</div>
 
 			<div className={`${wrap} relative mt-4 pt-10 pb-5 sm:mt-6 sm:pt-15 sm:pb-10`}>
-				<Cords />
+				<Cords className="-top-5 h-155 w-215 sm:-top-7 sm:h-190 sm:w-[calc(100%+240px)] min-[1500px]:w-[1500px]" />
 				<div
 					role="img"
 					aria-label="Ejemplo del Inicio de Quipu. Hola, Miguel. Puedes gastar hoy 68 soles con 59 céntimos, sin tocar tus compromisos ni tu ahorro. Sobres: Necesidades 530 soles con 60, Gustos 292 soles con 50 y Ahorro 266 soles. Próximo compromiso: Celular, vence en 3 días."

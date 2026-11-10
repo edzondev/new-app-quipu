@@ -1,64 +1,80 @@
 import { Fingerprint } from "lucide-react";
+import { cn } from "cn";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { authClient } from "#/lib/auth-client";
+import { authButton, authLink, authTitle } from "#/modules/auth/styles";
 
 type Props = {
 	/** Where to go once the key is made or skipped. */
-	onDone: () => Promise<void>;
+	onDone: () => void;
 };
 
 export function PasskeyStep({ onDone }: Props) {
 	const [isPending, setIsPending] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [failed, setFailed] = useState(false);
 
-	async function createPasskey() {
-		setError(null);
+	async function activate() {
 		setIsPending(true);
 		const { error } = await authClient.passkey.addPasskey();
 		setIsPending(false);
 		if (error) {
-			setError("No pudimos crear tu llave. Inténtalo otra vez o sigue sin ella.");
+			setFailed(true);
 			return;
 		}
-		await onDone();
+		onDone();
 	}
 
 	return (
-		<>
-			<h1 className="text-[42px] font-normal leading-tight tracking-tight sm:text-[52px]">
-				Entra más rápido la próxima vez
-			</h1>
-			<p className="mt-6 break-words text-sm leading-relaxed text-muted-foreground">
-				Crea una llave en este equipo y entra con tu huella o tu cara.
+		<div className="text-center">
+			<Fingerprint
+				aria-hidden="true"
+				strokeWidth={1.25}
+				className="mx-auto mb-6 size-16 opacity-100"
+			/>
+			<h1 className={cn(authTitle, "mb-4")}>Entra más rápido la próxima vez</h1>
+			<p className="mb-6 text-[13px] leading-7 text-muted-foreground">
+				Usa tu huella, rostro o el desbloqueo de tu celular o compu. Sin códigos.
 			</p>
-			<div className="mt-8 flex flex-wrap gap-3">
-				<Button
-					type="button"
-					variant="secondary"
-					className="h-12 flex-1 rounded-full px-4"
-					disabled={isPending}
-					loading={isPending}
-					onClick={createPasskey}
-				>
-					<Fingerprint strokeWidth={1.5} />
-					Crear mi llave
-				</Button>
-				<Button
-					type="button"
-					variant="secondary"
-					className="h-12 flex-1 rounded-full px-4"
-					disabled={isPending}
-					onClick={onDone}
-				>
-					Ahora no
-				</Button>
-			</div>
-			{error ? (
-				<p role="alert" className="mt-3 text-xs text-warning-foreground">
-					{error}
-				</p>
-			) : null}
-		</>
+			{failed ? (
+				<>
+					<p role="alert" className="text-xs text-warning-foreground">
+						No se pudo activar. Puedes hacerlo luego en Ajustes.
+					</p>
+					<Button
+						type="button"
+						variant="default"
+						size="xl"
+						className={cn(authButton, "mt-6")}
+						onClick={onDone}
+					>
+						Continuar
+					</Button>
+				</>
+			) : (
+				<>
+					<Button
+						type="button"
+						variant="default"
+						size="xl"
+						className={authButton}
+						disabled={isPending}
+						loading={isPending}
+						onClick={activate}
+					>
+						Activar huella o rostro
+					</Button>
+					<Button
+						type="button"
+						variant="ghost"
+						className={cn(authLink, "mt-2 inline-flex")}
+						disabled={isPending}
+						onClick={onDone}
+					>
+						Ahora no
+					</Button>
+				</>
+			)}
+		</div>
 	);
 }

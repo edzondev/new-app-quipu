@@ -17,6 +17,7 @@ import {
 
 type Props = {
 	defaultValues: SplitStepValues;
+	name: string;
 	cycleStep: CycleStepValues;
 	/** Where to go when the plan is saved. */
 	redirect: string;
@@ -24,7 +25,7 @@ type Props = {
 	onBack: (value: SplitStepValues) => void;
 };
 
-export function SplitStep({ defaultValues, cycleStep, redirect, onBack }: Props) {
+export function SplitStep({ defaultValues, name, cycleStep, redirect, onBack }: Props) {
 	const navigate = useNavigate();
 	const completeOnboarding = useConvexMutation(api.profiles.completeOnboarding);
 	const [saveError, setSaveError] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export function SplitStep({ defaultValues, cycleStep, redirect, onBack }: Props)
 			setSaveError(null);
 			try {
 				await completeOnboarding({
+					name,
 					cadence: cycleStep.cadence,
 					cycleStartDay: parseStartDay(cycleStep.startDay),
 					incomeCents: cycleIncomeCents,

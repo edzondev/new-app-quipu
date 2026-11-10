@@ -17,3 +17,8 @@ export function safeRedirect(value: unknown): string {
 export function firstName(name: string): string {
 	return name.trim().split(/\s+/)[0] ?? "";
 }
+
+/** The first name of another person, or "Alguien" while they have not given one (an account that has not done onboarding yet). */
+export function displayName(name: string): string {
+	return firstName(name) || "Alguien";
+}

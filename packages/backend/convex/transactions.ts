@@ -11,7 +11,7 @@ import {
 } from "../shared/budget";
 import { addDays, isEarlyIncomeWindow, isoDateSchema } from "../shared/dates";
 import { moneyLabel, rowLabel } from "../shared/activity";
-import { firstName } from "../shared/household";
+import { displayName } from "../shared/household";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
@@ -359,7 +359,7 @@ export const list = query({
 			await Promise.all(
 				authorIds.map(async (authorId) => {
 					const user = await authComponent.getAnyUserById(ctx, authorId);
-					whoByUser.set(authorId, user ? firstName(user.name) : null);
+					whoByUser.set(authorId, user ? displayName(user.name) : null);
 				}),
 			);
 		}

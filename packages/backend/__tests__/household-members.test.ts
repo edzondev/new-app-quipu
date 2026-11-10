@@ -325,7 +325,7 @@ test("someone with no Personal plan joins, reads and writes the household, and a
 		marta.as.query(api.balances.getHome, { space: "personal", today: TODAY }),
 	).rejects.toThrow("Termina tus primeros pasos.");
 
-	await marta.as.mutation(api.profiles.completeOnboarding, monthly15);
+	await marta.as.mutation(api.profiles.completeOnboarding, { ...monthly15, name: "Marta" });
 	const own = await marta.as.query(api.balances.getHome, { space: "personal", today: TODAY });
 	expect(own.needsCents).toBe(30_000);
 	const shared = await marta.as.query(api.balances.getHome, { space: household, today: TODAY });

@@ -3,7 +3,7 @@ import { parseInput } from "./model/input";
 import { authComponent } from "./auth";
 import { query } from "./_generated/server";
 import { requireSpace } from "./model/spaces";
-import { firstName } from "../shared/household";
+import { displayName } from "../shared/household";
 import { eventType } from "./schema";
 import * as z from "zod/mini";
 
@@ -46,7 +46,7 @@ export const list = query({
 		await Promise.all(
 			[...new Set(page.map((row) => row.userId))].map(async (authorId) => {
 				const user = await authComponent.getAnyUserById(ctx, authorId);
-				names.set(authorId, user ? firstName(user.name) : "");
+				names.set(authorId, user ? displayName(user.name) : "");
 			}),
 		);
 		return {

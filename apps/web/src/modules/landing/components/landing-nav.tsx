@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MenuIcon, MoonIcon, SunIcon } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import {
@@ -10,7 +10,7 @@ import {
 	DrawerTitle,
 	DrawerTrigger,
 } from "#/components/ui/drawer";
-import { setTheme } from "#/lib/theme";
+import { ThemeToggle } from "#/components/theme-toggle";
 import { NAV_LINKS } from "../landing-data";
 import { Brand, SignUpButton, wrap } from "./preview-parts";
 
@@ -55,21 +55,7 @@ export function LandingNav() {
 					>
 						Empezar gratis
 					</SignUpButton>
-					<Button
-						variant="ghost"
-						size="icon-xl"
-						aria-label="Cambiar tema"
-						className="rounded-full"
-						onClick={(event) =>
-							setTheme(
-								document.documentElement.classList.contains("dark") ? "light" : "dark",
-								event.nativeEvent,
-							)
-						}
-					>
-						<MoonIcon className="dark:hidden" />
-						<SunIcon className="hidden dark:inline" />
-					</Button>
+					<ThemeToggle />
 					<Drawer position="left" open={open} onOpenChange={setOpen}>
 						<DrawerTrigger
 							render={

@@ -2,6 +2,7 @@ import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "@tanstack/react-router";
 import { useConvexAuth } from "convex/react";
+import { cn } from "cn";
 import { Fingerprint } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -11,6 +12,7 @@ import { authClient, sendSignInCode } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
 import { clearAuthTokenCache } from "#/lib/auth-token";
 import { emailStepSchema } from "#/modules/auth/schemas";
+import { authButton, authInput, authLabel, authTitle } from "#/modules/auth/styles";
 
 type Props = {
 	/** Where a passkey sign-in goes. */
@@ -46,7 +48,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 		const { error } = await authClient.signIn.passkey();
 		if (error) {
 			setIsPasskeyPending(false);
-			setError("No pudimos usar tu llave. Si no tienes una en este equipo, entra con tu correo.");
+			setError("No se pudo entrar con huella o rostro. Entra con tu correo.");
 			return;
 		}
 		clearAuthTokenCache(queryClient);
@@ -76,26 +78,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 
 	return (
 		<>
-			<h1 className="text-[42px] font-normal leading-tight tracking-tight sm:text-[52px]">
-				Qué bueno verte.
-			</h1>
-			<Button
-				type="button"
-				variant="default"
-				size="xl"
-				className="mt-9 w-full rounded-full"
-				disabled={isSigningIn || isSubmitting}
-				loading={isSigningIn}
-				onClick={signInWithPasskey}
-			>
-				<Fingerprint strokeWidth={1.5} />
-				Entrar con mi llave
-			</Button>
-			<div className="my-7 flex items-center gap-4 text-xs text-muted-foreground">
-				<span className="h-px flex-1 bg-border" />
-				<span>o</span>
-				<span className="h-px flex-1 bg-border" />
-			</div>
+			<h1 className={authTitle}>Entrar a Quipu</h1>
 			<form
 				noValidate
 				onSubmit={(e) => {
@@ -109,19 +92,16 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 						const errorMessage = field.state.meta.errors[0]?.message;
 						return (
 							<Field name={field.name} invalid={isInvalid}>
-								<FieldLabel className="text-sm font-normal text-muted-foreground">
-									Tu correo
-								</FieldLabel>
+								<FieldLabel className={authLabel}>Correo</FieldLabel>
 								<Input
 									name={field.name}
 									type="email"
 									autoComplete="username webauthn"
-									placeholder="tu@correo.pe"
+									placeholder="tu@correo.com"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
-									unstyled
-									className="w-full border-0 border-b border-input bg-transparent has-focus-visible:border-foreground has-aria-invalid:border-warning [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-3.5 [&_[data-slot=input]]:text-lg"
+									className={authInput}
 								/>
 								{isInvalid && errorMessage ? (
 									<FieldError match className="text-warning-foreground">
@@ -141,15 +121,32 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 					type="submit"
 					variant="default"
 					size="xl"
-					className="mt-9 w-full rounded-full"
+					className={cn(authButton, "mt-6")}
 					disabled={isSubmitting || isSigningIn}
 					loading={isSubmitting}
 				>
-					Recibir código por correo
+					Enviar código
 				</Button>
 			</form>
-			<p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-				¿Cambiaste de celular o perdiste tu llave? Entra con un código y crea una nueva.
+			<div className="my-4 flex items-center gap-4 text-xs text-muted-foreground">
+				<span className="h-px flex-1 bg-border" />
+				<span>o</span>
+				<span className="h-px flex-1 bg-border" />
+			</div>
+			<Button
+				type="button"
+				variant="outline"
+				size="xl"
+				className={authButton}
+				disabled={isSigningIn || isSubmitting}
+				loading={isSigningIn}
+				onClick={signInWithPasskey}
+			>
+				<Fingerprint strokeWidth={1.5} />
+				Entrar con huella o rostro
+			</Button>
+			<p className="mt-2 text-center text-xs leading-relaxed text-muted-foreground">
+				Usa el desbloqueo de tu celular o compu.
 			</p>
 		</>
 	);

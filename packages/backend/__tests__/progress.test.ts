@@ -87,7 +87,7 @@ async function startAna(t: ReturnType<typeof harness>, plan = onboard) {
 			update: { expiresAt: Date.UTC(2028, 0, 1) },
 		},
 	});
-	await ana.mutation(api.profiles.completeOnboarding, plan);
+	await ana.mutation(api.profiles.completeOnboarding, { ...plan, name: "Ana" });
 	return ana;
 }
 
@@ -811,7 +811,7 @@ test("each person sees only their own cycles, and a closed household cycle is no
 	});
 	expect(closedHouseholdCycles).toBe(1);
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 
 	const anas = await ana.query(api.progress.list, {});
 	expect(anas.cycles.map((cycle) => cycle.startDate)).toEqual(["2026-10-20"]);

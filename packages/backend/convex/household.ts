@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { nameSchema } from "../shared/budget";
 import { getLimaDate, isoDateSchema } from "../shared/dates";
-import { firstName } from "../shared/household";
+import { displayName } from "../shared/household";
 import { cycleLabel, isValidPlan } from "../shared/plan";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
@@ -259,7 +259,7 @@ export const leaveHousehold = mutation({
 		await ctx.db.delete("spaceMembers", membership._id);
 		// What was shared stays with who stays, who also takes over inviting.
 		await ctx.db.patch("spaces", space._id, {
-			partnerLeft: { name: firstName(user.name) },
+			partnerLeft: { name: displayName(user.name) },
 			...(space.ownerId === user._id ? { ownerId: partnerId } : {}),
 		});
 		return null;
@@ -375,13 +375,13 @@ export const get = query({
 		return {
 			name: space.name ?? null,
 			isOwner,
-			partnerName: partner ? firstName(partner.name) : null,
+			partnerName: partner ? displayName(partner.name) : null,
 			partnerJoinedAt: partnerMember?.joinedAt ?? null,
 			cycle: await requirePlan(ctx, space),
 			partnerLeft: space.partnerLeft?.name ?? null,
 			withdrawalNotice: withdrawal
 				? {
-						name: withdrawer ? firstName(withdrawer.name) : "",
+						name: withdrawer ? displayName(withdrawer.name) : "",
 						amountCents: withdrawal.amountCents ?? 0,
 					}
 				: null,
@@ -391,7 +391,7 @@ export const get = query({
 					: null,
 			plus: {
 				active: await householdHasPlus(ctx, space._id),
-				payerName: payer ? firstName(payer.name) : null,
+				payerName: payer ? displayName(payer.name) : null,
 				payerIsMe: payerId === user._id,
 			},
 		};
@@ -449,7 +449,7 @@ export const inviteInfo = query({
 		if (space?.kind !== "household") return null;
 		const inviter = await authComponent.getAnyUserById(ctx, space.ownerId);
 		return {
-			inviterName: firstName(inviter?.name ?? ""),
+			inviterName: displayName(inviter?.name ?? ""),
 			expiresAt: space.inviteExpiresAt ?? 0,
 		};
 	},

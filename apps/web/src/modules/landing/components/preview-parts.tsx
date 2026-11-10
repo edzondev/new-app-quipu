@@ -9,10 +9,10 @@ export const wrap =
 
 type SignUpButtonProps = Omit<React.ComponentProps<typeof Button>, "render"> & { arrow?: boolean };
 
-/** Every call to action on the landing goes to the sign-up form. */
+/** Every call to action on the landing goes to the sign-in form. */
 export function SignUpButton({ children, arrow = true, ...props }: SignUpButtonProps) {
 	return (
-		<Button render={<Link to="/sign-up" search={{ email: "" }} />} {...props}>
+		<Button render={<Link to="/sign-in" />} {...props}>
 			{children}
 			{arrow ? <ArrowUpRightIcon aria-hidden="true" /> : null}
 		</Button>
