@@ -17,8 +17,8 @@ export function PasskeyStep({ onDone }: Props) {
 	async function activate() {
 		setIsPending(true);
 		const { error } = await authClient.passkey.addPasskey();
-		setIsPending(false);
 		if (error) {
+			setIsPending(false);
 			setFailed(true);
 			return;
 		}

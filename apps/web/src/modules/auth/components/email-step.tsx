@@ -1,16 +1,12 @@
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
-import { Navigate } from "@tanstack/react-router";
-import { useConvexAuth } from "convex/react";
 import { cn } from "cn";
 import { Fingerprint } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
-import { authClient, sendSignInCode } from "#/lib/auth-client";
+import { authClient, reloadTo, sendSignInCode } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
-import { clearAuthTokenCache } from "#/lib/auth-token";
 import { emailStepSchema } from "#/modules/auth/schemas";
 import { authButton, authInput, authLabel, authTitle } from "#/modules/auth/styles";
 
@@ -22,12 +18,9 @@ type Props = {
 };
 
 export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
-	const queryClient = useQueryClient();
-	const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
 	const [error, setError] = useState<string | null>(null);
-	const [isPasskeyPending, setIsPasskeyPending] = useState(false);
-	const [hasPasskeySession, setHasPasskeySession] = useState(false);
-	const isSigningIn = isPasskeyPending || hasPasskeySession;
+	// Stays true after a passkey sign-in, so the buttons keep loading while the page leaves.
+	const [isSigningIn, setIsSigningIn] = useState(false);
 
 	// Passkey autofill: the browser offers saved passkeys in the email field's suggestions.
 	// Errors are ignored on purpose (unsupported browser, or aborted when the button starts its own request).
@@ -36,23 +29,22 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 			.passkey({ autoFill: true })
 			.then(({ data }) => {
 				if (!data) return;
-				clearAuthTokenCache(queryClient);
-				setHasPasskeySession(true);
+				setIsSigningIn(true);
+				void reloadTo(redirect);
 			})
 			.catch(() => {});
-	}, [queryClient]);
+	}, [redirect]);
 
 	async function signInWithPasskey() {
 		setError(null);
-		setIsPasskeyPending(true);
+		setIsSigningIn(true);
 		const { error } = await authClient.signIn.passkey();
 		if (error) {
-			setIsPasskeyPending(false);
+			setIsSigningIn(false);
 			setError("No se pudo entrar con huella o rostro. Entra con tu correo.");
 			return;
 		}
-		clearAuthTokenCache(queryClient);
-		setHasPasskeySession(true);
+		void reloadTo(redirect);
 	}
 
 	const form = useForm({
@@ -71,10 +63,6 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 		},
 	});
 	const isSubmitting = useSelector(form.store, (state) => state.isSubmitting);
-
-	// Navigate only once Convex confirms the session: before that myProfile runs without a token,
-	// returns null and /_app sends the user to /onboarding.
-	if (hasPasskeySession && isConvexAuthenticated) return <Navigate to={redirect} />;
 
 	return (
 		<>

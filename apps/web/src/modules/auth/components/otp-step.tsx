@@ -1,5 +1,4 @@
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -8,7 +7,6 @@ import { Input } from "#/components/ui/input";
 import { useCountdown } from "#/hooks/use-countdown";
 import { authClient, sendSignInCode } from "#/lib/auth-client";
 import { type AuthError, getAuthErrorMessage } from "#/lib/auth-errors";
-import { clearAuthTokenCache } from "#/lib/auth-token";
 import { otpStepSchema } from "#/modules/auth/schemas";
 import { authButton, authInput, authLabel, authLink, authTitle } from "#/modules/auth/styles";
 
@@ -28,7 +26,6 @@ function formatClock(totalSeconds: number): string {
 }
 
 export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
-	const queryClient = useQueryClient();
 	const [error, setError] = useState<AuthError>(null);
 	const [isResending, setIsResending] = useState(false);
 	const { secondsLeft, restart } = useCountdown();
@@ -44,7 +41,6 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 				setError(error);
 				return;
 			}
-			clearAuthTokenCache(queryClient);
 			await onVerified();
 		},
 	});
@@ -72,6 +68,7 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 					type="button"
 					variant="ghost"
 					className={cn(authLink, "shrink-0 text-xs")}
+					disabled={isSubmitting}
 					onClick={onChangeEmail}
 				>
 					Cambiar
@@ -138,7 +135,7 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 							authLink,
 							"text-xs disabled:no-underline disabled:text-muted-foreground disabled:opacity-100",
 						)}
-						disabled={secondsLeft > 0 || isResending}
+						disabled={secondsLeft > 0 || isResending || isSubmitting}
 						onClick={resend}
 					>
 						{secondsLeft > 0 ? `Reenviar en ${formatClock(secondsLeft)}` : "Reenviar código"}

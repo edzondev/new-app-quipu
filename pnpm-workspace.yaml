@@ -11,9 +11,9 @@ allowBuilds:
   sharp: true
   workerd: true
 overrides:
-  better-auth: 1.6.33
-  "@better-auth/core": 1.6.33
-  "@better-auth/passkey": 1.6.33
+  better-auth: 1.7.18
+  "@better-auth/core": 1.7.18
+  "@better-auth/passkey": 1.7.18
 permissions:
   "@tanstack/devtools-vite":
     skills: true
