@@ -46,7 +46,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 		const { error } = await authClient.signIn.passkey();
 		if (error) {
 			setIsPasskeyPending(false);
-			setError("No pudimos usar tu llave. Si no tienes una en este equipo, entra con tu correo.");
+			setError("No se pudo entrar con huella o rostro. Entra con tu correo.");
 			return;
 		}
 		clearAuthTokenCache(queryClient);
@@ -77,27 +77,11 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 	return (
 		<>
 			<h1 className="text-[42px] font-normal leading-tight tracking-tight sm:text-[52px]">
-				Qué bueno verte.
+				Entrar a Quipu
 			</h1>
-			<Button
-				type="button"
-				variant="default"
-				size="xl"
-				className="mt-9 w-full rounded-full"
-				disabled={isSigningIn || isSubmitting}
-				loading={isSigningIn}
-				onClick={signInWithPasskey}
-			>
-				<Fingerprint strokeWidth={1.5} />
-				Entrar con mi llave
-			</Button>
-			<div className="my-7 flex items-center gap-4 text-xs text-muted-foreground">
-				<span className="h-px flex-1 bg-border" />
-				<span>o</span>
-				<span className="h-px flex-1 bg-border" />
-			</div>
 			<form
 				noValidate
+				className="mt-9"
 				onSubmit={(e) => {
 					e.preventDefault();
 					void form.handleSubmit();
@@ -110,7 +94,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 						return (
 							<Field name={field.name} invalid={isInvalid}>
 								<FieldLabel className="text-sm font-normal text-muted-foreground">
-									Tu correo
+									Correo
 								</FieldLabel>
 								<Input
 									name={field.name}
@@ -145,11 +129,28 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 					disabled={isSubmitting || isSigningIn}
 					loading={isSubmitting}
 				>
-					Recibir código por correo
+					Enviar código
 				</Button>
 			</form>
-			<p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-				¿Cambiaste de celular o perdiste tu llave? Entra con un código y crea una nueva.
+			<div className="my-7 flex items-center gap-4 text-xs text-muted-foreground">
+				<span className="h-px flex-1 bg-border" />
+				<span>o</span>
+				<span className="h-px flex-1 bg-border" />
+			</div>
+			<Button
+				type="button"
+				variant="outline"
+				size="xl"
+				className="w-full rounded-full"
+				disabled={isSigningIn || isSubmitting}
+				loading={isSigningIn}
+				onClick={signInWithPasskey}
+			>
+				<Fingerprint strokeWidth={1.5} />
+				Entrar con huella o rostro
+			</Button>
+			<p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+				Usa el desbloqueo de tu celular o compu.
 			</p>
 		</>
 	);

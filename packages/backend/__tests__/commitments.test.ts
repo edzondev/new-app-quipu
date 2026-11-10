@@ -73,7 +73,7 @@ test("Luz S/ 50 day 25 lowers daily; markPaid cuts Needs and stops the discount"
 	const t = harness();
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	const ana = await signIn(t, "ana@correo.com", "Ana");
-	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 
 	await ana.mutation(api.commitments.add, {
 		space: "personal",
@@ -105,7 +105,7 @@ test("once commitment paid in October cannot be marked paid again after ensureOp
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 
 	await ana.mutation(api.commitments.add, {
 		space: "personal",
@@ -150,7 +150,7 @@ async function startAnaAt(
 			update: { expiresAt: Date.UTC(2027, 0, 1) },
 		},
 	});
-	await ana.mutation(api.profiles.completeOnboarding, plan);
+	await ana.mutation(api.profiles.completeOnboarding, { ...plan, name: "Ana" });
 	return ana;
 }
 

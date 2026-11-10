@@ -2,7 +2,9 @@ import { ConvexError, v } from "convex/values";
 import * as z from "zod/mini";
 import { applyIncome, ZERO_AMOUNTS } from "../shared/budget";
 import { getLimaDate } from "../shared/dates";
+import { nameSchema } from "../shared/name";
 import { isValidPlan, isValidSplit } from "../shared/plan";
+import { components } from "./_generated/api";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { createFirstCycle } from "./model/cycles";
 import { BAD_INPUT, parseInput } from "./model/input";
@@ -46,16 +48,18 @@ export const myProfile = query({
 
 export const completeOnboarding = mutation({
 	args: {
+		name: v.string(),
 		...plan.fields,
 		todayCents: v.number(),
 		split,
 	},
 	returns: v.null(),
-	handler: async (ctx, { split: splitValue, todayCents, ...planValue }) => {
+	handler: async (ctx, { name, split: splitValue, todayCents, ...planValue }) => {
 		const user = await requireUser(ctx);
 		const profile = await getProfile(ctx, user._id);
 		if (!profile) throw new ConvexError("No encontramos tu perfil.");
 
+		const cleanName = parseInput(nameSchema, name);
 		parseInput(z.int().check(z.nonnegative()), todayCents);
 		if (!isValidPlan(planValue) || !isValidSplit(splitValue)) throw new ConvexError(BAD_INPUT);
 
@@ -63,6 +67,14 @@ export const completeOnboarding = mutation({
 		// must not rewrite the plan while leaving the first cycle untouched.
 		if (await getPersonalSpace(ctx, user._id)) return null;
 
+		// Same mutation as the plan, so a plan never exists without a name.
+		await ctx.runMutation(components.betterAuth.adapter.updateOne, {
+			input: {
+				model: "user",
+				where: [{ field: "_id", value: user._id }],
+				update: { name: cleanName },
+			},
+		});
 		const today = getLimaDate();
 		const trialEndsAt = Date.now() + 14 * 24 * 60 * 60 * 1000;
 		await ctx.db.patch("profiles", profile._id, { plan: planValue, trialEndsAt });

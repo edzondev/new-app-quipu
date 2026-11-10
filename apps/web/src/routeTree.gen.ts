@@ -23,7 +23,6 @@ import { Route as AppSavingsRouteImport } from './routes/_app/savings'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSpaceRouteImport } from './routes/_app/space'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
-import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as UnirmeIndexRouteImport } from './routes/unirme/index'
 import { Route as UnirmeCodeRouteImport } from './routes/unirme/$code'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -96,11 +95,6 @@ const AuthSignInRoute = AuthSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthSignUpRoute = AuthSignUpRouteImport.update({
-  id: '/sign-up',
-  path: '/sign-up',
-  getParentRoute: () => AuthRoute,
-} as any)
 const UnirmeIndexRoute = UnirmeIndexRouteImport.update({
   id: '/unirme/',
   path: '/unirme/',
@@ -130,7 +124,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/space': typeof AppSpaceRoute
   '/sign-in': typeof AuthSignInRoute
-  '/sign-up': typeof AuthSignUpRoute
   '/unirme/$code': typeof UnirmeCodeRoute
   '/unirme/': typeof UnirmeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -148,7 +141,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/space': typeof AppSpaceRoute
   '/sign-in': typeof AuthSignInRoute
-  '/sign-up': typeof AuthSignUpRoute
   '/unirme/$code': typeof UnirmeCodeRoute
   '/unirme': typeof UnirmeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -169,7 +161,6 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/space': typeof AppSpaceRoute
   '/_auth/sign-in': typeof AuthSignInRoute
-  '/_auth/sign-up': typeof AuthSignUpRoute
   '/unirme/$code': typeof UnirmeCodeRoute
   '/unirme/': typeof UnirmeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -189,7 +180,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/space'
     | '/sign-in'
-    | '/sign-up'
     | '/unirme/$code'
     | '/unirme/'
     | '/api/auth/$'
@@ -207,7 +197,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/space'
     | '/sign-in'
-    | '/sign-up'
     | '/unirme/$code'
     | '/unirme'
     | '/api/auth/$'
@@ -227,7 +216,6 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/space'
     | '/_auth/sign-in'
-    | '/_auth/sign-up'
     | '/unirme/$code'
     | '/unirme/'
     | '/api/auth/$'
@@ -345,13 +333,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_auth/sign-up': {
-      id: '/_auth/sign-up'
-      path: '/sign-up'
-      fullPath: '/sign-up'
-      preLoaderRoute: typeof AuthSignUpRouteImport
-      parentRoute: typeof AuthRoute
-    }
     '/unirme/': {
       id: '/unirme/'
       path: '/unirme'
@@ -400,12 +381,10 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface AuthRouteChildren {
   AuthSignInRoute: typeof AuthSignInRoute
-  AuthSignUpRoute: typeof AuthSignUpRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthSignInRoute: AuthSignInRoute,
-  AuthSignUpRoute: AuthSignUpRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

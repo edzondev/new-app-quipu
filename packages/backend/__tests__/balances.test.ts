@@ -75,7 +75,7 @@ test("S/ 500 at 50/30/20 with 12 days left → sobres and daily number", async (
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	// 20–31 Oct = 12 days. S/ 500 → Needs 250, Gustos 150, Ahorro 100; diario floor(400/12).
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 
 	const balances = await ana.query(api.balances.getBalances, { space: "personal" });
 	const share = splitIncome(50_000, SPLIT);
@@ -93,7 +93,7 @@ test("a pending commitment lowers only the daily number", async () => {
 	const t = harness();
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	const ana = await signIn(t, "ana@correo.com", "Ana");
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 
 	await t.run(async (ctx) => {
 		const space = (await ctx.db.query("spaces").take(1))[0];
@@ -118,7 +118,7 @@ test("after close, balances come from carryIn envelopes even with no new income"
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 
 	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
 	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
@@ -143,7 +143,7 @@ test("getHome with a later today shrinks daysLeft and raises dailyCents", async 
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 
 	const day20 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
 	const day26 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-26" });
@@ -163,7 +163,7 @@ test("getHome is not empty when income exists but every envelope is at 0", async
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 
 	const share = splitIncome(50_000, SPLIT);
 	const goalId = await t.run(async (ctx) => {
@@ -195,7 +195,7 @@ test("getHome is not empty on a new cycle with carry but no income", async () =>
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 
 	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
 	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
@@ -211,7 +211,7 @@ test("assigned is never negative when the cycle opens with a negative carry", as
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 	// Needs got S/ 250; spending S/ 300 leaves it at −S/ 50 when October closes.
 	await ana.mutation(api.transactions.addExpense, {
 		space: "personal",
@@ -231,7 +231,7 @@ test("getHome returns the dates of the open cycle", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 
 	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
 	expect(home.startDate).toBe("2026-10-20");
@@ -242,7 +242,7 @@ test("assigned is what the cycle received and does not drop when you spend", asy
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 	await ana.mutation(api.transactions.addExpense, {
 		space: "personal",
 		amountCents: 5_000,
@@ -258,7 +258,7 @@ test("assigned adds the share of each income, like the envelopes do", async () =
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 	// 3 cents split 50/30/20 give Gustos 0 each time; one sum of 6 cents would give it 1.
 	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 3 });
 	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 3 });
@@ -276,7 +276,7 @@ test("assigned drops when an income is deleted", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboardOct20);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
 	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 20_000 });
 	const args = { space: "personal" as const, today: "2026-10-20" };
 
@@ -295,7 +295,11 @@ test("getHome is empty with no income and nothing carried", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, todayCents: 0 });
+	await ana.mutation(api.profiles.completeOnboarding, {
+		name: "Ana",
+		...onboardOct20,
+		todayCents: 0,
+	});
 
 	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
 	expect(home.empty).toBe(true);

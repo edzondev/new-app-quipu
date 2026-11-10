@@ -319,7 +319,7 @@ test.describe("sesiones y llaves, con un usuario nuevo", () => {
 		const other = await otherContext.newPage();
 		await copyPasskeys(first, await addVirtualAuthenticator(otherContext, other));
 		await open(other, "/sign-in");
-		await other.getByRole("button", { name: "Entrar con mi llave" }).click();
+		await other.getByRole("button", { name: "Entrar con huella o rostro" }).click();
 		await expect(other).not.toHaveURL(/\/sign-in$/);
 		// Right after a passkey sign-in the app lands on /onboarding; Inicio loads on a second request.
 		await open(other, "/home");

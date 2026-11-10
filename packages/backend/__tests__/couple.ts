@@ -81,7 +81,7 @@ export const monthly15 = {
 export async function startUser(t: Harness, email: string, name: string) {
 	vi.useFakeTimers({ now: new Date(START) });
 	const user = await signUp(t, email, name);
-	await user.as.mutation(api.profiles.completeOnboarding, monthly15);
+	await user.as.mutation(api.profiles.completeOnboarding, { ...monthly15, name });
 	return user;
 }
 

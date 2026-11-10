@@ -108,7 +108,7 @@ export function JoinPage({
 
 	function onJoin() {
 		if (isAuthenticated) join.mutate();
-		else void navigate({ to: "/sign-up", search: { email: "", redirect: `/unirme/${code}` } });
+		else void navigate({ to: "/sign-in", search: { redirect: `/unirme/${code}` } });
 	}
 
 	const actions = (

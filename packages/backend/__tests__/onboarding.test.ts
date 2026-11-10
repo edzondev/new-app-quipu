@@ -67,6 +67,7 @@ async function signIn(t: ReturnType<typeof harness>, email: string, name: string
 }
 
 const good = {
+	name: "Ana",
 	cadence: "monthly" as const,
 	cycleStartDay: "last" as const,
 	incomeCents: 250000,
@@ -99,7 +100,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	const today = getLimaDate();
 	const expectedCycle = getFirstCycleRange("monthly", "last", today);
 	const allocation = splitIncome(good.todayCents, good.split);
-	await ana.mutation(api.profiles.completeOnboarding, good);
+	await ana.mutation(api.profiles.completeOnboarding, { ...good, name: "Ana" });
 	expect(await ana.query(api.profiles.myProfile, {})).toEqual({
 		name: "Ana",
 		plan: planOnly,
@@ -183,6 +184,7 @@ test("Oct 20 with payday day 1 → cycle 20–31 with S/ 500 and plan.incomeCent
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	const allocation = splitIncome(50_000, { needs: 50, wants: 30, savings: 20 });
 	await ana.mutation(api.profiles.completeOnboarding, {
+		name: "Ana",
 		cadence: "monthly",
 		cycleStartDay: 1,
 		todayCents: 50_000,
@@ -242,6 +244,7 @@ test("without a usual income the plan is saved without the key and Inicio report
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	await ana.mutation(api.profiles.completeOnboarding, {
+		name: "Ana",
 		cadence: "monthly",
 		cycleStartDay: 1,
 		todayCents: 0,
@@ -278,8 +281,8 @@ test("payday today starts a full cycle with the income in it", async () => {
 test("a repeated call keeps one space, one cycle and one income, and the first plan", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
-	await ana.mutation(api.profiles.completeOnboarding, good);
-	await ana.mutation(api.profiles.completeOnboarding, good);
+	await ana.mutation(api.profiles.completeOnboarding, { ...good, name: "Ana" });
+	await ana.mutation(api.profiles.completeOnboarding, { ...good, name: "Ana" });
 	await ana.mutation(api.profiles.completeOnboarding, {
 		...good,
 		cadence: "weekly",
@@ -344,13 +347,41 @@ test("rejects invalid values", async () => {
 	});
 });
 
-test("sign-in can't create an account: a new email without a name is refused", async () => {
+test("asking for a code creates nothing; the account appears when the code is verified, with an empty name", async () => {
 	const t = harness();
 	const otp = await sendCode(t, "eva@correo.com");
-	const res = await post(t, "/sign-in/email-otp", { email: "eva@correo.com", otp });
-	expect(res.status).toBe(400);
-	expect((await res.json()).code).toBe("USER_NOT_FOUND");
 	expect(await findUser(t, "eva@correo.com")).toBeNull();
+
+	const res = await post(t, "/sign-in/email-otp", { email: "eva@correo.com", otp });
+	expect(res.status, await res.clone().text()).toBe(200);
+	expect((await findUser(t, "eva@correo.com"))?.name).toBe("");
+});
+
+test("onboarding saves the trimmed name with the plan, and refuses a blank or too long one", async () => {
+	const t = harness();
+	const otp = await sendCode(t, "eva@correo.com");
+	await post(t, "/sign-in/email-otp", { email: "eva@correo.com", otp });
+	const user = await findUser(t, "eva@correo.com");
+	const session = await t.query(components.betterAuth.adapter.findOne, {
+		model: "session",
+		where: [{ field: "userId", value: user._id }],
+	});
+	const eva = t.withIdentity({ subject: user._id, sessionId: session._id });
+	expect((await eva.query(api.profiles.myProfile, {}))?.name).toBe("");
+
+	for (const name of ["", "   ", "x".repeat(41)]) {
+		await expect(
+			eva.mutation(api.profiles.completeOnboarding, { ...good, name }),
+			JSON.stringify(name),
+		).rejects.toThrow();
+	}
+	expect(await eva.query(api.profiles.myProfile, {})).toMatchObject({ name: "", plan: null });
+
+	await eva.mutation(api.profiles.completeOnboarding, { ...good, name: "  Eva Luz  " });
+	expect(await eva.query(api.profiles.myProfile, {})).toMatchObject({
+		name: "Eva Luz",
+		plan: planOnly,
+	});
 });
 
 test("a second code within 90 s is refused", async () => {

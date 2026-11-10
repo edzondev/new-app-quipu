@@ -7,7 +7,7 @@ export const authClient = createAuthClient({
 	plugins: [convexClient(), emailOTPClient(), passkeyClient()],
 });
 
-// Sign-in and sign-up both use the "sign-in" OTP; the server decides whether a new account is allowed.
+// One flow for everyone: asking for a code creates nothing; the account is made when the code is verified.
 export function sendSignInCode(email: string) {
 	return authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
 }

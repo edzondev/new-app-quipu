@@ -6,6 +6,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
 import { QuipuHeader } from "#/components/quipu-header";
+import { NameStep } from "#/modules/onboarding/components/name-step";
 import { CycleStep } from "#/modules/onboarding/components/cycle-step";
 import { SplitStep } from "#/modules/onboarding/components/split-step";
 import type { OnboardingValues } from "#/modules/onboarding/schemas";
@@ -18,31 +19,35 @@ export const Route = createFileRoute("/onboarding")({
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
 		const profile = await context.queryClient.query(convexQuery(api.profiles.myProfile, {}));
 		if (profile?.plan) throw redirect({ to: search.redirect ?? "/home" });
+		// An account made before the name moved here already has one.
+		return { profileName: profile?.name ?? "" };
 	},
 	head: () => ({
 		meta: [
 			{ title: "Quipu — Primeros pasos" },
 			{
 				name: "description",
-				content: "Tu ingreso y tus sobres, en dos pasos.",
+				content: "Tu ingreso y tus sobres, en tres pasos.",
 			},
 		],
 	}),
 	component: OnboardingPage,
 });
 
-const STEPS = ["cycle", "split"] as const;
+const STEPS = ["name", "cycle", "split"] as const;
 type Step = (typeof STEPS)[number];
 
-const defaultValues: OnboardingValues = {
+const emptyValues: OnboardingValues = {
+	nameStep: { name: "" },
 	cycleStep: { cadence: "monthly", startDay: "1", todayAmount: "", cycleIncome: "" },
 	splitStep: { split: { needs: 50, wants: 30, savings: 20 } },
 };
 
 function OnboardingPage() {
 	const { redirect = "/home" } = Route.useSearch();
-	const [step, setStep] = useState<Step>("cycle");
-	const [values, setValues] = useState(defaultValues);
+	const { profileName } = Route.useRouteContext();
+	const [step, setStep] = useState<Step>("name");
+	const [values, setValues] = useState({ ...emptyValues, nameStep: { name: profileName } });
 	const [today] = useState(() => getLimaDate());
 	const stepNumber = STEPS.indexOf(step) + 1;
 
@@ -80,16 +85,24 @@ function OnboardingPage() {
 					</span>
 				</div>
 
+				{step === "name" && (
+					<NameStep
+						defaultValues={values.nameStep}
+						onNext={(nameStep) => goTo("cycle", { nameStep })}
+					/>
+				)}
 				{step === "cycle" && (
 					<CycleStep
 						defaultValues={values.cycleStep}
 						today={today}
+						onBack={(cycleStep) => goTo("name", { cycleStep })}
 						onNext={(cycleStep) => goTo("split", { cycleStep })}
 					/>
 				)}
 				{step === "split" && (
 					<SplitStep
 						defaultValues={values.splitStep}
+						name={values.nameStep.name}
 						cycleStep={values.cycleStep}
 						redirect={redirect}
 						onBack={(splitStep) => goTo("cycle", { splitStep })}

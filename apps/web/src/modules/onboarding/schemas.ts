@@ -1,4 +1,5 @@
 import { toCents } from "@quipu/backend/shared/budget";
+import { nameSchema } from "@quipu/backend/shared/name";
 import { isValidSplit } from "@quipu/backend/shared/plan";
 import * as z from "zod/mini";
 
@@ -16,6 +17,8 @@ const nonNegativeMoney = (message: string) =>
 			return v.trim() !== "" && Number.isFinite(n) && n >= 0;
 		}, message),
 	);
+
+export const nameStepSchema = z.object({ name: nameSchema });
 
 export const cycleStepSchema = z.object({
 	cadence: cadenceSchema,
@@ -38,9 +41,11 @@ export const splitStepSchema = z.object({
 
 export type Cadence = z.infer<typeof cadenceSchema>;
 export type Split = z.infer<typeof splitSchema>;
+export type NameStepValues = z.infer<typeof nameStepSchema>;
 export type CycleStepValues = z.infer<typeof cycleStepSchema>;
 export type SplitStepValues = z.infer<typeof splitStepSchema>;
 export type OnboardingValues = {
+	nameStep: NameStepValues;
 	cycleStep: CycleStepValues;
 	splitStep: SplitStepValues;
 };

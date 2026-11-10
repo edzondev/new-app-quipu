@@ -1,9 +1,8 @@
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
-import { Field, FieldDescription, FieldError, FieldLabel } from "#/components/ui/field";
+import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { useCountdown } from "#/hooks/use-countdown";
 import { authClient, sendSignInCode } from "#/lib/auth-client";
@@ -13,19 +12,20 @@ import { otpStepSchema } from "#/modules/auth/schemas";
 
 type Props = {
 	email: string;
-	/** Only sign-up sends a name; without it the server refuses to create a new account. */
-	name?: string;
-	/** Carried to Crear cuenta when the email has no account. */
-	redirect?: string;
 	onChangeEmail: () => void;
-	onVerified: () => void;
+	onVerified: () => Promise<void>;
 };
 
 function toOtpDigits(raw: string): string {
 	return raw.replace(/\D/g, "").slice(0, 6);
 }
 
-export function OtpStep({ email, name, redirect, onChangeEmail, onVerified }: Props) {
+function formatClock(totalSeconds: number): string {
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${pad(Math.floor(totalSeconds / 60))}:${pad(totalSeconds % 60)}`;
+}
+
+export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<AuthError>(null);
 	const [isResending, setIsResending] = useState(false);
@@ -37,13 +37,13 @@ export function OtpStep({ email, name, redirect, onChangeEmail, onVerified }: Pr
 		validators: { onDynamic: otpStepSchema },
 		onSubmit: async ({ value }) => {
 			setError(null);
-			const { error } = await authClient.signIn.emailOtp({ email, otp: value.otp, name });
+			const { error } = await authClient.signIn.emailOtp({ email, otp: value.otp });
 			if (error) {
 				setError(error);
 				return;
 			}
 			clearAuthTokenCache(queryClient);
-			onVerified();
+			await onVerified();
 		},
 	});
 	const isSubmitting = useSelector(form.store, (state) => state.isSubmitting);
@@ -67,7 +67,15 @@ export function OtpStep({ email, name, redirect, onChangeEmail, onVerified }: Pr
 				Revisa tu correo
 			</h1>
 			<p className="mt-6 wrap-break-word text-sm leading-relaxed text-muted-foreground">
-				Te mandamos un código de 6 dígitos a {email}.
+				<span className="break-all font-medium text-foreground">{email}</span>{" "}
+				<Button
+					type="button"
+					variant="ghost"
+					className="inline h-auto p-0 text-sm text-muted-foreground underline underline-offset-4 hover:bg-transparent hover:text-foreground"
+					onClick={onChangeEmail}
+				>
+					Cambiar
+				</Button>
 			</p>
 			<form
 				noValidate
@@ -99,28 +107,17 @@ export function OtpStep({ email, name, redirect, onChangeEmail, onVerified }: Pr
 										{errorMessage}
 									</FieldError>
 								) : null}
-								<FieldDescription className="mt-4 text-xs">
-									El código dura 5 minutos.
-								</FieldDescription>
 							</Field>
 						);
 					}}
 				</form.Field>
 				{error ? (
 					<p role="alert" className="mt-3 text-xs text-warning-foreground">
-						{getAuthErrorMessage(error)}{" "}
-						{error.code === "USER_NOT_FOUND" ? (
-							<Link
-								to="/sign-up"
-								search={{ email, redirect }}
-								className="underline underline-offset-4"
-							>
-								Crear mi cuenta
-							</Link>
-						) : null}
+						{getAuthErrorMessage(error)}
 					</p>
 				) : null}
-				<div className="mt-5">
+				<p className="mt-4 text-xs text-muted-foreground">Vence en 5 minutos.</p>
+				<div className="mt-2">
 					<Button
 						type="button"
 						variant="ghost"
@@ -128,7 +125,7 @@ export function OtpStep({ email, name, redirect, onChangeEmail, onVerified }: Pr
 						disabled={secondsLeft > 0 || isResending}
 						onClick={resend}
 					>
-						{secondsLeft > 0 ? `Reenviar en ${secondsLeft} s` : "Reenviar código"}
+						{secondsLeft > 0 ? `Reenviar en ${formatClock(secondsLeft)}` : "Reenviar código"}
 					</Button>
 				</div>
 				<Button
@@ -139,17 +136,9 @@ export function OtpStep({ email, name, redirect, onChangeEmail, onVerified }: Pr
 					disabled={isSubmitting}
 					loading={isSubmitting}
 				>
-					Confirmar
+					Entrar
 				</Button>
 			</form>
-			<Button
-				type="button"
-				variant="ghost"
-				className="mt-6 h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground"
-				onClick={onChangeEmail}
-			>
-				Cambiar correo
-			</Button>
 		</>
 	);
 }

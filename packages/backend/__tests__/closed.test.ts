@@ -85,7 +85,7 @@ async function startAna(t: ReturnType<typeof harness>, now: string, plan = onboa
 			update: { expiresAt: Date.UTC(2027, 0, 1) },
 		},
 	});
-	await ana.mutation(api.profiles.completeOnboarding, plan);
+	await ana.mutation(api.profiles.completeOnboarding, { ...plan, name: "Ana" });
 	return ana;
 }
 

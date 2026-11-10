@@ -84,7 +84,7 @@ async function startAna(t: ReturnType<typeof harness>, email = "ana@correo.com",
 			update: { expiresAt: Date.UTC(2027, 0, 1) },
 		},
 	});
-	await person.mutation(api.profiles.completeOnboarding, onboard);
+	await person.mutation(api.profiles.completeOnboarding, { ...onboard, name });
 	return person;
 }
 
@@ -310,7 +310,7 @@ test("changing my split leaves another person's cycle alone", async () => {
 	const t = harness();
 	const ana = await startAna(t);
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 
 	await ana.mutation(api.settings.updateSplit, { space: "personal", split: SPLIT_40 });
 
@@ -351,7 +351,11 @@ test("a person without a usual income can change the cycle, and the pending plan
 	const t = harness();
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	const ana = await signIn(t, "ana@correo.com", "Ana");
-	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, incomeCents: undefined });
+	await ana.mutation(api.profiles.completeOnboarding, {
+		name: "Ana",
+		...onboard,
+		incomeCents: undefined,
+	});
 	const weekly = { cadence: "weekly" as const, cycleStartDay: 1 };
 
 	await ana.mutation(api.settings.updatePlan, weekly);
@@ -424,7 +428,7 @@ test("a pending change belongs to its owner", async () => {
 	const t = harness();
 	const ana = await startAna(t);
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 
 	await ana.mutation(api.settings.updatePlan, WEEKLY_MONDAY);
 

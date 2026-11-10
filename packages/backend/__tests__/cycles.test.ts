@@ -73,14 +73,14 @@ const onboard = {
 async function onboardOct20(t: ReturnType<typeof harness>) {
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 	return ana;
 }
 
 test("requireSpaceById allows your space and rejects someone else's", async () => {
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
-	await ana.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 	const spaceId = await t.run(async (ctx) => {
 		const space = (await ctx.db.query("spaces").take(1))[0];
 		return space._id;

@@ -74,7 +74,7 @@ const onboard = {
 async function anaOnOct20(t: ReturnType<typeof harness>) {
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.as.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 	return ana;
 }
 
@@ -170,7 +170,7 @@ test("Luis cannot edit or delete Ana's expense", async () => {
 	const id = await expenseId(t);
 
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.as.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 
 	await expect(
 		luis.as.mutation(api.transactions.updateExpense, {
@@ -512,12 +512,12 @@ test("list in household is newest first with mine and author who", async () => {
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 
 	const ana = await signIn(t, "ana@correo.com", "Ana");
-	await ana.as.mutation(api.profiles.completeOnboarding, onboard);
+	await ana.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
 	await ana.as.mutation(api.household.createHousehold, { name: "Casa" });
 	const { code } = await ana.as.mutation(api.household.createInvite, {});
 
 	const luis = await signIn(t, "luis@correo.com", "Luis");
-	await luis.as.mutation(api.profiles.completeOnboarding, onboard);
+	await luis.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 	expect(await luis.as.mutation(api.household.joinHousehold, { code })).toEqual({ ok: true });
 
 	await ana.as.mutation(api.transactions.addExpense, {
@@ -827,7 +827,11 @@ test("an early income does not take away the empty state of a cycle with no mone
 	const t = harness();
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
-	await ana.as.mutation(api.profiles.completeOnboarding, { ...onboard, todayCents: 0 });
+	await ana.as.mutation(api.profiles.completeOnboarding, {
+		name: "Ana",
+		...onboard,
+		todayCents: 0,
+	});
 	vi.setSystemTime(new Date("2026-10-30T17:00:00.000Z"));
 
 	await ana.as.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });

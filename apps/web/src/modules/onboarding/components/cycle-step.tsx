@@ -13,10 +13,11 @@ import { type CycleStepValues, cycleStepSchema } from "#/modules/onboarding/sche
 type Props = {
 	defaultValues: CycleStepValues;
 	today: string;
+	onBack: (value: CycleStepValues) => void;
 	onNext: (value: CycleStepValues) => void;
 };
 
-export function CycleStep({ defaultValues, today, onNext }: Props) {
+export function CycleStep({ defaultValues, today, onBack, onNext }: Props) {
 	const form = useForm({
 		defaultValues,
 		validationLogic: revalidateLogic(),
@@ -29,7 +30,7 @@ export function CycleStep({ defaultValues, today, onNext }: Props) {
 
 	return (
 		<>
-			<StepHeader title="¿Cada cuánto quieres planear?" />
+			<StepHeader title="¿Cada cuánto quieres planear?" onBack={() => onBack(form.state.values)} />
 			<form
 				noValidate
 				className="mt-8"
