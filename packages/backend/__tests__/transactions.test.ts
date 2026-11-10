@@ -1342,3 +1342,116 @@ test("deleting a withdrawal can leave Necesidades below zero, like an overspend"
 
 	expect(await figures(ana, t)).toMatchObject({ needs: -10_000, fund: 10_000 });
 });
+
+test("changing a saving or a withdrawal to zero, a negative or a fraction of a cent fails and moves nothing", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 4_000,
+		reason: "other",
+	});
+	// A saving to a goal: lowering one to the fund is also stopped by what was already withdrawn.
+	await ana.as.mutation(api.goals.add, { space: "personal", name: "Viaje", targetCents: 100_000 });
+	const [goal] = await ana.as.query(api.goals.list, { space: "personal" });
+	await ana.as.mutation(api.transactions.addSaving, {
+		space: "personal",
+		amountCents: 2_000,
+		goalId: goal.id,
+	});
+	const { rows } = await ana.as.query(api.transactions.list, { space: "personal", today: TODAY });
+	const saving = rows.find((row) => row.goalId === goal.id);
+	if (!saving) throw new Error("missing saving");
+	const withdrawal = await rowOf(ana, "withdrawal");
+	const before = await figures(ana, t);
+
+	for (const amountCents of [0, -100, 100.5]) {
+		await expect(
+			ana.as.mutation(api.transactions.updateSaving, {
+				space: "personal",
+				id: saving.id,
+				amountCents,
+			}),
+		).rejects.toThrow();
+		await expect(
+			ana.as.mutation(api.transactions.updateWithdrawal, {
+				space: "personal",
+				id: withdrawal.id,
+				amountCents,
+				reason: "other",
+			}),
+		).rejects.toThrow();
+	}
+	expect(await figures(ana, t)).toEqual(before);
+});
+
+test("a saving cannot be changed through the id of an expense, nor a withdrawal deleted through the id of a saving", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 1_000,
+		envelope: "needs",
+	});
+	const before = await figures(ana, t);
+
+	await expect(
+		ana.as.mutation(api.transactions.updateSaving, {
+			space: "personal",
+			id: await expenseId(t),
+			amountCents: 500,
+		}),
+	).rejects.toThrow(NOT_FOUND);
+	await expect(
+		ana.as.mutation(api.transactions.deleteWithdrawal, {
+			space: "personal",
+			id: (await rowOf(ana, "saving")).id,
+		}),
+	).rejects.toThrow(NOT_FOUND);
+	expect(await figures(ana, t)).toEqual(before);
+});
+
+test("saving a saving or a withdrawal with nothing changed leaves no event in Nuestro espacio", async () => {
+	const { ana } = await joinedCouple();
+	const household = "household" as const;
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: household,
+		amountCents: 1_000,
+		reason: "other",
+	});
+	const { rows } = await ana.as.query(api.transactions.list, { space: household, today: TODAY });
+	const saving = rows.find((row) => row.kind === "saving");
+	const withdrawal = rows.find((row) => row.kind === "withdrawal");
+	if (!saving || !withdrawal) throw new Error("missing rows");
+	const eventCount = async () => (await ana.as.query(api.activity.list, {})).events.length;
+	const start = await eventCount();
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: household,
+		id: saving.id,
+		amountCents: 5_000,
+	});
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: household,
+		id: withdrawal.id,
+		amountCents: 1_000,
+		reason: "other",
+	});
+	expect(await eventCount()).toBe(start);
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: household,
+		id: saving.id,
+		amountCents: 4_000,
+	});
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: household,
+		id: withdrawal.id,
+		amountCents: 1_000,
+		reason: "emergency",
+	});
+	expect(await eventCount()).toBe(start + 2);
+});

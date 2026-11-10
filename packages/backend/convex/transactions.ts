@@ -376,16 +376,16 @@ export const updateSaving = mutation({
 		const max = cycle.envelopes.savingsCents + row.amountCents;
 		parseInput(centsSchema, amountCents);
 		if (amountCents > max) throw new ConvexError(savingOverAhorro(max));
+		const cleanNote = parseInput(noteSchema, note);
 		await moveSaving(ctx, space, cycle, row, amountCents);
-		await ctx.db.patch("transactions", id, {
-			amountCents,
-			note: parseInput(noteSchema, note),
-		});
-		await logEvent(ctx, space, userId, "saving_edited", {
-			detail: await savingDestination(ctx, row.goalId),
-			before: moneyLabel(row.amountCents),
-			after: moneyLabel(amountCents),
-		});
+		await ctx.db.patch("transactions", id, { amountCents, note: cleanNote });
+		if (amountCents !== row.amountCents || cleanNote !== row.note) {
+			await logEvent(ctx, space, userId, "saving_edited", {
+				detail: await savingDestination(ctx, row.goalId),
+				before: moneyLabel(row.amountCents),
+				after: moneyLabel(amountCents),
+			});
+		}
 		return null;
 	},
 });
@@ -421,17 +421,16 @@ export const updateWithdrawal = mutation({
 		const max = space.fundCents + row.amountCents;
 		parseInput(centsSchema, amountCents);
 		if (amountCents > max) throw new ConvexError(withdrawalOverFund(max));
+		const cleanNote = parseInput(noteSchema, note);
 		await moveWithdrawal(ctx, space, cycle, row, amountCents);
-		await ctx.db.patch("transactions", id, {
-			amountCents,
-			reason,
-			note: parseInput(noteSchema, note),
-		});
-		await logEvent(ctx, space, userId, "withdrawal_edited", {
-			detail: row.note,
-			before: moneyLabel(row.amountCents),
-			after: moneyLabel(amountCents),
-		});
+		await ctx.db.patch("transactions", id, { amountCents, reason, note: cleanNote });
+		if (amountCents !== row.amountCents || reason !== row.reason || cleanNote !== row.note) {
+			await logEvent(ctx, space, userId, "withdrawal_edited", {
+				detail: row.note,
+				before: moneyLabel(row.amountCents),
+				after: moneyLabel(amountCents),
+			});
+		}
 		return null;
 	},
 });
