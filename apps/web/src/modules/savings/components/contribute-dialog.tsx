@@ -76,7 +76,9 @@ function ContributeForm({
 				}}
 			>
 				<FormSheetHeader>
-					<FormSheetTitle>{goal ? `Aportar a ${goal.name}` : "Aportar al fondo"}</FormSheetTitle>
+					<FormSheetTitle className="wrap-break-word">
+						{goal ? `Aportar a ${goal.name}` : "Aportar al fondo"}
+					</FormSheetTitle>
 					<p className="text-sm text-muted-foreground tabular-nums">
 						S/ {formatCents(savedCents)}
 						{targetCents ? ` de S/ ${formatCents(targetCents)}` : ""}

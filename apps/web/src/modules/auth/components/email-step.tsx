@@ -113,7 +113,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 					}}
 				</form.Field>
 				{error ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						{error}
 					</p>
 				) : null}

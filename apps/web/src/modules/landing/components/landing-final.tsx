@@ -17,7 +17,7 @@ export function LandingFinal() {
 						<br />
 						un número claro.
 					</h2>
-					<p className="mx-auto mt-4 max-w-62 text-xs leading-[1.8] opacity-90 sm:text-xs md:mx-0 md:max-w-none">
+					<p className="mx-auto mt-4 max-w-62 text-xs leading-[1.8] opacity-90 md:mx-0 md:max-w-none">
 						No se trata de dejar de gastar. Se trata de saber con cuánto cuentas.
 					</p>
 				</div>

@@ -55,12 +55,12 @@ function RenameEditor({ name, onDone }: { name: string; onDone: () => void }) {
 					onChange={(event) => setValue(event.target.value)}
 				/>
 				{tooLong ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						El nombre tiene máximo {NAME_MAX_LENGTH} caracteres.
 					</p>
 				) : null}
 				{save.isError ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						{readError(save.error)}
 					</p>
 				) : null}
@@ -103,14 +103,14 @@ function LeaveEditor({ partnerName, onDone }: { partnerName: string; onDone: () 
 		<>
 			<FormSheetHeader>
 				<FormSheetTitle>¿Salir de Nuestro espacio?</FormSheetTitle>
-				<FormSheetDescription>
+				<FormSheetDescription className="wrap-break-word">
 					Dejarás de verlo. El historial y el fondo se quedan con {partnerName}. Quipu no mueve
 					dinero: lo del fondo acuérdenlo entre ustedes.
 				</FormSheetDescription>
 			</FormSheetHeader>
 			{save.isError ? (
 				<FormSheetPanel>
-					<p role="alert" className="text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word text-xs text-warning-foreground">
 						{readError(save.error)}
 					</p>
 				</FormSheetPanel>
@@ -184,7 +184,7 @@ function Space({ today }: { today: string }) {
 	return (
 		<div className="max-w-2xl">
 			<header>
-				<h1 className="font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
+				<h1 className="wrap-break-word font-heading text-[34px] leading-[1.1] font-normal tracking-[-0.01em]">
 					{name ?? DEFAULT_NAME}
 				</h1>
 			</header>

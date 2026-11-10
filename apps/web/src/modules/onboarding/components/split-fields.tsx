@@ -33,7 +33,7 @@ export function SplitFields({ value, amounts, onChange, error, children }: Props
 						invalid={Boolean(error)}
 						className="border-b border-border py-5"
 					>
-						<div className="flex w-full items-center gap-3">
+						<div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-3">
 							<span
 								aria-hidden="true"
 								className={cn("size-2 shrink-0 rounded-full", envelope.dot)}
@@ -54,7 +54,7 @@ export function SplitFields({ value, amounts, onChange, error, children }: Props
 								className="w-14 border-0 border-b border-input bg-transparent has-focus-visible:border-foreground has-aria-invalid:border-warning [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-1 [&_[data-slot=input]]:text-right [&_[data-slot=input]]:tabular-nums"
 							/>
 							<span className="text-sm text-muted-foreground">%</span>
-							<span className="w-28 text-right text-sm tabular-nums text-muted-foreground">
+							<span className="ml-auto shrink-0 text-right sm:w-28 text-sm tabular-nums text-muted-foreground">
 								S/ {formatCents(amounts[AMOUNT_KEYS[envelope.key]])}
 							</span>
 						</div>

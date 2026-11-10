@@ -117,7 +117,7 @@ export function JoinPage({
 				<Message title="Muchos intentos.">Prueba de nuevo en unos minutos.</Message>
 			) : null}
 			{join.isError ? (
-				<p role="alert" className="text-xs text-warning-foreground">
+				<p role="alert" className="wrap-break-word text-xs text-warning-foreground">
 					{readError(join.error)}
 				</p>
 			) : null}
@@ -168,7 +168,7 @@ export function JoinPage({
 					</Button>
 				) : null}
 				{replace.isError ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						{readError(replace.error)}
 					</p>
 				) : null}
@@ -184,7 +184,7 @@ export function JoinPage({
 			) : (
 				<>
 					<p className="text-sm text-muted-foreground">Invitación</p>
-					<h1 className="mt-3 text-[36px] font-normal leading-tight tracking-tight sm:text-[44px]">
+					<h1 className="wrap-break-word mt-3 text-[36px] font-normal leading-tight tracking-tight sm:text-[44px]">
 						{inviter} te invitó a su espacio
 					</h1>
 					<p className="mt-4 text-muted-foreground">

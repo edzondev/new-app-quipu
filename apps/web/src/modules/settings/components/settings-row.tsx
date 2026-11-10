@@ -22,7 +22,7 @@ export function SettingsRow({
 	return (
 		<li className="flex min-h-[72px] items-center justify-between gap-4 border-b border-border/80 py-4">
 			<div className="min-w-0">
-				<p className="text-[15px] font-semibold">{title}</p>
+				<p className="wrap-break-word text-[15px] font-semibold">{title}</p>
 				{children ? (
 					<div className="mt-1 space-y-0.5 text-sm text-muted-foreground">{children}</div>
 				) : null}

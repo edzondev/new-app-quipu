@@ -115,7 +115,7 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 					}}
 				</form.Field>
 				{error ? (
-					<p role="alert" className="mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						{getAuthErrorMessage(error)}
 					</p>
 				) : null}

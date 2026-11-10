@@ -34,7 +34,7 @@ export function JoinedNotice() {
 
 	if (!visible) return null;
 	return (
-		<p role="status" className="mb-4 rounded-2xl bg-muted px-4 py-3 text-sm">
+		<p role="status" className="wrap-break-word mb-4 rounded-2xl bg-muted px-4 py-3 text-sm">
 			{text}
 		</p>
 	);

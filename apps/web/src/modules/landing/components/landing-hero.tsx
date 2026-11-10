@@ -41,7 +41,7 @@ export function LandingHero() {
 				<p className="mx-auto max-w-156 text-[13px] leading-[1.85] text-muted-foreground sm:text-base sm:leading-[1.8]">
 					{HERO_SUBTITLE}
 				</p>
-				<ul className="mt-5 mb-7 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-medium sm:gap-x-7 sm:text-xs">
+				<ul className="mt-5 mb-7 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-medium sm:gap-x-7">
 					{HERO_CHECKS.map((check) => (
 						<li key={check}>
 							<CheckIcon

@@ -176,16 +176,15 @@
 }
 
 /*
- * Dialogs, sheets and popovers: a slight scale in 150 ms and out in 120 ms. Pages have no
- * animation, and neither does anything when the person asks for less motion. The side menu
- * (variant "straight") keeps sliding.
+ * Dialogs and popovers: a slight scale in 150 ms and out in 120 ms. Pages have no
+ * animation, and neither does anything when the person asks for less motion. Drawers (bottom
+ * sheets and the side menu) keep their own slide.
  */
 :is(
 	[data-slot="dialog-popup"],
 	[data-slot="alert-dialog-popup"],
 	[data-slot="popover-popup"],
-	[data-slot="menu-popup"],
-	[data-slot="drawer-popup"]:not([data-variant="straight"])
+	[data-slot="menu-popup"]
 ) {
 	transition:
 		opacity 150ms ease-out,
@@ -196,8 +195,7 @@
 	[data-slot="dialog-popup"],
 	[data-slot="alert-dialog-popup"],
 	[data-slot="popover-popup"],
-	[data-slot="menu-popup"],
-	[data-slot="drawer-popup"]:not([data-variant="straight"])
+	[data-slot="menu-popup"]
 ):is([data-starting-style], [data-ending-style]) {
 	opacity: 0;
 	scale: 0.96;
@@ -208,8 +206,7 @@
 	[data-slot="dialog-popup"],
 	[data-slot="alert-dialog-popup"],
 	[data-slot="popover-popup"],
-	[data-slot="menu-popup"],
-	[data-slot="drawer-popup"]:not([data-variant="straight"])
+	[data-slot="menu-popup"]
 )[data-ending-style] {
 	transition-duration: 120ms;
 }
