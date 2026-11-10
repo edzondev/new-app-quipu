@@ -9,6 +9,7 @@ import {
 	getNextDueDate,
 	isReserved,
 	isValidRule,
+	settledDates,
 	type Occurrence,
 } from "../shared/commitments";
 import { formatDay, isoDateSchema, monthSchema } from "../shared/dates";
@@ -18,6 +19,7 @@ import {
 	getCommitmentOccurrences,
 	getCommitmentPayments,
 	getCommitmentStates,
+	toCommitmentPayments,
 	scheduleOf,
 } from "./model/commitments";
 import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
@@ -286,8 +288,11 @@ export const list = query({
 		const charges = await Promise.all(
 			rows.map(async (row) => {
 				const payments = await getCommitmentPayments(ctx, row);
-				const occurrences = getCommitmentStates(row, payments.length, today, cycle.endDate);
-				// Each payment settled the oldest open occurrence, so payment i settled occurrence i.
+				const occurrences = getCommitmentStates(row, payments, today, cycle.endDate);
+				const settled = settledDates(
+					occurrences.map(({ dueDate }) => dueDate),
+					toCommitmentPayments(payments),
+				);
 				const cyclePayments = payments.flatMap((tx, index) =>
 					tx.cycleId === cycle._id
 						? [
@@ -298,7 +303,7 @@ export const list = query({
 									envelope: row.envelope,
 									amountCents: tx.amountCents,
 									paidOn: tx.date,
-									dueDate: occurrences[index]?.dueDate ?? tx.date,
+									dueDate: settled[index] ?? tx.date,
 								},
 							]
 						: [],
@@ -358,7 +363,9 @@ export const markPaid = mutation({
 		if (!row || row.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
 
 		const occurrences = await getCommitmentOccurrences(ctx, row, today, cycle.endDate);
-		if (occurrences.every(({ status }) => status === "paid")) throw new ConvexError(ALREADY_PAID);
+		// The oldest date still open is the one this payment covers.
+		const open = occurrences.find(({ status }) => status !== "paid");
+		if (!open) throw new ConvexError(ALREADY_PAID);
 
 		const paidCents = amountCents ?? row.amountCents;
 		parseInput(centsSchema, paidCents);
@@ -373,6 +380,8 @@ export const markPaid = mutation({
 			date: today,
 			envelope: row.envelope,
 			commitmentId: id,
+			// A one-off has a single date that may move, so any payment settles it.
+			...(row.frequency === "monthly" ? { forMonth: open.dueDate.slice(0, 7) } : {}),
 		});
 		await ctx.db.patch("cycles", cycle._id, {
 			envelopes: {

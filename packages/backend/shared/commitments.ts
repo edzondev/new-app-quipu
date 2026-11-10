@@ -1,6 +1,6 @@
 import type { Infer } from "convex/values";
 import type { dueAdjustment, dueRule } from "../convex/schema";
-import { addDays, dayInMonth } from "./dates";
+import { addDays, dayInMonth, shiftMonth } from "./dates";
 
 export type DueRule = Infer<typeof dueRule>;
 export type DueAdjustment = Infer<typeof dueAdjustment>;
@@ -145,24 +145,60 @@ function getDueDates(schedule: Schedule, createdOn: string, cycleEnd: string): s
 		: getMonthlyDueDates(schedule.rule, schedule.adjustment, createdOn, cycleEnd);
 }
 
-// State comes from dates and the payment count alone: each payment settles the oldest
-// occurrence still open, so deleting a payment reopens it with no stored flag.
+/** A payment of a commitment. `forMonth` ("2026-10") is the month a monthly payment covers. */
+export type CommitmentPayment = { forMonth?: string };
+
+/**
+ * The due date each payment settled (undefined if it settled none now). A payment that knows its
+ * month settles that month, whatever the rule says today. An older payment, saved before payments
+ * knew their month, settles the oldest date nobody else took. This is the only place that
+ * reads old payments.
+ */
+export function settledDates(
+	dueDates: string[],
+	payments: CommitmentPayment[],
+): (string | undefined)[] {
+	const byMonth = new Map(dueDates.map((date) => [date.slice(0, 7), date]));
+	const taken = new Set<string>();
+	const known = payments.map(({ forMonth }) => {
+		const date = forMonth === undefined ? undefined : byMonth.get(forMonth);
+		if (date) taken.add(date);
+		return date;
+	});
+	const free = dueDates.filter((date) => !taken.has(date));
+	let next = 0;
+	return payments.map(({ forMonth }, index) =>
+		forMonth === undefined ? free[next++] : known[index],
+	);
+}
+
+// State comes from dates and the payments alone, so deleting a payment reopens its date with
+// no stored flag. A payment settles the month it was made for, not its position in the list.
 export function getOccurrences(
 	schedule: Schedule,
 	createdOn: string,
-	paidCount: number,
+	payments: CommitmentPayment[],
 	today: string,
 	cycleEnd: string,
 ): Occurrence[] {
-	return getDueDates(schedule, createdOn, cycleEnd).map((dueDate, index) => ({
+	const dueDates = getDueDates(schedule, createdOn, cycleEnd);
+	const paid = new Set(settledDates(dueDates, payments));
+	return dueDates.map((dueDate) => ({
 		dueDate,
-		status: index < paidCount ? "paid" : getOpenStatus(dueDate, today, cycleEnd),
+		status: paid.has(dueDate) ? "paid" : getOpenStatus(dueDate, today, cycleEnd),
 	}));
+}
+
+/** The first due date of a monthly after `date`, looking month by month as far as it takes. */
+function nextMonthlyDueDate(rule: DueRule, adjustment: DueAdjustment | undefined, date: string) {
+	for (let month = date.slice(0, 7); ; month = shiftMonth(month, 1)) {
+		const dueDate = dueDateFor(rule, adjustment, month);
+		if (dueDate > date) return dueDate;
+	}
 }
 
 // First due date after `date`. A monthly with no charge left in the cycle still has one: the next month's.
 export function getNextDueDate(schedule: Schedule, date: string): string {
 	if (schedule.frequency === "once") return schedule.dueDate;
-	const from = addDays(date, 1);
-	return getMonthlyDueDates(schedule.rule, schedule.adjustment, from, addDays(from, 31))[0];
+	return nextMonthlyDueDate(schedule.rule, schedule.adjustment, date);
 }

@@ -140,3 +140,36 @@ describe("date texts", () => {
 		}
 	});
 });
+
+describe("getNextDueDate with adjustments", () => {
+	const monthly = (adjustment: { month: string; day: number }, rule = day(28)) => ({
+		frequency: "monthly" as const,
+		rule,
+		adjustment,
+	});
+
+	test("a month already adjusted before today gives the next month's rule date", () => {
+		expect(getNextDueDate(monthly({ month: "2026-11", day: 10 }), "2026-11-20")).toBe("2026-12-28");
+	});
+
+	test("an adjusted month ahead gives its adjusted date and never undefined", () => {
+		expect(getNextDueDate(monthly({ month: "2026-11", day: 30 }, day(1)), "2026-10-15")).toBe(
+			"2026-11-30",
+		);
+	});
+
+	test("an adjustment of a month far away does not hide the next date", () => {
+		expect(getNextDueDate(monthly({ month: "2027-03", day: 15 }, day(1)), "2026-10-15")).toBe(
+			"2026-11-01",
+		);
+	});
+
+	test("it looks as many months ahead as it takes", () => {
+		expect(getNextDueDate({ frequency: "monthly", rule: day(31) }, "2026-01-31")).toBe(
+			"2026-02-28",
+		);
+		expect(getNextDueDate({ frequency: "monthly", rule: before(10) }, "2026-02-18")).toBe(
+			"2026-03-21",
+		);
+	});
+});

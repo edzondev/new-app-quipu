@@ -272,3 +272,116 @@ test("with the Plus lapsed, the household cannot adjust", async () => {
 		luis.as.mutation(api.commitments.clearDueThisMonth, { space: household, id: internet.id }),
 	).rejects.toThrow(readOnly);
 });
+
+async function paymentRows(t: Awaited<ReturnType<typeof personalUser>>["t"]) {
+	return await t.run(async (ctx) => {
+		const rows = await ctx.db.query("transactions").take(50);
+		return rows.flatMap((row) =>
+			row.kind === "expense" && row.commitmentId
+				? [{ forMonth: row.forMonth, date: row.date }]
+				: [],
+		);
+	});
+}
+
+test("a payment keeps covering its month when the rule changes", async () => {
+	const { t, ana } = await personalUser();
+	await add(ana, personal, "Agua", day(28));
+	const [agua] = await items(ana);
+	if (!agua) throw new Error("missing item");
+	await ana.as.mutation(api.commitments.markPaid, { space: personal, id: agua.id });
+	expect(await paymentRows(t)).toEqual([{ forMonth: "2026-10", date: TODAY }]);
+
+	await ana.as.mutation(api.commitments.update, {
+		space: personal,
+		id: agua.id,
+		name: "Agua",
+		amountCents: 9_000,
+		envelope: "needs",
+		schedule: { frequency: "monthly", rule: { kind: "mid" } },
+	});
+	// October is still paid (its payment stays in the list); November waits, unpaid.
+	const after = await ana.as.query(api.commitments.list, { space: personal, today: TODAY });
+	expect(after.paidCents).toBe(9_000);
+	expect(after.items[0]).toMatchObject({ dueDate: "2026-11-15", status: "later" });
+
+	vi.setSystemTime(new Date("2026-11-16T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: personal });
+	const november = await ana.as.query(api.commitments.list, {
+		space: personal,
+		today: "2026-11-16",
+	});
+	expect(november.items[0]).toMatchObject({ dueDate: "2026-11-15", status: "overdue" });
+	await ana.as.mutation(api.commitments.markPaid, { space: personal, id: agua.id });
+	expect((await paymentRows(t)).map((row) => row.forMonth)).toEqual(["2026-10", "2026-11"]);
+});
+
+test("a payment made late still covers the month it was due", async () => {
+	const { t, ana } = await personalUser();
+	await add(ana, personal, "Agua", day(28));
+	const [agua] = await items(ana);
+	if (!agua) throw new Error("missing item");
+	vi.setSystemTime(new Date("2026-11-03T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: personal });
+	await ana.as.mutation(api.commitments.markPaid, { space: personal, id: agua.id });
+	expect(await paymentRows(t)).toEqual([{ forMonth: "2026-10", date: "2026-11-03" }]);
+	const list = await ana.as.query(api.commitments.list, { space: personal, today: "2026-11-03" });
+	expect(list.payments[0]).toMatchObject({ dueDate: "2026-10-28", paidOn: "2026-11-03" });
+});
+
+test("a payment saved before payments knew their month still settles the oldest open date", async () => {
+	const { t, ana } = await personalUser();
+	await add(ana, personal, "Agua", day(25));
+	const [agua] = await items(ana);
+	if (!agua) throw new Error("missing item");
+	await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(5)).find((row) => row.kind === "personal");
+		const cycle = await ctx.db.query("cycles").first();
+		if (!space || !cycle) throw new Error("missing space");
+		await ctx.db.insert("transactions", {
+			kind: "expense",
+			spaceId: space._id,
+			cycleId: cycle._id,
+			userId: ana.userId,
+			amountCents: 9_000,
+			date: TODAY,
+			envelope: "needs",
+			commitmentId: agua.id,
+		});
+	});
+	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-11-25", status: "later" });
+
+	// The next payment is a new one: it knows its month and takes the date that is left.
+	vi.setSystemTime(new Date("2026-11-26T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: personal });
+	await ana.as.mutation(api.commitments.markPaid, { space: personal, id: agua.id });
+	expect((await paymentRows(t)).map((row) => row.forMonth)).toEqual([undefined, "2026-11"]);
+	const list = await ana.as.query(api.commitments.list, { space: personal, today: "2026-11-26" });
+	expect(list.items[0]?.status).not.toBe("paid");
+	expect(list.items[0]?.dueDate).toBe("2026-12-25");
+});
+
+test("a one-off commitment is settled by any payment, also after its date moves", async () => {
+	const { ana } = await personalUser();
+	await ana.as.mutation(api.commitments.add, {
+		space: personal,
+		name: "Seguro",
+		amountCents: 9_000,
+		envelope: "needs",
+		schedule: { frequency: "once", dueDate: "2026-10-25" },
+	});
+	const [seguro] = await items(ana);
+	if (!seguro) throw new Error("missing item");
+	await ana.as.mutation(api.commitments.markPaid, { space: personal, id: seguro.id });
+	await ana.as.mutation(api.commitments.update, {
+		space: personal,
+		id: seguro.id,
+		name: "Seguro",
+		amountCents: 9_000,
+		envelope: "needs",
+		schedule: { frequency: "once", dueDate: "2026-12-05" },
+	});
+	const list = await ana.as.query(api.commitments.list, { space: personal, today: TODAY });
+	expect(list.payments).toHaveLength(1);
+	expect(list.items.some((item) => item.status !== "paid" && item.name === "Seguro")).toBe(false);
+});

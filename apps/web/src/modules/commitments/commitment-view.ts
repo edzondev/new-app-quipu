@@ -1,7 +1,7 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS } from "@quipu/backend/shared/budget";
 import { dueDateFor, ruleText } from "@quipu/backend/shared/commitments";
-import { formatPastDay, formatWeekdayDay } from "@quipu/backend/shared/dates";
+import { formatPastDay, formatWeekdayDay, monthName } from "@quipu/backend/shared/dates";
 import type { FunctionReturnType } from "convex/server";
 
 type CommitmentList = FunctionReturnType<typeof api.commitments.list>;
@@ -38,6 +38,26 @@ export function describePaid(
 export function ruleDay(item: CommitmentItem): number | null {
 	if (!item.rule) return null;
 	return Number(dueDateFor(item.rule, undefined, item.dueDate.slice(0, 7)).slice(8));
+}
+
+const capitalize = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+
+/** The title of the one-month change: "Este mes vence…", or the real month when it is not this one. */
+export function dueMonthTitle(month: string, today: string) {
+	return month === today.slice(0, 7) ? "Este mes vence…" : `${capitalize(monthName(month))} vence…`;
+}
+
+/** "Agua vence el 27 este mes", or "Agua vence el 27 de diciembre" for another month. */
+export function dueMonthToast(name: string, day: number, month: string, today: string) {
+	const when = month === today.slice(0, 7) ? "este mes" : `de ${monthName(month)}`;
+	return `${name} vence el ${day} ${when}`;
+}
+
+/** The adjustment a charge carries, rebuilt from its date: what the preview of the edit form needs. */
+export function adjustmentOf(item: CommitmentItem) {
+	return item.adjusted
+		? { month: item.dueDate.slice(0, 7), day: Number(item.dueDate.slice(8)) }
+		: undefined;
 }
 
 /** "cada mes el 28", or "el 27 · solo este mes" when this month was moved by hand. */

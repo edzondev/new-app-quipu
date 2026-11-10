@@ -1,4 +1,4 @@
-import { getOccurrences, type Schedule } from "../../shared/commitments";
+import { type CommitmentPayment, getOccurrences, type Schedule } from "../../shared/commitments";
 import { getLimaDate } from "../../shared/dates";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
@@ -23,16 +23,21 @@ export function getCommitmentPayments(ctx: QueryCtx | MutationCtx, row: Doc<"com
 		.take(PAYMENTS_CAP);
 }
 
+/** What the states need from a commitment's payments: the month each one covers, if it says. */
+export function toCommitmentPayments(rows: Doc<"transactions">[]): CommitmentPayment[] {
+	return rows.map((row) => ({ forMonth: row.kind === "expense" ? row.forMonth : undefined }));
+}
+
 export function getCommitmentStates(
 	row: Doc<"commitments">,
-	paymentCount: number,
+	payments: Doc<"transactions">[],
 	today: string,
 	cycleEnd: string,
 ) {
 	return getOccurrences(
 		scheduleOf(row),
 		getLimaDate(new Date(row._creationTime)),
-		paymentCount,
+		toCommitmentPayments(payments),
 		today,
 		cycleEnd,
 	);
@@ -46,5 +51,5 @@ export async function getCommitmentOccurrences(
 	cycleEnd: string,
 ) {
 	const payments = await getCommitmentPayments(ctx, row);
-	return getCommitmentStates(row, payments.length, today, cycleEnd);
+	return getCommitmentStates(row, payments, today, cycleEnd);
 }

@@ -32,8 +32,12 @@ import { Button } from "#/components/ui/button";
 import { Calendar } from "#/components/ui/calendar";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "#/components/ui/menu";
 import { readError } from "#/lib/read-error";
-import { readOnlyProps, useIsReadOnly } from "#/modules/household/use-read-only-gate";
-import { type CommitmentItem, ruleDay } from "../commitment-view";
+import {
+	readOnlyProps,
+	useIsReadOnly,
+	useReadOnlyGate,
+} from "#/modules/household/use-read-only-gate";
+import { type CommitmentItem, dueMonthTitle, dueMonthToast, ruleDay } from "../commitment-view";
 import { FieldError } from "./field-error";
 
 type Space = "personal" | "household";
@@ -73,7 +77,7 @@ function DueMonthDialog({
 		mutationFn: (day: number) =>
 			setDue({ space, id: item.id, month: item.dueDate.slice(0, 7), day }),
 		onSuccess: (_, day) => {
-			onNotice(`${item.name} vence el ${day} este mes`);
+			onNotice(dueMonthToast(item.name, day, item.dueDate.slice(0, 7), today));
 			onClose();
 		},
 	});
@@ -82,7 +86,7 @@ function DueMonthDialog({
 	return (
 		<FormSheetPopup>
 			<FormSheetHeader>
-				<FormSheetTitle>Este mes vence…</FormSheetTitle>
+				<FormSheetTitle>{dueMonthTitle(item.dueDate.slice(0, 7), today)}</FormSheetTitle>
 				<FormSheetDescription>{dueMonthText(item, rule)}</FormSheetDescription>
 			</FormSheetHeader>
 			<FormSheetPanel className="flex flex-col items-center">
@@ -94,7 +98,10 @@ function DueMonthDialog({
 					showOutsideDays={false}
 					today={parseLocalDate(today)}
 					selected={month}
+					// One save at a time: no other day while this one is going.
+					disabled={save.isPending}
 					onSelect={(date) => {
+						if (save.isPending) return;
 						if (date && formatLocalDate(date).slice(0, 7) === item.dueDate.slice(0, 7)) {
 							save.mutate(date.getDate());
 						}
@@ -151,7 +158,7 @@ function RemoveDialog({
 
 /** The "⋯" of a row. In a household without Plus it is off, like "+ Registrar". */
 export function CommitmentMenu(props: Props & { today: string }) {
-	const { item, space, onEdit } = props;
+	const { item, space, today, onEdit } = props;
 	const readOnly = useIsReadOnly();
 	const [panel, setPanel] = useState<"due" | "remove" | null>(null);
 	const label = `Más opciones de ${item.name}`;
@@ -181,7 +188,11 @@ export function CommitmentMenu(props: Props & { today: string }) {
 					<MoreHorizontalIcon aria-hidden />
 				</MenuTrigger>
 				<MenuPopup align="end">
-					{item.rule ? <MenuItem onClick={() => setPanel("due")}>Este mes vence…</MenuItem> : null}
+					{item.rule ? (
+						<MenuItem onClick={() => setPanel("due")}>
+							{dueMonthTitle(item.dueDate.slice(0, 7), today)}
+						</MenuItem>
+					) : null}
 					{item.status === "paid" ? null : <MenuItem onClick={onEdit}>Editar</MenuItem>}
 					<MenuItem onClick={() => setPanel("remove")}>Borrar</MenuItem>
 				</MenuPopup>
@@ -215,6 +226,8 @@ export function BackToRuleButton({
 }) {
 	const clear = useConvexMutation(api.commitments.clearDueThisMonth);
 	const back = useMutation({ mutationFn: () => clear({ space, id: item.id }) });
+	// Like "+ Registrar": with the Plus lapsed it does nothing, and the server would refuse anyway.
+	const gate = useReadOnlyGate();
 	const day = ruleDay(item);
 	if (day === null) return null;
 	return (
@@ -224,6 +237,7 @@ export function BackToRuleButton({
 				className={className}
 				disabled={back.isPending}
 				onClick={() => back.mutate()}
+				{...gate}
 			>
 				Volver al {day}
 			</button>
