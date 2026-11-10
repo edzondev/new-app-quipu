@@ -26,7 +26,7 @@ function RouteComponent() {
 				aria-hidden="true"
 				className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
 			>
-				<div className="absolute inset-x-0 top-[20%] h-3/5 bg-[radial-gradient(ellipse,color-mix(in_srgb,var(--envelope-savings)_5%,transparent),transparent_68%)] blur-[40px] sm:inset-x-[18%]" />
+				<div className="absolute inset-x-0 top-[20%] h-3/5 bg-[radial-gradient(ellipse,color-mix(in_srgb,var(--envelope-savings)_7%,transparent),transparent_68%)] blur-[40px] sm:inset-x-[18%]" />
 				<Cords className="top-1/2 h-155 w-215 -translate-y-1/2 sm:w-[calc(100%+240px)] min-[1500px]:w-[1500px]" />
 			</div>
 			<QuipuHeader>
