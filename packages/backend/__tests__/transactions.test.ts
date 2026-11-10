@@ -6,6 +6,7 @@ import { api, components } from "../convex/_generated/api";
 import authSchema from "../convex/betterAuth/schema";
 import schema from "../convex/schema";
 import { splitIncome } from "../shared/budget";
+import { joinedCouple } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -1025,4 +1026,319 @@ test("Inicio reports the window and the early income with the day it starts", as
 		earlyWindow: true,
 		earlyIncome: { amountCents: 100_000, startsOn: "2026-11-01" },
 	});
+});
+
+const NOT_AUTHOR = "Solo quien lo registró puede cambiarlo.";
+const NOT_FOUND = "No encontramos este dato.";
+const TODAY = "2026-10-20";
+
+type Ana = Awaited<ReturnType<typeof anaOnOct20>>;
+
+async function rowOf(ana: Ana, kind: "saving" | "withdrawal") {
+	const { rows } = await ana.as.query(api.transactions.list, { space: "personal", today: TODAY });
+	const row = rows.find((item) => item.kind === kind);
+	if (!row) throw new Error(`missing ${kind}`);
+	return row;
+}
+
+async function figures(ana: Ana, t: ReturnType<typeof harness>) {
+	const balances = await ana.as.query(api.balances.getBalances, { space: "personal" });
+	return {
+		savings: balances.savingsCents,
+		needs: balances.needsCents,
+		fund: await readFundCents(t),
+	};
+}
+
+test("only who recorded a saving or a withdrawal changes or deletes it", async () => {
+	const { ana, luis } = await joinedCouple();
+	const household = "household" as const;
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: household,
+		amountCents: 1_000,
+		reason: "other",
+	});
+	const list = () => luis.as.query(api.transactions.list, { space: household, today: TODAY });
+	const { rows } = await list();
+	const saving = rows.find((row) => row.kind === "saving")?.id;
+	const withdrawal = rows.find((row) => row.kind === "withdrawal")?.id;
+	if (!saving || !withdrawal) throw new Error("missing rows");
+
+	await expect(
+		luis.as.mutation(api.transactions.updateSaving, {
+			space: household,
+			id: saving,
+			amountCents: 1,
+		}),
+	).rejects.toThrow(NOT_AUTHOR);
+	await expect(
+		luis.as.mutation(api.transactions.deleteSaving, { space: household, id: saving }),
+	).rejects.toThrow(NOT_AUTHOR);
+	await expect(
+		luis.as.mutation(api.transactions.updateWithdrawal, {
+			space: household,
+			id: withdrawal,
+			amountCents: 1,
+			reason: "other",
+		}),
+	).rejects.toThrow(NOT_AUTHOR);
+	await expect(
+		luis.as.mutation(api.transactions.deleteWithdrawal, { space: household, id: withdrawal }),
+	).rejects.toThrow(NOT_AUTHOR);
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: household,
+		id: saving,
+		amountCents: 6_000,
+		note: "Corregido",
+	});
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: household,
+		id: withdrawal,
+		amountCents: 500,
+		reason: "emergency",
+	});
+	const edited = (await list()).rows;
+	expect(edited.find((row) => row.id === saving)).toMatchObject({
+		amountCents: 6_000,
+		note: "Corregido",
+	});
+	expect(edited.find((row) => row.id === withdrawal)).toMatchObject({
+		amountCents: 500,
+		reason: "emergency",
+	});
+
+	await ana.as.mutation(api.transactions.deleteWithdrawal, { space: household, id: withdrawal });
+	await ana.as.mutation(api.transactions.deleteSaving, { space: household, id: saving });
+	expect(
+		(await list()).rows.some((row) => row.kind === "saving" || row.kind === "withdrawal"),
+	).toBe(false);
+});
+
+test("a saving or a withdrawal of a cycle that already closed cannot be changed", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 1_000,
+		reason: "other",
+	});
+	const saving = (await rowOf(ana, "saving")).id;
+	const withdrawal = (await rowOf(ana, "withdrawal")).id;
+	vi.setSystemTime(new Date("2026-11-05T17:00:00.000Z"));
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "personal" });
+	const before = await figures(ana, t);
+
+	await expect(
+		ana.as.mutation(api.transactions.updateSaving, {
+			space: "personal",
+			id: saving,
+			amountCents: 1,
+		}),
+	).rejects.toThrow(NOT_FOUND);
+	await expect(
+		ana.as.mutation(api.transactions.deleteSaving, { space: "personal", id: saving }),
+	).rejects.toThrow(NOT_FOUND);
+	await expect(
+		ana.as.mutation(api.transactions.updateWithdrawal, {
+			space: "personal",
+			id: withdrawal,
+			amountCents: 1,
+			reason: "other",
+		}),
+	).rejects.toThrow(NOT_FOUND);
+	await expect(
+		ana.as.mutation(api.transactions.deleteWithdrawal, { space: "personal", id: withdrawal }),
+	).rejects.toThrow(NOT_FOUND);
+	expect(await figures(ana, t)).toEqual(before);
+});
+
+test("editing and deleting a saving to a goal moves Ahorro and what the goal has, never the fund", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.goals.add, { space: "personal", name: "Viaje", targetCents: 100_000 });
+	const [goal] = await ana.as.query(api.goals.list, { space: "personal" });
+	const start = await figures(ana, t);
+	await ana.as.mutation(api.transactions.addSaving, {
+		space: "personal",
+		amountCents: 4_000,
+		goalId: goal.id,
+	});
+	const saving = await rowOf(ana, "saving");
+	expect(saving.goalId).toBe(goal.id);
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: "personal",
+		id: saving.id,
+		amountCents: 6_000,
+	});
+	expect((await ana.as.query(api.goals.list, { space: "personal" }))[0].savedCents).toBe(6_000);
+	expect(await figures(ana, t)).toEqual({ ...start, savings: start.savings - 6_000 });
+
+	await ana.as.mutation(api.transactions.deleteSaving, { space: "personal", id: saving.id });
+	expect((await ana.as.query(api.goals.list, { space: "personal" }))[0].savedCents).toBe(0);
+	expect(await figures(ana, t)).toEqual(start);
+});
+
+test("editing and deleting a saving to the fund moves Ahorro and the fund together", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	const start = await figures(ana, t);
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 10_000 });
+	const saving = await rowOf(ana, "saving");
+	expect(saving.goalId).toBeNull();
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: "personal",
+		id: saving.id,
+		amountCents: 6_000,
+	});
+	expect(await figures(ana, t)).toEqual({ ...start, savings: start.savings - 6_000, fund: 6_000 });
+
+	await ana.as.mutation(api.transactions.deleteSaving, { space: "personal", id: saving.id });
+	expect(await figures(ana, t)).toEqual(start);
+});
+
+test("a saving can go up to what Ahorro has plus its own amount, and not one cent more", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 4_000 });
+	const saving = await rowOf(ana, "saving");
+	const before = await figures(ana, t);
+
+	await expect(
+		ana.as.mutation(api.transactions.updateSaving, {
+			space: "personal",
+			id: saving.id,
+			amountCents: 10_001,
+		}),
+	).rejects.toThrow("Solo tienes S/ 100.00 para este ahorro. Baja el monto.");
+	expect(await figures(ana, t)).toEqual(before);
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: "personal",
+		id: saving.id,
+		amountCents: 10_000,
+	});
+	expect(await figures(ana, t)).toEqual({ savings: 0, needs: before.needs, fund: 10_000 });
+});
+
+test("editing and deleting a withdrawal moves the fund and Necesidades the other way, and can change its reason", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	const start = await figures(ana, t);
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 4_000,
+		reason: "emergency",
+	});
+	const withdrawal = await rowOf(ana, "withdrawal");
+	expect(withdrawal.reason).toBe("emergency");
+
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: "personal",
+		id: withdrawal.id,
+		amountCents: 7_000,
+		reason: "other",
+		note: "Médico",
+	});
+	expect(await figures(ana, t)).toEqual({
+		...start,
+		needs: start.needs + 7_000,
+		fund: start.fund - 7_000,
+	});
+	expect(await rowOf(ana, "withdrawal")).toMatchObject({ reason: "other", note: "Médico" });
+
+	await ana.as.mutation(api.transactions.deleteWithdrawal, {
+		space: "personal",
+		id: withdrawal.id,
+	});
+	expect(await figures(ana, t)).toEqual(start);
+});
+
+test("a withdrawal can go up to what the fund has plus its own amount, and not one cent more", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 4_000,
+		reason: "other",
+	});
+	const withdrawal = await rowOf(ana, "withdrawal");
+	const before = await figures(ana, t);
+
+	await expect(
+		ana.as.mutation(api.transactions.updateWithdrawal, {
+			space: "personal",
+			id: withdrawal.id,
+			amountCents: 10_001,
+			reason: "other",
+		}),
+	).rejects.toThrow("Solo tienes S/ 100.00 en el fondo para este retiro. Baja el monto.");
+	expect(await figures(ana, t)).toEqual(before);
+
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: "personal",
+		id: withdrawal.id,
+		amountCents: 10_000,
+		reason: "other",
+	});
+	expect((await figures(ana, t)).fund).toBe(0);
+});
+
+test("a saving to the fund cannot be deleted or lowered below what was already withdrawn from it", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 4_000,
+		reason: "other",
+	});
+	const saving = await rowOf(ana, "saving");
+	const before = await figures(ana, t);
+	const ALREADY = "Ya retiraste parte de este ahorro del fondo. Borra primero ese retiro.";
+
+	await expect(
+		ana.as.mutation(api.transactions.deleteSaving, { space: "personal", id: saving.id }),
+	).rejects.toThrow(ALREADY);
+	await expect(
+		ana.as.mutation(api.transactions.updateSaving, {
+			space: "personal",
+			id: saving.id,
+			amountCents: 3_999,
+		}),
+	).rejects.toThrow(ALREADY);
+	expect(await figures(ana, t)).toEqual(before);
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: "personal",
+		id: saving.id,
+		amountCents: 4_000,
+	});
+	expect((await figures(ana, t)).fund).toBe(0);
+});
+
+test("deleting a withdrawal can leave Necesidades below zero, like an overspend", async () => {
+	const t = harness();
+	const ana = await anaWithFund(t);
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 10_000,
+		reason: "other",
+	});
+	const { needs } = await figures(ana, t);
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: needs,
+		envelope: "needs",
+	});
+
+	await ana.as.mutation(api.transactions.deleteWithdrawal, {
+		space: "personal",
+		id: (await rowOf(ana, "withdrawal")).id,
+	});
+
+	expect(await figures(ana, t)).toMatchObject({ needs: -10_000, fund: 10_000 });
 });

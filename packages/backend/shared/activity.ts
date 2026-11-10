@@ -19,7 +19,11 @@ export const EVENT_TYPES = [
 	"income_edited",
 	"income_deleted",
 	"saving_added",
+	"saving_edited",
+	"saving_deleted",
 	"withdrawal",
+	"withdrawal_edited",
+	"withdrawal_deleted",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -42,7 +46,11 @@ const PHRASES: Record<EventType, [string, string]> = {
 	income_edited: ["editó un ingreso", "editaste un ingreso"],
 	income_deleted: ["borró un ingreso", "borraste un ingreso"],
 	saving_added: ["aportó al ahorro", "aportaste al ahorro"],
+	saving_edited: ["editó un ahorro", "editaste un ahorro"],
+	saving_deleted: ["borró un ahorro", "borraste un ahorro"],
 	withdrawal: ["retiró del fondo", "retiraste del fondo"],
+	withdrawal_edited: ["editó un retiro", "editaste un retiro"],
+	withdrawal_deleted: ["borró un retiro", "borraste un retiro"],
 };
 
 /** "Ana cambió el reparto" / "Tú cambiaste el reparto". Without a name: "Cambió el reparto". */

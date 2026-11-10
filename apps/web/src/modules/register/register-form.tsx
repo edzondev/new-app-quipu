@@ -30,6 +30,7 @@ import { Label } from "#/components/ui/label";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
 import { positiveMoney } from "#/lib/money-schema";
+import { DeleteButton } from "./delete-button";
 import type { Draft, Kind } from "./movement-draft";
 import { useMovementActions } from "./use-movement-actions";
 
@@ -70,42 +71,6 @@ const DESTINATIONS: { value: RegisterValues["destination"]; label: string }[] = 
 ];
 
 const ENVELOPES: Envelope[] = ["needs", "wants"];
-
-function DeleteButton({
-	kind,
-	disabled,
-	onDelete,
-}: {
-	kind: Kind;
-	disabled: boolean;
-	onDelete: () => void;
-}) {
-	const [confirm, setConfirm] = useState(false);
-	const prompt =
-		kind === "expense"
-			? "¿Eliminar este gasto? El monto vuelve a su sobre."
-			: "¿Eliminar este ingreso?";
-
-	if (confirm) {
-		return (
-			<>
-				<p className="mr-auto text-sm text-muted-foreground">{prompt}</p>
-				<Button type="button" variant="ghost" disabled={disabled} onClick={onDelete}>
-					Eliminar
-				</Button>
-				<Button type="button" variant="ghost" disabled={disabled} onClick={() => setConfirm(false)}>
-					Cancelar
-				</Button>
-			</>
-		);
-	}
-
-	return (
-		<Button type="button" variant="ghost" disabled={disabled} onClick={() => setConfirm(true)}>
-			Eliminar
-		</Button>
-	);
-}
 
 export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => void }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
@@ -401,7 +366,11 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 				<FormSheetFooter>
 					{editId ? (
 						<DeleteButton
-							kind={draft.kind}
+							prompt={
+								isExpense
+									? "¿Eliminar este gasto? El monto vuelve a su sobre."
+									: "¿Eliminar este ingreso?"
+							}
 							disabled={pending}
 							onDelete={() => remove(draft.kind, editId)}
 						/>

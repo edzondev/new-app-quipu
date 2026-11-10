@@ -97,8 +97,8 @@ async function unseenPartnerWithdrawal(ctx: QueryCtx, spaceId: Id<"spaces">, use
 		.unique();
 	const seenAt = profile?.seenWithdrawalAt ?? 0;
 	const withdrawals = ctx.db
-		.query("spaceEvents")
-		.withIndex("by_space_type", (q) => q.eq("spaceId", spaceId).eq("type", "withdrawal"))
+		.query("transactions")
+		.withIndex("by_spaceId_kind", (q) => q.eq("spaceId", spaceId).eq("kind", "withdrawal"))
 		.order("desc");
 	for await (const event of withdrawals) {
 		if (event._creationTime <= seenAt) return null;
@@ -382,7 +382,7 @@ export const get = query({
 			withdrawalNotice: withdrawal
 				? {
 						name: withdrawer ? displayName(withdrawer.name) : "",
-						amountCents: withdrawal.amountCents ?? 0,
+						amountCents: withdrawal.amountCents,
 					}
 				: null,
 			invite:

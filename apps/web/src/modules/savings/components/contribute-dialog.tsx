@@ -1,8 +1,6 @@
-import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, toCents } from "@quipu/backend/shared/budget";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { useMutation } from "@tanstack/react-query";
 import { cn } from "cn";
 import type { FunctionArgs } from "convex/server";
 import * as z from "zod/mini";
@@ -17,9 +15,11 @@ import {
 } from "#/components/form-sheet";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { positiveMoney } from "#/lib/money-schema";
-import { readError } from "#/lib/read-error";
 import { CHIP } from "#/lib/typography";
 import { AmountField } from "#/modules/commitments/components/amount-field";
+import { DeleteButton } from "#/modules/register/delete-button";
+import type { Movement } from "#/modules/register/movement-draft";
+import { useSavingActions } from "../use-saving-actions";
 import type { Goal } from "./goal-card";
 
 const QUICK_CENTS = 10_000;
@@ -33,35 +33,34 @@ type ContributeProps = {
 	savedCents: number;
 	targetCents: number | null;
 	goal?: Pick<Goal, "id" | "name">;
+	/** A saving to change or delete; its amount counts as available. */
+	editing?: Movement;
 	onClose: () => void;
 };
 
-function ContributeForm({
+export function ContributeForm({
 	space,
 	savingsCents,
 	savedCents,
 	targetCents,
 	goal,
+	editing,
 	onClose,
 }: ContributeProps) {
-	const add = useConvexMutation(api.transactions.addSaving);
-	const save = useMutation({
-		mutationFn: (amountCents: number) =>
-			add({ space, amountCents, ...(goal ? { goalId: goal.id } : {}) }),
-		onSuccess: onClose,
-	});
+	const { save, remove, pending, error: saveError } = useSavingActions(space, onClose, editing);
 	const form = useForm({
-		defaultValues: { amount: "" },
-		onSubmit: ({ value }) => save.mutate(toCents(value.amount)),
+		defaultValues: { amount: editing ? (editing.amountCents / 100).toFixed(2) : "" },
+		onSubmit: ({ value }) =>
+			save({ amountCents: toCents(value.amount), ...(goal ? { goalId: goal.id } : {}) }),
 	});
 	const amount = useSelector(form.store, (state) => state.values.amount);
-	const available = Math.max(0, savingsCents);
+	const available = Math.max(0, savingsCents + (editing?.amountCents ?? 0));
 	const over = toCents(amount) > available;
 	const shortcut = goal
 		? { label: "Lo que falta", cents: Math.max(0, (targetCents ?? 0) - savedCents) }
 		: { label: "Todo el Ahorro", cents: available };
 
-	const canSave = contributeSchema.safeParse({ amount }).success && !over && !save.isPending;
+	const canSave = contributeSchema.safeParse({ amount }).success && !over && !pending;
 	const error =
 		over || available === 0 ? `Solo tienes S/ ${formatCents(available)} en Ahorro.` : undefined;
 
@@ -92,7 +91,7 @@ function ContributeForm({
 								label="Monto"
 								value={field.state.value}
 								onChange={field.handleChange}
-								error={error ?? (save.isError ? readError(save.error) : undefined)}
+								error={error ?? saveError}
 							/>
 						)}
 					</form.Field>
@@ -122,16 +121,29 @@ function ContributeForm({
 						Sale del sobre Ahorro. No cuenta como gasto.
 					</p>
 				</FormSheetPanel>
-				<FormSheetFooter variant="bare">
-					<Button
-						type="submit"
-						className="h-11 w-full rounded-full"
-						disabled={!canSave}
-						loading={save.isPending}
-					>
-						Aportar
-					</Button>
-				</FormSheetFooter>
+				{editing ? (
+					<FormSheetFooter>
+						<DeleteButton
+							prompt="¿Eliminar este ahorro? El monto vuelve a su sobre."
+							disabled={pending}
+							onDelete={remove}
+						/>
+						<Button type="submit" disabled={!canSave} loading={pending}>
+							Guardar
+						</Button>
+					</FormSheetFooter>
+				) : (
+					<FormSheetFooter variant="bare">
+						<Button
+							type="submit"
+							className="h-11 w-full rounded-full"
+							disabled={!canSave}
+							loading={pending}
+						>
+							Aportar
+						</Button>
+					</FormSheetFooter>
+				)}
 			</form>
 		</FormSheetPopup>
 	);

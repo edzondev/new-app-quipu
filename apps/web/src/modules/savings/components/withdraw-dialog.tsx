@@ -1,8 +1,6 @@
-import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { useMutation } from "@tanstack/react-query";
 import { cn } from "cn";
 import type { FunctionArgs } from "convex/server";
 import * as z from "zod/mini";
@@ -20,9 +18,11 @@ import {
 import { Input } from "#/components/ui/input";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { positiveMoney } from "#/lib/money-schema";
-import { readError } from "#/lib/read-error";
 import { EYEBROW } from "#/lib/typography";
 import { AmountField } from "#/modules/commitments/components/amount-field";
+import { DeleteButton } from "#/modules/register/delete-button";
+import type { Movement } from "#/modules/register/movement-draft";
+import { useWithdrawalActions } from "../use-withdrawal-actions";
 
 type Reason = FunctionArgs<typeof api.transactions.withdrawSaving>["reason"];
 
@@ -40,26 +40,31 @@ const withdrawSchema = z.object({ amount: positiveMoney("Escribe un monto.") });
 type WithdrawProps = {
 	space: FunctionArgs<typeof api.transactions.withdrawSaving>["space"];
 	fundCents: number;
+	/** A withdrawal to change or delete; its amount counts as available. */
+	editing?: Movement;
 	onClose: () => void;
 };
 
-function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
-	const withdraw = useConvexMutation(api.transactions.withdrawSaving);
-	const save = useMutation({
-		mutationFn: (value: WithdrawValues) =>
-			withdraw({
-				space,
+export function WithdrawForm({ space, fundCents, editing, onClose }: WithdrawProps) {
+	const { save, remove, pending, error } = useWithdrawalActions(space, onClose, editing);
+	const defaultValues: WithdrawValues = {
+		amount: editing ? (editing.amountCents / 100).toFixed(2) : "",
+		reason: editing?.reason ?? "emergency",
+		note: editing?.note ?? "",
+	};
+	const form = useForm({
+		defaultValues,
+		onSubmit: ({ value }) =>
+			save({
 				amountCents: toCents(value.amount),
 				reason: value.reason,
 				note: value.reason === "other" ? value.note.trim() || undefined : undefined,
 			}),
-		onSuccess: onClose,
 	});
-	const defaultValues: WithdrawValues = { amount: "", reason: "emergency", note: "" };
-	const form = useForm({ defaultValues, onSubmit: ({ value }) => save.mutate(value) });
 	const { amount, reason } = useSelector(form.store, (state) => state.values);
-	const over = toCents(amount) > fundCents;
-	const canSave = withdrawSchema.safeParse({ amount }).success && !over && !save.isPending;
+	const available = fundCents + (editing?.amountCents ?? 0);
+	const over = toCents(amount) > available;
+	const canSave = withdrawSchema.safeParse({ amount }).success && !over && !pending;
 
 	return (
 		<FormSheetPopup>
@@ -73,7 +78,7 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 			>
 				<FormSheetHeader>
 					<FormSheetTitle>Retirar del fondo</FormSheetTitle>
-					<FormSheetDescription>Tienes S/ {formatCents(fundCents)}</FormSheetDescription>
+					<FormSheetDescription>Tienes S/ {formatCents(available)}</FormSheetDescription>
 				</FormSheetHeader>
 				<FormSheetPanel className="flex flex-col gap-5">
 					<form.Field name="amount">
@@ -83,13 +88,7 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 								label="Monto a retirar"
 								value={field.state.value}
 								onChange={field.handleChange}
-								error={
-									over
-										? `Tu fondo tiene S/ ${formatCents(fundCents)}.`
-										: save.isError
-											? readError(save.error)
-											: undefined
-								}
+								error={over ? `Tu fondo tiene S/ ${formatCents(available)}.` : error}
 							/>
 						)}
 					</form.Field>
@@ -129,16 +128,25 @@ function WithdrawForm({ space, fundCents, onClose }: WithdrawProps) {
 						Pasa a Necesidades de este ciclo.
 					</p>
 				</FormSheetPanel>
-				<FormSheetFooter variant="bare">
-					<Button
-						type="submit"
-						className="h-11 w-full rounded-full"
-						disabled={!canSave}
-						loading={save.isPending}
-					>
-						Confirmar
-					</Button>
-				</FormSheetFooter>
+				{editing ? (
+					<FormSheetFooter>
+						<DeleteButton prompt="¿Eliminar este retiro?" disabled={pending} onDelete={remove} />
+						<Button type="submit" disabled={!canSave} loading={pending}>
+							Guardar
+						</Button>
+					</FormSheetFooter>
+				) : (
+					<FormSheetFooter variant="bare">
+						<Button
+							type="submit"
+							className="h-11 w-full rounded-full"
+							disabled={!canSave}
+							loading={pending}
+						>
+							Confirmar
+						</Button>
+					</FormSheetFooter>
+				)}
 			</form>
 		</FormSheetPopup>
 	);
