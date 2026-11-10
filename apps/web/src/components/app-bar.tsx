@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState, useSearch } from "@tanstack/react-router";
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
+import { QuipuMark } from "#/components/quipu-mark";
 import { Button } from "#/components/ui/button";
 import {
 	Drawer,
@@ -169,11 +170,8 @@ export function AppBar() {
 							</DrawerPanel>
 						</DrawerPopup>
 					</Drawer>
-					<Link
-						to="/home"
-						className="font-heading text-[21px] font-medium tracking-tight text-foreground"
-					>
-						Quipu
+					<Link to="/home" aria-label="Quipu, inicio" className="inline-flex h-11 items-center">
+						<QuipuMark className="h-7 w-8" />
 					</Link>
 				</div>
 
