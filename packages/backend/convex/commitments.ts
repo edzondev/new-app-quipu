@@ -8,6 +8,7 @@ import {
 	dueDateFor,
 	getNextDueDate,
 	isReserved,
+	isSameRule,
 	isValidRule,
 	settledDates,
 	type Occurrence,
@@ -19,7 +20,6 @@ import {
 	getCommitmentOccurrences,
 	getCommitmentPayments,
 	getCommitmentStates,
-	toCommitmentPayments,
 	scheduleOf,
 } from "./model/commitments";
 import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
@@ -27,7 +27,7 @@ import { logEvent } from "./model/events";
 import { BAD_INPUT, parseInput } from "./model/input";
 import { requireWritableSpace } from "./model/plus";
 import { type SpaceKind } from "./model/spaces";
-import { dueRule, spaceKind, spendable } from "./schema";
+import { dueAdjustment, dueRule, spaceKind, spendable } from "./schema";
 
 const NOT_FOUND = "No encontramos este dato.";
 const ALREADY_PAID = "Este compromiso ya está pagado en este ciclo.";
@@ -130,9 +130,21 @@ export const update = mutation({
 				row.frequency === "monthly" ? row.adjustment : undefined,
 			),
 		);
-		await logEvent(ctx, space, userId, "commitment_edited", {
-			detail: rowLabel(cleanName, amountCents),
-		});
+		const before = scheduleOf(row);
+		const sameSchedule =
+			before.frequency === "monthly"
+				? when.frequency === "monthly" && isSameRule(before.rule, when.rule)
+				: when.frequency === "once" && when.dueDate === before.dueDate;
+		const unchanged =
+			row.name === cleanName &&
+			row.amountCents === amountCents &&
+			row.envelope === envelope &&
+			sameSchedule;
+		if (!unchanged) {
+			await logEvent(ctx, space, userId, "commitment_edited", {
+				detail: rowLabel(cleanName, amountCents),
+			});
+		}
 		return null;
 	},
 });
@@ -206,9 +218,9 @@ const listItem = {
 	envelope: spendable,
 	frequency: v.union(v.literal("monthly"), v.literal("once")),
 	dueDate: v.string(),
-	// The rule of a monthly (null for a one-off) and whether this charge's date is a one-month change.
+	// The rule of a monthly (null for a one-off) and its saved one-month change, if any.
 	rule: v.union(dueRule, v.null()),
-	adjusted: v.boolean(),
+	adjustment: v.union(dueAdjustment, v.null()),
 };
 
 type Charge =
@@ -291,7 +303,7 @@ export const list = query({
 				const occurrences = getCommitmentStates(row, payments, today, cycle.endDate);
 				const settled = settledDates(
 					occurrences.map(({ dueDate }) => dueDate),
-					toCommitmentPayments(payments),
+					payments,
 				);
 				const cyclePayments = payments.flatMap((tx, index) =>
 					tx.cycleId === cycle._id
@@ -329,7 +341,7 @@ export const list = query({
 						envelope: row.envelope,
 						frequency: row.frequency,
 						rule: monthly?.rule ?? null,
-						adjusted: monthly?.adjustment?.month === charge.dueDate.slice(0, 7),
+						adjustment: monthly?.adjustment ?? null,
 						...charge,
 					},
 				];
@@ -380,8 +392,7 @@ export const markPaid = mutation({
 			date: today,
 			envelope: row.envelope,
 			commitmentId: id,
-			// A one-off has a single date that may move, so any payment settles it.
-			...(row.frequency === "monthly" ? { forMonth: open.dueDate.slice(0, 7) } : {}),
+			forMonth: open.dueDate.slice(0, 7),
 		});
 		await ctx.db.patch("cycles", cycle._id, {
 			envelopes: {

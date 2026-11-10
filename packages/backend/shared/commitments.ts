@@ -145,31 +145,25 @@ function getDueDates(schedule: Schedule, createdOn: string, cycleEnd: string): s
 		: getMonthlyDueDates(schedule.rule, schedule.adjustment, createdOn, cycleEnd);
 }
 
-/** A payment of a commitment. `forMonth` ("2026-10") is the month a monthly payment covers. */
-export type CommitmentPayment = { forMonth?: string };
+/** A payment of a commitment. `forMonth` ("2026-10") is the month of the due date it covers. */
+export type CommitmentPayment = { forMonth: string };
 
 /**
- * The due date each payment settled (undefined if it settled none now). A payment that knows its
- * month settles that month, whatever the rule says today. An older payment, saved before payments
- * knew their month, settles the oldest date nobody else took. This is the only place that
- * reads old payments.
+ * The due date each payment settled: the one in its month (undefined when that month has no due
+ * date now). It does not depend on the rule or on how many payments came before.
  */
 export function settledDates(
 	dueDates: string[],
 	payments: CommitmentPayment[],
 ): (string | undefined)[] {
 	const byMonth = new Map(dueDates.map((date) => [date.slice(0, 7), date]));
-	const taken = new Set<string>();
-	const known = payments.map(({ forMonth }) => {
-		const date = forMonth === undefined ? undefined : byMonth.get(forMonth);
-		if (date) taken.add(date);
-		return date;
-	});
-	const free = dueDates.filter((date) => !taken.has(date));
-	let next = 0;
-	return payments.map(({ forMonth }, index) =>
-		forMonth === undefined ? free[next++] : known[index],
-	);
+	return payments.map(({ forMonth }) => byMonth.get(forMonth));
+}
+
+export function isSameRule(a: DueRule, b: DueRule): boolean {
+	if (a.kind === "day" && b.kind === "day") return a.day === b.day;
+	if (a.kind === "beforeEnd" && b.kind === "beforeEnd") return a.days === b.days;
+	return a.kind === b.kind;
 }
 
 // State comes from dates and the payments alone, so deleting a payment reopens its date with

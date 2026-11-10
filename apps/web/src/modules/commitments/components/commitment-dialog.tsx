@@ -29,7 +29,7 @@ import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
-import { adjustmentOf, type CommitmentItem } from "../commitment-view";
+import type { CommitmentItem } from "../commitment-view";
 import { AmountField } from "./amount-field";
 import { FieldError } from "./field-error";
 
@@ -151,7 +151,7 @@ function CommitmentForm({
 	const values = useSelector(form.store, (state) => state.values);
 	const rule = ruleFromChoice(values.ruleKind, values.ruleAmount);
 	const thisMonth = rule
-		? dueDateFor(rule, item ? adjustmentOf(item) : undefined, today.slice(0, 7))
+		? dueDateFor(rule, item?.adjustment ?? undefined, today.slice(0, 7))
 		: null;
 
 	return (

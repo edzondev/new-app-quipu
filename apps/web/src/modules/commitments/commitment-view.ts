@@ -53,17 +53,15 @@ export function dueMonthToast(name: string, day: number, month: string, today: s
 	return `${name} vence el ${day} ${when}`;
 }
 
-/** The adjustment a charge carries, rebuilt from its date: what the preview of the edit form needs. */
-export function adjustmentOf(item: CommitmentItem) {
-	return item.adjusted
-		? { month: item.dueDate.slice(0, 7), day: Number(item.dueDate.slice(8)) }
-		: undefined;
+/** Whether the date shown is a one-month change (the saved one belongs to the month of this charge). */
+export function isAdjusted(item: CommitmentItem) {
+	return item.adjustment?.month === item.dueDate.slice(0, 7);
 }
 
 /** "cada mes el 28", or "el 27 · solo este mes" when this month was moved by hand. */
 function describeRule(item: CommitmentItem) {
 	if (!item.rule) return ENVELOPE_LABELS[item.envelope];
-	if (item.adjusted) return `el ${Number(item.dueDate.slice(8))} · solo este mes`;
+	if (isAdjusted(item)) return `el ${Number(item.dueDate.slice(8))} · solo este mes`;
 	return `cada mes ${ruleText(item.rule)}`;
 }
 

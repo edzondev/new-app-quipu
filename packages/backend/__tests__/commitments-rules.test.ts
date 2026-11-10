@@ -43,7 +43,7 @@ test("a rule shows its date in the open cycle and its text data", async () => {
 	const { ana } = await personalUser();
 	await add(ana, personal, "Agua", { kind: "last" });
 	const [item] = await items(ana);
-	expect(item).toMatchObject({ dueDate: "2026-10-31", rule: { kind: "last" }, adjusted: false });
+	expect(item).toMatchObject({ dueDate: "2026-10-31", rule: { kind: "last" }, adjustment: null });
 });
 
 test("an old row with only dueDay gives the same date as the same rule", async () => {
@@ -90,7 +90,10 @@ test("an old row can be adjusted and edited, and editing turns it into a rule", 
 		month: "2026-10",
 		day: 22,
 	});
-	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-10-22", adjusted: true });
+	expect((await items(ana))[0]).toMatchObject({
+		dueDate: "2026-10-22",
+		adjustment: { month: "2026-10", day: 22 },
+	});
 
 	await ana.as.mutation(api.commitments.update, {
 		space: personal,
@@ -104,7 +107,7 @@ test("an old row can be adjusted and edited, and editing turns it into a rule", 
 	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-10-22", rule: { kind: "mid" } });
 	await ana.as.mutation(api.commitments.clearDueThisMonth, { space: personal, id });
 	// The 15th already passed this month, so the rule shows the next one.
-	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-11-15", adjusted: false });
+	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-11-15", adjustment: null });
 });
 
 test("setting this month moves one month; clearing goes back to the rule", async () => {
@@ -119,10 +122,13 @@ test("setting this month moves one month; clearing goes back to the rule", async
 		month: "2026-10",
 		day: 27,
 	});
-	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-10-27", adjusted: true });
+	expect((await items(ana))[0]).toMatchObject({
+		dueDate: "2026-10-27",
+		adjustment: { month: "2026-10", day: 27 },
+	});
 
 	await ana.as.mutation(api.commitments.clearDueThisMonth, { space: personal, id: agua.id });
-	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-10-28", adjusted: false });
+	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-10-28", adjustment: null });
 });
 
 test("the next month goes back to the rule on its own", async () => {
@@ -141,7 +147,10 @@ test("the next month goes back to the rule on its own", async () => {
 	vi.setSystemTime(new Date("2026-11-16T17:00:00.000Z"));
 	await ana.as.mutation(api.cycles.ensureOpen, { space: personal });
 	const next = await ana.as.query(api.commitments.list, { space: personal, today: "2026-11-16" });
-	expect(next.items[0]).toMatchObject({ dueDate: "2026-11-28", adjusted: false });
+	expect(next.items[0]).toMatchObject({
+		dueDate: "2026-11-28",
+		adjustment: { month: "2026-10", day: 27 },
+	});
 });
 
 test("an adjusted day before the commitment existed counts as overdue", async () => {
@@ -190,7 +199,7 @@ test("a one-off commitment has no month to adjust", async () => {
 	});
 	const [seguro] = await items(ana);
 	if (!seguro) throw new Error("missing item");
-	expect(seguro).toMatchObject({ rule: null, adjusted: false });
+	expect(seguro).toMatchObject({ rule: null, adjustment: null });
 	await expect(
 		ana.as.mutation(api.commitments.setDueThisMonth, {
 			space: personal,
@@ -234,7 +243,10 @@ test("in the household both adjust, it counts in the activity, and nothing chang
 		month: "2026-10",
 		day: 27,
 	});
-	expect((await items(ana, household))[0]).toMatchObject({ dueDate: "2026-10-27", adjusted: true });
+	expect((await items(ana, household))[0]).toMatchObject({
+		dueDate: "2026-10-27",
+		adjustment: { month: "2026-10", day: 27 },
+	});
 	await luis.as.mutation(api.commitments.setDueThisMonth, {
 		space: household,
 		id: internet.id,
@@ -277,7 +289,7 @@ async function paymentRows(t: Awaited<ReturnType<typeof personalUser>>["t"]) {
 	return await t.run(async (ctx) => {
 		const rows = await ctx.db.query("transactions").take(50);
 		return rows.flatMap((row) =>
-			row.kind === "expense" && row.commitmentId
+			row.kind === "expense" && "forMonth" in row
 				? [{ forMonth: row.forMonth, date: row.date }]
 				: [],
 		);
@@ -329,40 +341,8 @@ test("a payment made late still covers the month it was due", async () => {
 	expect(list.payments[0]).toMatchObject({ dueDate: "2026-10-28", paidOn: "2026-11-03" });
 });
 
-test("a payment saved before payments knew their month still settles the oldest open date", async () => {
+test("a one-off payment covers the month of its date: moving the date inside the month keeps it paid", async () => {
 	const { t, ana } = await personalUser();
-	await add(ana, personal, "Agua", day(25));
-	const [agua] = await items(ana);
-	if (!agua) throw new Error("missing item");
-	await t.run(async (ctx) => {
-		const space = (await ctx.db.query("spaces").take(5)).find((row) => row.kind === "personal");
-		const cycle = await ctx.db.query("cycles").first();
-		if (!space || !cycle) throw new Error("missing space");
-		await ctx.db.insert("transactions", {
-			kind: "expense",
-			spaceId: space._id,
-			cycleId: cycle._id,
-			userId: ana.userId,
-			amountCents: 9_000,
-			date: TODAY,
-			envelope: "needs",
-			commitmentId: agua.id,
-		});
-	});
-	expect((await items(ana))[0]).toMatchObject({ dueDate: "2026-11-25", status: "later" });
-
-	// The next payment is a new one: it knows its month and takes the date that is left.
-	vi.setSystemTime(new Date("2026-11-26T17:00:00.000Z"));
-	await ana.as.mutation(api.cycles.ensureOpen, { space: personal });
-	await ana.as.mutation(api.commitments.markPaid, { space: personal, id: agua.id });
-	expect((await paymentRows(t)).map((row) => row.forMonth)).toEqual([undefined, "2026-11"]);
-	const list = await ana.as.query(api.commitments.list, { space: personal, today: "2026-11-26" });
-	expect(list.items[0]?.status).not.toBe("paid");
-	expect(list.items[0]?.dueDate).toBe("2026-12-25");
-});
-
-test("a one-off commitment is settled by any payment, also after its date moves", async () => {
-	const { ana } = await personalUser();
 	await ana.as.mutation(api.commitments.add, {
 		space: personal,
 		name: "Seguro",
@@ -373,15 +353,56 @@ test("a one-off commitment is settled by any payment, also after its date moves"
 	const [seguro] = await items(ana);
 	if (!seguro) throw new Error("missing item");
 	await ana.as.mutation(api.commitments.markPaid, { space: personal, id: seguro.id });
-	await ana.as.mutation(api.commitments.update, {
-		space: personal,
-		id: seguro.id,
-		name: "Seguro",
-		amountCents: 9_000,
-		envelope: "needs",
-		schedule: { frequency: "once", dueDate: "2026-12-05" },
-	});
-	const list = await ana.as.query(api.commitments.list, { space: personal, today: TODAY });
-	expect(list.payments).toHaveLength(1);
-	expect(list.items.some((item) => item.status !== "paid" && item.name === "Seguro")).toBe(false);
+	expect((await paymentRows(t)).map((row) => row.forMonth)).toEqual(["2026-10"]);
+
+	const update = (dueDate: string) =>
+		ana.as.mutation(api.commitments.update, {
+			space: personal,
+			id: seguro.id,
+			name: "Seguro",
+			amountCents: 9_000,
+			envelope: "needs",
+			schedule: { frequency: "once", dueDate },
+		});
+	await update("2026-10-30");
+	const sameMonth = await ana.as.query(api.commitments.list, { space: personal, today: TODAY });
+	expect(sameMonth.items.some((item) => item.status !== "paid" && item.name === "Seguro")).toBe(
+		false,
+	);
+
+	// Another month is another due date: it is not paid, and the old payment stays listed.
+	await update("2026-12-05");
+	const otherMonth = await ana.as.query(api.commitments.list, { space: personal, today: TODAY });
+	expect(otherMonth.items[0]).toMatchObject({ name: "Seguro", dueDate: "2026-12-05" });
+	expect(otherMonth.items[0]?.status).not.toBe("paid");
+	expect(otherMonth.payments).toHaveLength(1);
+});
+
+test("saving a commitment without changes leaves no event; a real change does", async () => {
+	const { ana, luis } = await joinedCouple();
+	await add(ana, household, "Internet", day(28));
+	const [internet] = await items(ana, household);
+	if (!internet) throw new Error("missing item");
+	const save = (who: typeof luis, amountCents: number, rule: DueRule = day(28)) =>
+		who.as.mutation(api.commitments.update, {
+			space: household,
+			id: internet.id,
+			name: "Internet",
+			amountCents,
+			envelope: "needs",
+			schedule: { frequency: "monthly", rule },
+		});
+	const edits = async () =>
+		(await ana.as.query(api.activity.list, {})).events.filter(
+			(event) => event.type === "commitment_edited",
+		).length;
+
+	await save(luis, 9_000);
+	expect(await edits()).toBe(0);
+	await save(luis, 9_500);
+	expect(await edits()).toBe(1);
+	await save(ana, 9_500, { kind: "last" });
+	expect(await edits()).toBe(2);
+	await save(ana, 9_500, { kind: "last" });
+	expect(await edits()).toBe(2);
 });

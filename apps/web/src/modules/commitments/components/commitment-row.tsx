@@ -18,6 +18,7 @@ import {
 	describeDue,
 	describePaid,
 	type Payment,
+	isAdjusted,
 } from "../commitment-view";
 import { AmountField } from "./amount-field";
 import { BackToRuleButton, CommitmentMenu } from "./commitment-menu";
@@ -239,7 +240,7 @@ export function CommitmentRow({
 			}
 			below={
 				<>
-					{item.adjusted ? (
+					{isAdjusted(item) ? (
 						<BackToRuleButton
 							item={item}
 							space={space}

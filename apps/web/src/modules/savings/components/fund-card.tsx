@@ -125,7 +125,14 @@ export function FundCard({
 				</div>
 
 				{fundGoalCents ? (
-					<div className="mt-6 h-2.5 overflow-hidden rounded-full bg-background">
+					<div
+						role="progressbar"
+						aria-label="Avance de la meta del fondo"
+						aria-valuenow={percent}
+						aria-valuemin={0}
+						aria-valuemax={100}
+						className="mt-6 h-2.5 overflow-hidden rounded-full bg-background"
+					>
 						<div
 							className="h-full rounded-full bg-envelope-savings"
 							style={{ width: `${percent}%` }}

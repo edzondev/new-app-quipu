@@ -15,29 +15,25 @@ export function scheduleOf(row: Doc<"commitments">): Schedule {
 	};
 }
 
-/** A commitment's payments in every cycle. A payment settles the oldest open occurrence, so the count drives the states. */
-export function getCommitmentPayments(ctx: QueryCtx | MutationCtx, row: Doc<"commitments">) {
-	return ctx.db
+/** A commitment's payments in every cycle. Each one settles the due date of its own month. */
+export async function getCommitmentPayments(ctx: QueryCtx | MutationCtx, row: Doc<"commitments">) {
+	const rows = await ctx.db
 		.query("transactions")
 		.withIndex("by_commitmentId", (q) => q.eq("commitmentId", row._id))
 		.take(PAYMENTS_CAP);
-}
-
-/** What the states need from a commitment's payments: the month each one covers, if it says. */
-export function toCommitmentPayments(rows: Doc<"transactions">[]): CommitmentPayment[] {
-	return rows.map((row) => ({ forMonth: row.kind === "expense" ? row.forMonth : undefined }));
+	return rows.flatMap((tx) => (tx.kind === "expense" && "forMonth" in tx ? [tx] : []));
 }
 
 export function getCommitmentStates(
 	row: Doc<"commitments">,
-	payments: Doc<"transactions">[],
+	payments: CommitmentPayment[],
 	today: string,
 	cycleEnd: string,
 ) {
 	return getOccurrences(
 		scheduleOf(row),
 		getLimaDate(new Date(row._creationTime)),
-		toCommitmentPayments(payments),
+		payments,
 		today,
 		cycleEnd,
 	);

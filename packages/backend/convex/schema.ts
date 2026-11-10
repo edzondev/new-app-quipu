@@ -159,9 +159,14 @@ export default defineSchema({
 				...movement,
 				kind: v.literal("expense"),
 				envelope: spendable,
-				commitmentId: v.optional(v.id("commitments")),
-				// The month ("2026-10") a monthly commitment payment covers. Older payments have none.
-				forMonth: v.optional(v.string()),
+			}),
+			// A commitment payment always says which month's due date it covers ("2026-10").
+			v.object({
+				...movement,
+				kind: v.literal("expense"),
+				envelope: spendable,
+				commitmentId: v.id("commitments"),
+				forMonth: v.string(),
 			}),
 			v.object({
 				...movement,
