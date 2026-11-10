@@ -209,6 +209,18 @@ test("every shared change and every withdrawal leaves its event, with who did it
 	expect(byType("expense_edited")).toMatchObject({ before: "S/ 45.00", after: "S/ 50.00" });
 	expect(byType("commitment_paid")?.detail).toBe("Internet · S/ 95.00");
 	expect(byType("goal_edited")).toMatchObject({ detail: "Viaje", before: "S/ 1,000.00" });
+	expect(byType("withdrawal_edited")).toMatchObject({
+		who: "Renzo",
+		before: "S/ 20.00",
+		after: "S/ 15.00",
+	});
+	expect(byType("withdrawal_deleted")).toMatchObject({ who: "Renzo", detail: "S/ 15.00" });
+	expect(byType("saving_edited")).toMatchObject({
+		who: "Camila",
+		before: "S/ 80.00",
+		after: "S/ 70.00",
+	});
+	expect(byType("saving_deleted")).toMatchObject({ who: "Camila", detail: "S/ 70.00" });
 });
 
 test("nothing recorded in Personal reaches the household activity", async () => {
@@ -225,7 +237,32 @@ test("nothing recorded in Personal reaches the household activity", async () => 
 		split: { needs: 40, wants: 40, savings: 20 },
 	});
 	await ana.as.mutation(api.goals.setFundGoal, { space: "personal", targetCents: 9_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 1_000,
+		reason: "other",
+	});
+	const { rows } = await ana.as.query(api.transactions.list, { space: "personal", today: TODAY });
+	const saving = rows.find((row) => row.kind === "saving")?.id;
+	const withdrawal = rows.find((row) => row.kind === "withdrawal")?.id;
+	if (!saving || !withdrawal) throw new Error("missing rows");
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: "personal",
+		id: withdrawal,
+		amountCents: 500,
+		reason: "other",
+	});
+	await ana.as.mutation(api.transactions.deleteWithdrawal, { space: "personal", id: withdrawal });
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: "personal",
+		id: saving,
+		amountCents: 4_000,
+	});
+	await ana.as.mutation(api.transactions.deleteSaving, { space: "personal", id: saving });
 	expect(await allEvents(pair)).toEqual([]);
+	// Not even stored: the Personal space keeps no events of its own.
+	expect(await pair.t.run((ctx) => ctx.db.query("spaceEvents").take(1))).toEqual([]);
 });
 
 test("saving without changing anything leaves no event", async () => {
