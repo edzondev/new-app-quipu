@@ -1,5 +1,6 @@
 import { safeRedirect } from "@quipu/backend/shared/household";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { useConvexAuth } from "convex/react";
 import { useState } from "react";
 import { authClient } from "#/lib/auth-client";
 import { EmailStep } from "#/modules/auth/components/email-step";
@@ -17,9 +18,10 @@ export const Route = createFileRoute("/_auth/sign-in")({
 function SignInPage() {
 	const { redirect } = Route.useSearch();
 	const to = redirect ?? "/home";
-	const navigate = useNavigate();
+	const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
 	const [step, setStep] = useState<"email" | "otp" | "passkey">("email");
 	const [email, setEmail] = useState("");
+	const [isDone, setIsDone] = useState(false);
 
 	// Any valid code (new or existing account) offers a key once, if this person has none and the browser can make one.
 	// Any failure here skips the offer: it never blocks. /onboarding takes over if there is no plan yet.
@@ -27,13 +29,16 @@ function SignInPage() {
 		const canCreate = typeof PublicKeyCredential !== "undefined";
 		const { data } = canCreate ? await authClient.passkey.listUserPasskeys() : { data: null };
 		if (data?.length === 0) setStep("passkey");
-		else await navigate({ to });
+		else setIsDone(true);
 	}
 
+	// Navigate only once Convex confirms the new session: before that myProfile runs without a token,
+	// returns null and /_app sends the user to /onboarding.
+	if (isDone && isConvexAuthenticated) return <Navigate to={to} />;
 	if (step === "otp") {
 		return <OtpStep email={email} onChangeEmail={() => setStep("email")} onVerified={afterCode} />;
 	}
-	if (step === "passkey") return <PasskeyStep onDone={() => void navigate({ to })} />;
+	if (step === "passkey") return <PasskeyStep onDone={() => setIsDone(true)} />;
 	return (
 		<>
 			<InviteLine redirect={to} action="Entra" />
