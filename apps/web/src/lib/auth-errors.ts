@@ -1,9 +1,9 @@
 export type AuthError = { code?: string; status?: number } | null | undefined;
 
 const messages: Record<string, string> = {
-	INVALID_OTP: "El código no es correcto.",
-	OTP_EXPIRED: "Este código ya venció. Pide uno nuevo.",
-	TOO_MANY_ATTEMPTS: "Hiciste muchos intentos. Pide un código nuevo.",
+	INVALID_OTP: "Código incorrecto.",
+	OTP_EXPIRED: "El código venció.",
+	TOO_MANY_ATTEMPTS: "Demasiados intentos. Pide un código nuevo.",
 	INVALID_EMAIL: "Correo inválido.",
 };
 

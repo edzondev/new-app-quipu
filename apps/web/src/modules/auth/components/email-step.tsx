@@ -2,6 +2,7 @@ import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "@tanstack/react-router";
 import { useConvexAuth } from "convex/react";
+import { cn } from "cn";
 import { Fingerprint } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -11,6 +12,7 @@ import { authClient, sendSignInCode } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
 import { clearAuthTokenCache } from "#/lib/auth-token";
 import { emailStepSchema } from "#/modules/auth/schemas";
+import { authButton, authInput, authLabel, authTitle } from "#/modules/auth/styles";
 
 type Props = {
 	/** Where a passkey sign-in goes. */
@@ -76,12 +78,9 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 
 	return (
 		<>
-			<h1 className="text-[42px] font-normal leading-tight tracking-tight sm:text-[52px]">
-				Entrar a Quipu
-			</h1>
+			<h1 className={authTitle}>Entrar a Quipu</h1>
 			<form
 				noValidate
-				className="mt-9"
 				onSubmit={(e) => {
 					e.preventDefault();
 					void form.handleSubmit();
@@ -93,19 +92,16 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 						const errorMessage = field.state.meta.errors[0]?.message;
 						return (
 							<Field name={field.name} invalid={isInvalid}>
-								<FieldLabel className="text-sm font-normal text-muted-foreground">
-									Correo
-								</FieldLabel>
+								<FieldLabel className={authLabel}>Correo</FieldLabel>
 								<Input
 									name={field.name}
 									type="email"
 									autoComplete="username webauthn"
-									placeholder="tu@correo.pe"
+									placeholder="tu@correo.com"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
-									unstyled
-									className="w-full border-0 border-b border-input bg-transparent has-focus-visible:border-foreground has-aria-invalid:border-warning [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-3.5 [&_[data-slot=input]]:text-lg"
+									className={authInput}
 								/>
 								{isInvalid && errorMessage ? (
 									<FieldError match className="text-warning-foreground">
@@ -125,14 +121,14 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 					type="submit"
 					variant="default"
 					size="xl"
-					className="mt-9 w-full rounded-full"
+					className={cn(authButton, "mt-6")}
 					disabled={isSubmitting || isSigningIn}
 					loading={isSubmitting}
 				>
 					Enviar código
 				</Button>
 			</form>
-			<div className="my-7 flex items-center gap-4 text-xs text-muted-foreground">
+			<div className="my-4 flex items-center gap-4 text-xs text-muted-foreground">
 				<span className="h-px flex-1 bg-border" />
 				<span>o</span>
 				<span className="h-px flex-1 bg-border" />
@@ -141,7 +137,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 				type="button"
 				variant="outline"
 				size="xl"
-				className="w-full rounded-full"
+				className={authButton}
 				disabled={isSigningIn || isSubmitting}
 				loading={isSigningIn}
 				onClick={signInWithPasskey}
@@ -149,7 +145,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 				<Fingerprint strokeWidth={1.5} />
 				Entrar con huella o rostro
 			</Button>
-			<p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+			<p className="mt-2 text-center text-xs leading-relaxed text-muted-foreground">
 				Usa el desbloqueo de tu celular o compu.
 			</p>
 		</>

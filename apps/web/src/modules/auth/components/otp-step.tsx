@@ -1,5 +1,6 @@
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "cn";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
@@ -9,6 +10,7 @@ import { authClient, sendSignInCode } from "#/lib/auth-client";
 import { type AuthError, getAuthErrorMessage } from "#/lib/auth-errors";
 import { clearAuthTokenCache } from "#/lib/auth-token";
 import { otpStepSchema } from "#/modules/auth/schemas";
+import { authButton, authInput, authLabel, authLink, authTitle } from "#/modules/auth/styles";
 
 type Props = {
 	email: string;
@@ -63,20 +65,18 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 
 	return (
 		<>
-			<h1 className="text-[42px] font-normal leading-tight tracking-tight sm:text-[52px]">
-				Revisa tu correo
-			</h1>
-			<p className="mt-6 wrap-break-word text-sm leading-relaxed text-muted-foreground">
-				<span className="break-all font-medium text-foreground">{email}</span>{" "}
+			<h1 className={authTitle}>Revisa tu correo</h1>
+			<div className="-mt-5 mb-5 flex items-center justify-between gap-2 text-[13px] text-muted-foreground">
+				<span className="wrap-anywhere">{email}</span>
 				<Button
 					type="button"
 					variant="ghost"
-					className="inline h-auto p-0 text-sm text-muted-foreground underline underline-offset-4 hover:bg-transparent hover:text-foreground"
+					className={cn(authLink, "shrink-0 text-xs")}
 					onClick={onChangeEmail}
 				>
 					Cambiar
 				</Button>
-			</p>
+			</div>
 			<form
 				noValidate
 				onSubmit={(e) => {
@@ -89,18 +89,21 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 						const errorMessage = field.state.meta.errors[0]?.message;
 						return (
-							<Field name={field.name} invalid={isInvalid} className="mt-8">
-								<FieldLabel className="sr-only">Código de 6 dígitos</FieldLabel>
+							<Field name={field.name} invalid={isInvalid}>
+								<FieldLabel className={authLabel}>Código de 6 dígitos</FieldLabel>
 								<Input
 									name={field.name}
 									inputMode="numeric"
 									autoComplete="one-time-code"
 									maxLength={6}
+									placeholder="000000"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(toOtpDigits(e.target.value))}
-									unstyled
-									className="w-full border-0 border-b border-input bg-transparent has-focus-visible:border-foreground has-aria-invalid:border-warning [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-3.5 [&_[data-slot=input]]:text-center [&_[data-slot=input]]:font-mono [&_[data-slot=input]]:text-2xl [&_[data-slot=input]]:tracking-widest"
+									className={cn(
+										authInput,
+										"[&_[data-slot=input]]:pl-6 [&_[data-slot=input]]:text-center [&_[data-slot=input]]:font-mono [&_[data-slot=input]]:text-[27px] [&_[data-slot=input]]:tracking-[0.34em]",
+									)}
 								/>
 								{isInvalid && errorMessage ? (
 									<FieldError match className="text-warning-foreground">
@@ -116,28 +119,31 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 						{getAuthErrorMessage(error)}
 					</p>
 				) : null}
-				<p className="mt-4 text-xs text-muted-foreground">Vence en 5 minutos.</p>
-				<div className="mt-2">
+				<p className="mt-2.5 text-xs text-muted-foreground">Vence en 5 minutos.</p>
+				<Button
+					type="submit"
+					variant="default"
+					size="xl"
+					className={cn(authButton, "mt-6")}
+					disabled={isSubmitting}
+					loading={isSubmitting}
+				>
+					Entrar
+				</Button>
+				<div className="mt-2 flex justify-center">
 					<Button
 						type="button"
 						variant="ghost"
-						className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+						className={cn(
+							authLink,
+							"text-xs disabled:no-underline disabled:text-muted-foreground disabled:opacity-100",
+						)}
 						disabled={secondsLeft > 0 || isResending}
 						onClick={resend}
 					>
 						{secondsLeft > 0 ? `Reenviar en ${formatClock(secondsLeft)}` : "Reenviar código"}
 					</Button>
 				</div>
-				<Button
-					type="submit"
-					variant="default"
-					size="xl"
-					className="mt-9 w-full rounded-full"
-					disabled={isSubmitting}
-					loading={isSubmitting}
-				>
-					Entrar
-				</Button>
 			</form>
 		</>
 	);
