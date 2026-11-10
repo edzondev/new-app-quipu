@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
-import { authClient, enterApp, sendSignInCode } from "#/lib/auth-client";
+import { authClient, reloadTo, sendSignInCode } from "#/lib/auth-client";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
 import { emailStepSchema } from "#/modules/auth/schemas";
 import { authButton, authInput, authLabel, authTitle } from "#/modules/auth/styles";
@@ -30,7 +30,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 			.then(({ data }) => {
 				if (!data) return;
 				setIsSigningIn(true);
-				void enterApp(redirect);
+				void reloadTo(redirect);
 			})
 			.catch(() => {});
 	}, [redirect]);
@@ -44,7 +44,7 @@ export function EmailStep({ redirect, defaultEmail, onSent }: Props) {
 			setError("No se pudo entrar con huella o rostro. Entra con tu correo.");
 			return;
 		}
-		void enterApp(redirect);
+		void reloadTo(redirect);
 	}
 
 	const form = useForm({

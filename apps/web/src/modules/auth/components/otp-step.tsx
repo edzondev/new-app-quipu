@@ -68,6 +68,7 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 					type="button"
 					variant="ghost"
 					className={cn(authLink, "shrink-0 text-xs")}
+					disabled={isSubmitting}
 					onClick={onChangeEmail}
 				>
 					Cambiar
@@ -134,7 +135,7 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 							authLink,
 							"text-xs disabled:no-underline disabled:text-muted-foreground disabled:opacity-100",
 						)}
-						disabled={secondsLeft > 0 || isResending}
+						disabled={secondsLeft > 0 || isResending || isSubmitting}
 						onClick={resend}
 					>
 						{secondsLeft > 0 ? `Reenviar en ${formatClock(secondsLeft)}` : "Reenviar código"}
