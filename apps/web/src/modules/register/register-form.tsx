@@ -27,6 +27,7 @@ import { Button } from "#/components/ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "#/components/ui/collapsible";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
+import { toastManager } from "#/components/ui/toast";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
 import { positiveMoney } from "#/lib/money-schema";
@@ -82,9 +83,13 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 	const home = useQuery(convexQuery(api.balances.getHome, homeArgs)).data;
 	const [confirmation, setConfirmation] = useState<string | null>(null);
 	const pendingConfirmation = useRef<string | null>(null);
-	const { save, remove, pending, error } = useMovementActions(space, () => {
-		if (pendingConfirmation.current) setConfirmation(pendingConfirmation.current);
-		else onDone();
+	const { save, remove, pending, error } = useMovementActions(space, (title) => {
+		if (pendingConfirmation.current) {
+			setConfirmation(pendingConfirmation.current);
+			return;
+		}
+		toastManager.add({ title, type: "success" });
+		onDone();
 	});
 
 	const editId = draft.id;

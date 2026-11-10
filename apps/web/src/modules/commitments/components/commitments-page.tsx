@@ -8,8 +8,6 @@ import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
-import { Toast } from "#/components/toast";
-import { useNotice } from "#/modules/household/use-notice";
 import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { groupCommitments } from "../commitment-view";
 import { CommitmentDialog } from "./commitment-dialog";
@@ -55,7 +53,6 @@ function Commitments({ today }: { today: string }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	const queryClient = useQueryClient();
 	const [dialog, setDialog] = useState<ComponentProps<typeof CommitmentDialog>["target"]>(null);
-	const [notice, setNotice] = useNotice();
 	const ensureOpen = useEnsureOpenCycle(space, today);
 	const list = useQuery(
 		convexQuery(api.commitments.list, ensureOpen.isSuccess ? { space, today } : "skip"),
@@ -100,7 +97,7 @@ function Commitments({ today }: { today: string }) {
 			item={item}
 			today={today}
 			space={space}
-			menu={{ onEdit: () => setDialog({ space, item }), onNotice: setNotice }}
+			menu={{ onEdit: () => setDialog({ space, item }) }}
 		/>
 	);
 
@@ -150,7 +147,6 @@ function Commitments({ today }: { today: string }) {
 			)}
 
 			<CommitmentDialog target={dialog} today={today} onClose={() => setDialog(null)} />
-			<Toast message={notice} />
 		</>
 	);
 }

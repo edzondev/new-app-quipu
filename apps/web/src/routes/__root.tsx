@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
+import { ToastProvider } from "#/components/ui/toast";
 import { authClient } from "#/lib/auth-client";
 import { getToken } from "#/lib/auth-server";
 import { AUTH_TOKEN_QUERY_KEY, AUTH_TOKEN_TTL_MS } from "#/lib/auth-token";
@@ -106,7 +107,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				{children}
+				<ToastProvider position="top-center" timeout={3000}>
+					{children}
+				</ToastProvider>
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",

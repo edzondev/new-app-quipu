@@ -31,6 +31,7 @@ import {
 import { Button } from "#/components/ui/button";
 import { Calendar } from "#/components/ui/calendar";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "#/components/ui/menu";
+import { toastManager } from "#/components/ui/toast";
 import { readError } from "#/lib/read-error";
 import {
 	readOnlyProps,
@@ -45,8 +46,6 @@ type Props = {
 	item: CommitmentItem;
 	space: Space;
 	onEdit: () => void;
-	/** Tells the page what happened, for its toast. */
-	onNotice: (message: string) => void;
 };
 
 const TRIGGER_CLASS = "size-11 shrink-0 rounded-full";
@@ -66,7 +65,6 @@ function DueMonthDialog({
 	space,
 	today,
 	onClose,
-	onNotice,
 }: Props & {
 	rule: DueRule;
 	today: string;
@@ -77,7 +75,10 @@ function DueMonthDialog({
 		mutationFn: (day: number) =>
 			setDue({ space, id: item.id, month: item.dueDate.slice(0, 7), day }),
 		onSuccess: (_, day) => {
-			onNotice(dueMonthToast(item.name, day, item.dueDate.slice(0, 7), today));
+			toastManager.add({
+				title: dueMonthToast(item.name, day, item.dueDate.slice(0, 7), today),
+				type: "success",
+			});
 			onClose();
 		},
 	});

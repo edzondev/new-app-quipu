@@ -6,6 +6,7 @@ import { cn } from "cn";
 import type { FunctionArgs } from "convex/server";
 import * as z from "zod/mini";
 import { Button } from "#/components/ui/button";
+import { toastManager } from "#/components/ui/toast";
 import {
 	FormSheet,
 	FormSheetFooter,
@@ -57,8 +58,12 @@ export function ContributeForm({
 		pending,
 		error: saveError,
 	} = useFundActions({
-		add: (value: Pick<FunctionArgs<typeof api.transactions.addSaving>, "amountCents" | "goalId">) =>
-			addSaving({ space, ...value }),
+		add: async (
+			value: Pick<FunctionArgs<typeof api.transactions.addSaving>, "amountCents" | "goalId">,
+		) => {
+			await addSaving({ space, ...value });
+			toastManager.add({ title: "Guardado", type: "success" });
+		},
 		// An edit keeps the destination and the note of the row.
 		update: (id, value) =>
 			updateSaving({ space, id, amountCents: value.amountCents, note: editing?.note ?? undefined }),

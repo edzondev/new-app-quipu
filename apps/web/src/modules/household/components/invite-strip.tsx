@@ -4,16 +4,15 @@ import { formatDay, getLimaDate } from "@quipu/backend/shared/dates";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
+import { toastManager } from "#/components/ui/toast";
 import { readError } from "#/lib/read-error";
 import { copyText, inviteUrl, shareInvite } from "../invite-link";
 import { inviteState } from "../invite-state";
-import { useNotice } from "../use-notice";
 
 type Props = { invite: { code: string; expiresAt: number }; firstName: string };
 
 /** W-U1 while the invite is valid, W-U2 once it expired. Only who invited sees it. */
 export function InviteStrip({ invite, firstName }: Props) {
-	const [notice, setNotice] = useNotice();
 	const createInvite = useConvexMutation(api.household.createInvite);
 	// The query does not run again when time passes, so the page compares with the clock.
 	const [now] = useState(Date.now);
@@ -22,18 +21,22 @@ export function InviteStrip({ invite, firstName }: Props) {
 	const resend = useMutation({
 		mutationFn: async () => {
 			const { code } = await createInvite({});
-			setNotice("Invitación enviada");
+			toastManager.add({ title: "Invitación enviada", type: "success" });
 			await shareInvite(code, firstName);
 		},
 	});
 
 	async function share() {
 		if ((await shareInvite(invite.code, firstName)) === "shared") return;
-		if (await copyText(inviteUrl(invite.code))) setNotice("Enlace copiado");
+		if (await copyText(inviteUrl(invite.code))) {
+			toastManager.add({ title: "Enlace copiado", type: "success" });
+		}
 	}
 
 	async function copyCode() {
-		if (await copyText(invite.code)) setNotice("Código copiado");
+		if (await copyText(invite.code)) {
+			toastManager.add({ title: "Código copiado", type: "success" });
+		}
 	}
 
 	return (
@@ -80,11 +83,6 @@ export function InviteStrip({ invite, firstName }: Props) {
 			{resend.isError ? (
 				<p role="alert" className="text-xs text-warning-foreground">
 					{readError(resend.error)}
-				</p>
-			) : null}
-			{notice ? (
-				<p role="status" className="text-muted-foreground">
-					{notice}
 				</p>
 			) : null}
 		</div>
