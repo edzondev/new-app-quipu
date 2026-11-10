@@ -275,9 +275,9 @@ export const dismissWithdrawalNotice = mutation({
 			.query("profiles")
 			.withIndex("by_userId", (q) => q.eq("userId", userId))
 			.unique();
-		const event = await unseenPartnerWithdrawal(ctx, space._id, userId);
-		if (profile && event) {
-			await ctx.db.patch("profiles", profile._id, { seenWithdrawalAt: event._creationTime });
+		const withdrawal = await unseenPartnerWithdrawal(ctx, space._id, userId);
+		if (profile && withdrawal) {
+			await ctx.db.patch("profiles", profile._id, { seenWithdrawalAt: withdrawal._creationTime });
 		}
 		return null;
 	},
