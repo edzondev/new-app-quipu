@@ -9,7 +9,7 @@ afterEach(() => {
 const READ_ONLY = "Solo lectura. Activa Plus para seguir anotando.";
 const LATER = "2026-11-04";
 const household = "household" as const;
-const monthly20 = { frequency: "monthly" as const, dueDay: 20 };
+const monthly20 = { frequency: "monthly" as const, rule: { kind: "day" as const, day: 20 } };
 
 /** Rows written while the household still had Plus, then both trials expire. */
 async function lapsedHousehold() {

@@ -94,7 +94,7 @@ function addLuz(person: Person) {
 		name: "Luz",
 		amountCents: 5_000,
 		envelope: "needs",
-		schedule: { frequency: "monthly", dueDay: 25 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 25 } },
 	});
 }
 
@@ -161,7 +161,7 @@ test("a pending commitment in Gustos stays in Gustos", async () => {
 		name: "Netflix",
 		amountCents: 3_000,
 		envelope: "wants",
-		schedule: { frequency: "monthly", dueDay: 25 },
+		schedule: { frequency: "monthly", rule: { kind: "day", day: 25 } },
 	});
 
 	const { before, after } = await saveSplit(ana, "2026-10-20", SPLIT_40);

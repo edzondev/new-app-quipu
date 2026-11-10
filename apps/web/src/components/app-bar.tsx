@@ -2,7 +2,6 @@ import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState, useSearch } from "@tanstack/react-router";
-import { cn } from "cn";
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -26,6 +25,7 @@ import {
 	MenuSeparator,
 	MenuTrigger,
 } from "#/components/ui/menu";
+import { SegmentedControl, SegmentedControlItem } from "#/components/ui/segmented-control";
 import { useSignOut } from "#/hooks/use-sign-out";
 import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { getAuthErrorMessage } from "#/lib/auth-errors";
@@ -34,9 +34,7 @@ import { useRegister } from "#/modules/register/register-dialog";
 
 // The menu items are 44 px tall on touch screens.
 const tapTarget = "pointer-coarse:min-h-11";
-const pill =
-	"flex h-11 items-center rounded-[22px] px-4 text-sm font-semibold text-muted-foreground";
-const pillOn = "bg-background text-foreground shadow-[0_1px_3px_rgba(29,22,16,0.12)]";
+const spaceItem = "h-11 rounded-[22px] px-4 text-sm font-semibold sm:h-11 sm:text-sm";
 const navLink = "flex h-11 items-center rounded-[22px] px-[18px] text-[15px] font-semibold";
 
 const NAV_LINKS = [
@@ -64,32 +62,56 @@ function NavLinks({ onSelect }: { onSelect?: () => void }) {
 	));
 }
 
+/**
+ * One pill that slides: the indicator follows whichever item has `aria-current`. `exact` matters:
+ * without it the Personal link, whose search is empty, is "active" in every space and the pill
+ * stays put. `preload="render"` loads the data of the other space as soon as the bar shows, so
+ * switching is instant.
+ */
 function SpaceSwitch({ onSelect }: { onSelect?: () => void }) {
 	const { space } = useSearch({ from: "/_app" });
 
 	return (
-		<div role="tablist" aria-label="Espacio" className="flex rounded-3xl bg-muted p-0.5">
-			<Link
-				to="."
-				role="tab"
-				aria-selected={!space}
-				search={(prev) => ({ ...prev, space: undefined })}
-				onClick={onSelect}
-				className={cn(pill, !space && pillOn)}
+		<SegmentedControl
+			role="tablist"
+			aria-label="Espacio"
+			className="rounded-3xl p-0.5 [&_[data-slot=segmented-control-indicator]]:rounded-[22px]"
+		>
+			<SegmentedControlItem
+				className={spaceItem}
+				render={
+					<Link
+						to="."
+						role="tab"
+						aria-selected={!space}
+						aria-current={space ? undefined : "page"}
+						search={(prev) => ({ ...prev, space: undefined })}
+						activeOptions={{ exact: true }}
+						preload="render"
+						onClick={onSelect}
+					/>
+				}
 			>
 				Personal
-			</Link>
-			<Link
-				to="."
-				role="tab"
-				aria-selected={space === "household"}
-				search={(prev) => ({ ...prev, space: "household" })}
-				onClick={onSelect}
-				className={cn(pill, space === "household" && pillOn)}
+			</SegmentedControlItem>
+			<SegmentedControlItem
+				className={spaceItem}
+				render={
+					<Link
+						to="."
+						role="tab"
+						aria-selected={space === "household"}
+						aria-current={space === "household" ? "page" : undefined}
+						search={(prev) => ({ ...prev, space: "household" })}
+						activeOptions={{ exact: true }}
+						preload="render"
+						onClick={onSelect}
+					/>
+				}
 			>
 				Nuestro espacio
-			</Link>
-		</div>
+			</SegmentedControlItem>
+		</SegmentedControl>
 	);
 }
 

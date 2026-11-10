@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import * as z from "zod/mini";
 import { moneyLabel } from "../shared/activity";
 import { centsSchema, nameSchema } from "../shared/budget";
-import { isoDateSchema } from "../shared/dates";
+import { isoDateSchema, monthSchema } from "../shared/dates";
 import { suggestFundGoalCents } from "../shared/plan";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
@@ -19,7 +19,7 @@ const FREE_GOAL_CAP = 2;
 const goalFieldsSchema = z.object({
 	name: nameSchema,
 	targetCents: centsSchema,
-	targetMonth: z.optional(z.string().check(z.regex(/^\d{4}-(0[1-9]|1[0-2])$/))),
+	targetMonth: z.optional(monthSchema),
 });
 
 async function requireOwnGoal(ctx: MutationCtx, kind: SpaceKind, id: Id<"goals">) {

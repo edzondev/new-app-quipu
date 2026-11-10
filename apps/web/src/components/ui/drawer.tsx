@@ -192,6 +192,7 @@ export function DrawerPopup({
 						className,
 					)}
 					data-slot="drawer-popup"
+					data-variant={variant}
 					{...props}
 				>
 					{children}

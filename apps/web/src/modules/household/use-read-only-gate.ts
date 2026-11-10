@@ -5,7 +5,7 @@ import { useSearch } from "@tanstack/react-router";
 
 const NO_PLUS = "Activa Plus para seguir anotando";
 
-const readOnlyProps = {
+export const readOnlyProps = {
 	"aria-disabled": true,
 	title: NO_PLUS,
 	onClick: (event: { preventDefault: () => void }) => event.preventDefault(),
@@ -16,10 +16,14 @@ const readOnlyProps = {
  * lapsed): the button stays visible, says why on hover and does nothing. The server decides anyway.
  */
 export function useReadOnlyGate() {
+	return useIsReadOnly() ? readOnlyProps : {};
+}
+
+/** Whether the space in the address is a household without Plus. */
+export function useIsReadOnly() {
 	const { space = "personal" } = useSearch({ from: "/_app" });
 	const household = useQuery(convexQuery(api.household.get, space === "household" ? {} : "skip"));
-	if (space !== "household" || household.data?.plus.active !== false) return {};
-	return readOnlyProps;
+	return space === "household" && household.data?.plus.active === false;
 }
 
 /** The same for what is about the household whatever the address says, like its settings. */

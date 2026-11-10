@@ -1,15 +1,106 @@
-import { addDays, dayInMonth } from "./dates";
+import type { Infer } from "convex/values";
+import type { dueAdjustment, dueRule } from "../convex/schema";
+import { addDays, dayInMonth, shiftMonth } from "./dates";
+
+export type DueRule = Infer<typeof dueRule>;
+export type DueAdjustment = Infer<typeof dueAdjustment>;
+
+export const MAX_DAYS_BEFORE_END = 10;
+const MID_MONTH_DAY = 15;
+
+export function isValidRule(rule: DueRule): boolean {
+	if (rule.kind === "day") return Number.isInteger(rule.day) && rule.day >= 1 && rule.day <= 31;
+	if (rule.kind === "beforeEnd") {
+		return Number.isInteger(rule.days) && rule.days >= 1 && rule.days <= MAX_DAYS_BEFORE_END;
+	}
+	return true;
+}
+
+/** "el 28", "último día", "3 días antes del fin" or "quincena". */
+export function ruleText(rule: DueRule): string {
+	switch (rule.kind) {
+		case "day":
+			return `el ${rule.day}`;
+		case "last":
+			return "último día";
+		case "beforeEnd":
+			return `${rule.days} ${rule.days === 1 ? "día antes" : "días antes"} del fin`;
+		case "mid":
+			return "quincena";
+	}
+}
+
+/**
+ * The due date of a monthly commitment in `month` ("2026-11"). The adjustment wins for its own
+ * month only; the next month goes back to the rule. A fixed day clamps to the last day of a short month.
+ */
+export function dueDateFor(
+	rule: DueRule,
+	adjustment: DueAdjustment | undefined,
+	month: string,
+): string {
+	if (adjustment?.month === month) return `${month}-${String(adjustment.day).padStart(2, "0")}`;
+	const [year, monthNumber] = month.split("-").map(Number);
+	const last = dayInMonth(year, monthNumber - 1, "last");
+	switch (rule.kind) {
+		case "day":
+			return dayInMonth(year, monthNumber - 1, rule.day);
+		case "last":
+			return last;
+		case "beforeEnd":
+			return addDays(last, -rule.days);
+		case "mid":
+			return dayInMonth(year, monthNumber - 1, MID_MONTH_DAY);
+	}
+}
+
+export type RuleKind = DueRule["kind"];
+
+/** The rule a "Vence" field describes. `amount` is the day (1–31) or the days before the end (1–10). */
+export function ruleFromChoice(kind: RuleKind, amount: string): DueRule | null {
+	const rule: DueRule =
+		kind === "day"
+			? { kind, day: Number(amount) }
+			: kind === "beforeEnd"
+				? { kind, days: Number(amount) }
+				: { kind };
+	return isValidRule(rule) ? rule : null;
+}
+
+/** The inverse, to fill the field when editing. */
+export function choiceOfRule(rule: DueRule): { kind: RuleKind; amount: string } {
+	if (rule.kind === "day") return { kind: rule.kind, amount: String(rule.day) };
+	if (rule.kind === "beforeEnd") return { kind: rule.kind, amount: String(rule.days) };
+	return { kind: rule.kind, amount: "" };
+}
+
+/** Whether `day` exists in `month` ("2026-02" has no 30). */
+export function dayExistsIn(month: string, day: number): boolean {
+	const [year, monthNumber] = month.split("-").map(Number);
+	return (
+		Number.isInteger(day) &&
+		day >= 1 &&
+		day <= Number(dayInMonth(year, monthNumber - 1, "last").slice(8))
+	);
+}
 
 export type MonthlyCommitment = { amountCents: number; dueDay: number };
 
 // Due dates inside [from, until], oldest first. A commitment only counts from the day it exists.
-export function getMonthlyDueDates(dueDay: number, from: string, until: string): string[] {
+export function getMonthlyDueDates(
+	rule: DueRule,
+	adjustment: DueAdjustment | undefined,
+	from: string,
+	until: string,
+): string[] {
 	const [year, month] = from.split("-").map(Number);
 	const dates: string[] = [];
 	for (let offset = 0; ; offset++) {
-		const date = dayInMonth(year, month - 1 + offset, dueDay);
+		const monthKey = dayInMonth(year, month - 1 + offset, 1).slice(0, 7);
+		const date = dueDateFor(rule, adjustment, monthKey);
 		if (date > until) return dates;
-		if (date >= from) dates.push(date);
+		// A day moved by hand may fall before the commitment existed: it still counts, as overdue.
+		if (date >= from || adjustment?.month === monthKey) dates.push(date);
 	}
 }
 
@@ -20,13 +111,15 @@ export function getPendingCents(
 ): number {
 	return commitments.reduce(
 		(sum, { amountCents, dueDay }) =>
-			sum + amountCents * getMonthlyDueDates(dueDay, today, cycleEnd).length,
+			sum +
+			amountCents *
+				getMonthlyDueDates({ kind: "day", day: dueDay }, undefined, today, cycleEnd).length,
 		0,
 	);
 }
 
 export type Schedule =
-	| { frequency: "monthly"; dueDay: number }
+	| { frequency: "monthly"; rule: DueRule; adjustment?: DueAdjustment }
 	| { frequency: "once"; dueDate: string };
 
 export type CommitmentStatus = "paid" | "overdue" | "upcoming" | "reserved" | "later";
@@ -49,27 +142,57 @@ function getOpenStatus(dueDate: string, today: string, cycleEnd: string): Commit
 function getDueDates(schedule: Schedule, createdOn: string, cycleEnd: string): string[] {
 	return schedule.frequency === "once"
 		? [schedule.dueDate]
-		: getMonthlyDueDates(schedule.dueDay, createdOn, cycleEnd);
+		: getMonthlyDueDates(schedule.rule, schedule.adjustment, createdOn, cycleEnd);
 }
 
-// State comes from dates and the payment count alone: each payment settles the oldest
-// occurrence still open, so deleting a payment reopens it with no stored flag.
+/** A payment of a commitment. `forMonth` ("2026-10") is the month of the due date it covers. */
+export type CommitmentPayment = { forMonth: string };
+
+/**
+ * The due date each payment settled: the one in its month (undefined when that month has no due
+ * date now). It does not depend on the rule or on how many payments came before.
+ */
+export function settledDates(
+	dueDates: string[],
+	payments: CommitmentPayment[],
+): (string | undefined)[] {
+	const byMonth = new Map(dueDates.map((date) => [date.slice(0, 7), date]));
+	return payments.map(({ forMonth }) => byMonth.get(forMonth));
+}
+
+export function isSameRule(a: DueRule, b: DueRule): boolean {
+	if (a.kind === "day" && b.kind === "day") return a.day === b.day;
+	if (a.kind === "beforeEnd" && b.kind === "beforeEnd") return a.days === b.days;
+	return a.kind === b.kind;
+}
+
+// State comes from dates and the payments alone, so deleting a payment reopens its date with
+// no stored flag. A payment settles the month it was made for, not its position in the list.
 export function getOccurrences(
 	schedule: Schedule,
 	createdOn: string,
-	paidCount: number,
+	payments: CommitmentPayment[],
 	today: string,
 	cycleEnd: string,
 ): Occurrence[] {
-	return getDueDates(schedule, createdOn, cycleEnd).map((dueDate, index) => ({
+	const dueDates = getDueDates(schedule, createdOn, cycleEnd);
+	const paid = new Set(settledDates(dueDates, payments));
+	return dueDates.map((dueDate) => ({
 		dueDate,
-		status: index < paidCount ? "paid" : getOpenStatus(dueDate, today, cycleEnd),
+		status: paid.has(dueDate) ? "paid" : getOpenStatus(dueDate, today, cycleEnd),
 	}));
+}
+
+/** The first due date of a monthly after `date`, looking month by month as far as it takes. */
+function nextMonthlyDueDate(rule: DueRule, adjustment: DueAdjustment | undefined, date: string) {
+	for (let month = date.slice(0, 7); ; month = shiftMonth(month, 1)) {
+		const dueDate = dueDateFor(rule, adjustment, month);
+		if (dueDate > date) return dueDate;
+	}
 }
 
 // First due date after `date`. A monthly with no charge left in the cycle still has one: the next month's.
 export function getNextDueDate(schedule: Schedule, date: string): string {
 	if (schedule.frequency === "once") return schedule.dueDate;
-	const from = addDays(date, 1);
-	return getMonthlyDueDates(schedule.dueDay, from, addDays(from, 31))[0];
+	return nextMonthlyDueDate(schedule.rule, schedule.adjustment, date);
 }

@@ -220,7 +220,7 @@ function Overview({
 					) : null}
 				</section>
 
-				<EnvelopeCards home={home} space={space} />
+				<EnvelopeCards home={home} />
 			</div>
 
 			<div className="mt-[52px] grid grid-cols-1 gap-14 border-t border-border/80 pt-7 lg:grid-cols-2">

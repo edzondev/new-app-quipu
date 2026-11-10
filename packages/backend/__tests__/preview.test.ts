@@ -6,23 +6,27 @@ const SPLIT = { needs: 50, wants: 30, savings: 20 };
 
 describe("getMonthlyDueDates", () => {
 	test("lists the due dates inside the range, oldest first", () => {
-		expect(getMonthlyDueDates(15, "2026-10-10", "2026-12-20")).toEqual([
-			"2026-10-15",
-			"2026-11-15",
-			"2026-12-15",
-		]);
+		expect(
+			getMonthlyDueDates({ kind: "day", day: 15 }, undefined, "2026-10-10", "2026-12-20"),
+		).toEqual(["2026-10-15", "2026-11-15", "2026-12-15"]);
 	});
 
 	test("skips a due date that already passed", () => {
-		expect(getMonthlyDueDates(1, "2026-10-10", "2026-10-31")).toEqual([]);
+		expect(
+			getMonthlyDueDates({ kind: "day", day: 1 }, undefined, "2026-10-10", "2026-10-31"),
+		).toEqual([]);
 	});
 
 	test("counts a commitment due today", () => {
-		expect(getMonthlyDueDates(15, "2026-10-15", "2026-10-31")).toEqual(["2026-10-15"]);
+		expect(
+			getMonthlyDueDates({ kind: "day", day: 15 }, undefined, "2026-10-15", "2026-10-31"),
+		).toEqual(["2026-10-15"]);
 	});
 
 	test("day 31 clamps to the last day of the month", () => {
-		expect(getMonthlyDueDates(31, "2026-02-01", "2026-02-28")).toEqual(["2026-02-28"]);
+		expect(
+			getMonthlyDueDates({ kind: "day", day: 31 }, undefined, "2026-02-01", "2026-02-28"),
+		).toEqual(["2026-02-28"]);
 	});
 });
 

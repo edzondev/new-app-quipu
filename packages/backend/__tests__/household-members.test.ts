@@ -218,7 +218,7 @@ test("a household with anything recorded is not deleted and nothing is lost", as
 					name: "Luz",
 					amountCents: 100,
 					envelope: "needs",
-					schedule: { frequency: "monthly", dueDay: 25 },
+					schedule: { frequency: "monthly", rule: { kind: "day", day: 25 } },
 				}),
 		],
 		[

@@ -78,7 +78,7 @@ test("every shared change and every withdrawal leaves its event, with who did it
 		ana.as.mutation(api.goals.remove, { space: household, id: goal.id }),
 	);
 
-	const schedule = { frequency: "monthly" as const, dueDay: 25 };
+	const schedule = { frequency: "monthly" as const, rule: { kind: "day" as const, day: 25 } };
 	await step("commitment_added", () =>
 		ana.as.mutation(api.commitments.add, {
 			space: household,

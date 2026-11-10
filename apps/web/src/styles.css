@@ -174,3 +174,79 @@
 		clip-path: circle(var(--theme-r) at var(--theme-x) var(--theme-y));
 	}
 }
+
+/*
+ * Dialogs, sheets and popovers: a slight scale in 150 ms and out in 120 ms. Pages have no
+ * animation, and neither does anything when the person asks for less motion. The side menu
+ * (variant "straight") keeps sliding.
+ */
+:is(
+	[data-slot="dialog-popup"],
+	[data-slot="alert-dialog-popup"],
+	[data-slot="popover-popup"],
+	[data-slot="menu-popup"],
+	[data-slot="drawer-popup"]:not([data-variant="straight"])
+) {
+	transition:
+		opacity 150ms ease-out,
+		scale 150ms ease-out;
+}
+
+:is(
+	[data-slot="dialog-popup"],
+	[data-slot="alert-dialog-popup"],
+	[data-slot="popover-popup"],
+	[data-slot="menu-popup"],
+	[data-slot="drawer-popup"]:not([data-variant="straight"])
+):is([data-starting-style], [data-ending-style]) {
+	opacity: 0;
+	scale: 0.96;
+	transform: none;
+}
+
+:is(
+	[data-slot="dialog-popup"],
+	[data-slot="alert-dialog-popup"],
+	[data-slot="popover-popup"],
+	[data-slot="menu-popup"],
+	[data-slot="drawer-popup"]:not([data-variant="straight"])
+)[data-ending-style] {
+	transition-duration: 120ms;
+}
+
+:is([data-slot="dialog-backdrop"], [data-slot="alert-dialog-backdrop"]) {
+	transition: opacity 150ms ease-out;
+}
+
+:is([data-slot="dialog-backdrop"], [data-slot="alert-dialog-backdrop"])[data-ending-style] {
+	transition-duration: 120ms;
+}
+
+/* An inline panel that opens like a popover, such as the one under "Ya pagué". */
+.pop-in {
+	animation: pop-in 150ms ease-out;
+}
+
+@keyframes pop-in {
+	from {
+		opacity: 0;
+		scale: 0.96;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:is(
+		[data-slot="dialog-popup"],
+		[data-slot="alert-dialog-popup"],
+		[data-slot="popover-popup"],
+		[data-slot="menu-popup"],
+		[data-slot="drawer-popup"],
+		[data-slot$="-backdrop"]
+	) {
+		transition: none;
+	}
+
+	.pop-in {
+		animation: none;
+	}
+}

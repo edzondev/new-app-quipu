@@ -3,7 +3,6 @@ import { AMOUNT_KEYS, ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared
 import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
-import { SplitDialog } from "#/modules/settings/components/split-dialog";
 import { SectionHeading } from "./section-heading";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
@@ -40,13 +39,10 @@ const LOCK = (
 	</span>
 );
 
-export function EnvelopeCards({ home, space }: { home: Home; space: "personal" | "household" }) {
+export function EnvelopeCards({ home }: { home: Home }) {
 	return (
 		<section>
-			<SectionHeading
-				title="Tus sobres"
-				action={<SplitDialog home={home} space={space} label="Editar reparto" />}
-			/>
+			<SectionHeading title="Tus sobres" />
 			<ul>
 				{ORDER.map((envelope) => {
 					const key = AMOUNT_KEYS[envelope];
