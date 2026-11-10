@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppCommitmentsRouteImport } from './routes/_app/commitments'
 import { Route as AppHomeRouteImport } from './routes/_app/home'
 import { Route as AppMovementsRouteImport } from './routes/_app/movements'
@@ -42,6 +44,16 @@ const AuthRoute = AuthRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppCommitmentsRoute = AppCommitmentsRouteImport.update({
@@ -108,6 +120,8 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/commitments': typeof AppCommitmentsRoute
   '/home': typeof AppHomeRoute
   '/movements': typeof AppMovementsRoute
@@ -124,6 +138,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/commitments': typeof AppCommitmentsRoute
   '/home': typeof AppHomeRoute
   '/movements': typeof AppMovementsRoute
@@ -143,6 +159,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/commitments': typeof AppCommitmentsRoute
   '/_app/home': typeof AppHomeRoute
   '/_app/movements': typeof AppMovementsRoute
@@ -161,6 +179,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/commitments'
     | '/home'
     | '/movements'
@@ -177,6 +197,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/onboarding'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/commitments'
     | '/home'
     | '/movements'
@@ -195,6 +217,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_auth'
     | '/onboarding'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/_app/commitments'
     | '/_app/home'
     | '/_app/movements'
@@ -214,6 +238,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   UnirmeCodeRoute: typeof UnirmeCodeRoute
   UnirmeIndexRoute: typeof UnirmeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -247,6 +273,20 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/commitments': {
@@ -375,6 +415,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   UnirmeCodeRoute: UnirmeCodeRoute,
   UnirmeIndexRoute: UnirmeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

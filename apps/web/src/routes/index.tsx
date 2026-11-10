@@ -1,24 +1,19 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { Button } from "#/components/ui/button";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { INDEXABLE, SITE_URL } from "#/lib/site";
+import { LandingPage } from "#/modules/landing/landing-page";
+
+const HOME_URL = new URL("/", SITE_URL).href;
 
 export const Route = createFileRoute("/")({
 	beforeLoad: ({ context }) => {
 		if (context.isAuthenticated) throw redirect({ to: "/home" });
 	},
-	component: Landing,
+	head: () => ({
+		meta: [
+			{ name: "robots", content: INDEXABLE ? "index, follow" : "noindex, follow" },
+			{ property: "og:url", content: HOME_URL },
+		],
+		links: [{ rel: "canonical", href: HOME_URL }],
+	}),
+	component: LandingPage,
 });
-
-function Landing() {
-	const navigate = useNavigate();
-
-	return (
-		<main>
-			<h1>Divide tu dinero antes de gastarlo.</h1>
-			<p>Hoy puedes gastar S/ 42.30</p>
-			<Button onClick={() => navigate({ to: "/sign-up", search: { email: "" } })}>
-				Crear cuenta
-			</Button>
-			<Link to="/sign-in">Ya tengo cuenta</Link>
-		</main>
-	);
-}

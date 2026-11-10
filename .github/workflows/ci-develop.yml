@@ -54,6 +54,8 @@ jobs:
           echo "CLOUDFLARE_ENV=develop" > apps/web/.env.develop
       - name: Deploy Convex and build web
         working-directory: packages/backend
+        env:
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
         run: >-
           pnpm exec convex deploy
           --cmd "pnpm --dir ../../apps/web run build:develop"
