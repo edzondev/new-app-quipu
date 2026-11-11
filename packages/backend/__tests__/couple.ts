@@ -1,8 +1,10 @@
+import polarTest from "@convex-dev/polar/test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";
 import { expect, vi } from "vitest";
 import { api, components } from "../convex/_generated/api";
+import type { Subscription } from "@convex-dev/polar";
 import authSchema from "../convex/betterAuth/schema";
 import schema from "../convex/schema";
 
@@ -16,6 +18,7 @@ const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
 export function harness() {
 	const t = convexTest(schema, modules);
 	t.registerComponent("betterAuth", authSchema, componentModules);
+	polarTest.register(t);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
 	return t;
@@ -120,5 +123,37 @@ export async function setTrialEnd(t: Harness, userId: string, trialEndsAt: numbe
 			.unique();
 		if (!profile) throw new Error("missing profile");
 		await ctx.db.patch("profiles", profile._id, { trialEndsAt });
+	});
+}
+
+const subscriptionBase: Subscription = {
+	id: "sub_test",
+	customerId: "cus_test",
+	createdAt: START,
+	modifiedAt: START,
+	productId: "prod_plus_monthly",
+	checkoutId: null,
+	amount: 1490,
+	currency: "pen",
+	recurringInterval: "month",
+	status: "active",
+	currentPeriodStart: START,
+	currentPeriodEnd: new Date(Date.parse(START) + 30 * DAY).toISOString(),
+	cancelAtPeriodEnd: false,
+	startedAt: START,
+	endedAt: null,
+	metadata: {},
+};
+
+/** Links the person to a Polar customer and stores a subscription for it, as the webhook would. */
+export async function subscribe(t: Harness, userId: string, over: Partial<Subscription> = {}) {
+	await t.mutation(components.polar.lib.insertCustomer, { id: `cus_${userId}`, userId });
+	await t.mutation(components.polar.lib.updateSubscription, {
+		subscription: {
+			...subscriptionBase,
+			id: `sub_${userId}`,
+			customerId: `cus_${userId}`,
+			...over,
+		},
 	});
 }

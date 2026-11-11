@@ -11,6 +11,7 @@
 import type * as activity from "../activity.js";
 import type * as auth from "../auth.js";
 import type * as balances from "../balances.js";
+import type * as billing from "../billing.js";
 import type * as commitments from "../commitments.js";
 import type * as cycles from "../cycles.js";
 import type * as goals from "../goals.js";
@@ -23,8 +24,11 @@ import type * as model_cycles from "../model/cycles.js";
 import type * as model_events from "../model/events.js";
 import type * as model_input from "../model/input.js";
 import type * as model_plus from "../model/plus.js";
+import type * as model_polarEvents from "../model/polarEvents.js";
+import type * as model_polarWebhook from "../model/polarWebhook.js";
 import type * as model_progress from "../model/progress.js";
 import type * as model_spaces from "../model/spaces.js";
+import type * as polar from "../polar.js";
 import type * as profiles from "../profiles.js";
 import type * as progress from "../progress.js";
 import type * as rateLimits from "../rateLimits.js";
@@ -41,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   activity: typeof activity;
   auth: typeof auth;
   balances: typeof balances;
+  billing: typeof billing;
   commitments: typeof commitments;
   cycles: typeof cycles;
   goals: typeof goals;
@@ -53,8 +58,11 @@ declare const fullApi: ApiFromModules<{
   "model/events": typeof model_events;
   "model/input": typeof model_input;
   "model/plus": typeof model_plus;
+  "model/polarEvents": typeof model_polarEvents;
+  "model/polarWebhook": typeof model_polarWebhook;
   "model/progress": typeof model_progress;
   "model/spaces": typeof model_spaces;
+  polar: typeof polar;
   profiles: typeof profiles;
   progress: typeof progress;
   rateLimits: typeof rateLimits;
@@ -92,4 +100,5 @@ export declare const components: {
   betterAuth: import("../betterAuth/_generated/component.js").ComponentApi<"betterAuth">;
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+  polar: import("@convex-dev/polar/_generated/component.js").ComponentApi<"polar">;
 };

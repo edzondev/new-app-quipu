@@ -14,7 +14,7 @@ import authSchema from "./betterAuth/schema";
 
 export const resend = new Resend(components.resend, { testMode: false });
 
-const siteUrl = env.SITE_URL ?? "http://localhost:3000";
+export const siteUrl = env.SITE_URL ?? "http://localhost:3000";
 const rpID = env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname;
 const authFunctions: AuthFunctions = internal.auth;
 
