@@ -126,6 +126,8 @@ export const purge = internalMutation({
 		if (profile?.deletionRunsAt === undefined || profile.deletionRunsAt > Date.now()) return null;
 		const user = await authComponent.getAnyUserById(ctx, userId);
 		if (!user) return null;
+		// Someone who signs in while the deletion is pending cannot keep a session between batches.
+		await (await createAuth(ctx).$context).internalAdapter.deleteUserSessions(userId);
 		const done = await purgeBatch(ctx, user);
 		if (!done) {
 			await ctx.scheduler.runAfter(0, internal.accountDeletion.purge, { userId });

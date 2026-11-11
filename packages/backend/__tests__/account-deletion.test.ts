@@ -70,11 +70,10 @@ async function runScheduled(t: Harness) {
 
 type FindMany = (typeof components.betterAuth.adapter.findMany)["_args"];
 
-function authRows(t: Harness, model: string, field: string, value: string) {
-	const args = { model, where: [{ field, value }], paginationOpts: { numItems: 10, cursor: null } };
-	return t
-		.query(components.betterAuth.adapter.findMany, args as FindMany)
-		.then((result) => result.page);
+const PAGE = { numItems: 10, cursor: null };
+
+function authRows(t: Harness, args: FindMany) {
+	return t.query(components.betterAuth.adapter.findMany, args).then((result) => result.page);
 }
 
 function getProfile(t: Harness, userId: string) {
@@ -88,7 +87,13 @@ function getProfile(t: Harness, userId: string) {
 
 async function expectIntact(t: Harness, userId: string) {
 	expect(await getProfile(t, userId)).not.toBeNull();
-	expect(await authRows(t, "user", "_id", userId)).toHaveLength(1);
+	expect(
+		await authRows(t, {
+			model: "user",
+			where: [{ field: "_id", value: userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(1);
 	const rows = await t.run(async (ctx) => ({
 		spaces: (await ctx.db.query("spaces").take(5)).length,
 		cycles: (await ctx.db.query("cycles").take(5)).length,
@@ -119,7 +124,13 @@ test("the deletion code does not sign anyone in", async () => {
 	const code = await ask(ana);
 	const res = await post(t, "/sign-in/email-otp", { email: EMAIL, otp: code });
 	expect(res.ok).toBe(false);
-	expect(await authRows(t, "session", "userId", ana.userId)).toHaveLength(1);
+	expect(
+		await authRows(t, {
+			model: "session",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(1);
 });
 
 test("requestCode is refused while the deletion is pending", async () => {
@@ -146,10 +157,22 @@ test("a good code stores the date and closes every session", async () => {
 			},
 		},
 	});
-	expect(await authRows(t, "session", "userId", ana.userId)).toHaveLength(2);
+	expect(
+		await authRows(t, {
+			model: "session",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(2);
 
 	await confirmDeletion(ana);
-	expect(await authRows(t, "session", "userId", ana.userId)).toHaveLength(0);
+	expect(
+		await authRows(t, {
+			model: "session",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(0);
 	expect(await ana.as.query(api.profiles.myProfile, {})).toBeNull();
 	const back = await signBackIn(t, ana);
 	expect((await back.query(api.profiles.myProfile, {}))?.deletionRunsAt).toBe(RUNS_AT);
@@ -163,7 +186,13 @@ test("a wrong code says so, stores nothing and nothing runs at the date", async 
 		error: WRONG,
 	});
 	expect((await ana.as.query(api.profiles.myProfile, {}))?.deletionRunsAt).toBeNull();
-	expect(await authRows(t, "session", "userId", ana.userId)).toHaveLength(1);
+	expect(
+		await authRows(t, {
+			model: "session",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(1);
 	await runScheduled(t);
 	await expectIntact(t, ana.userId);
 });
@@ -253,12 +282,40 @@ test("when due it deletes the person's data, their sign-in rows and their profil
 	await runScheduled(t);
 
 	expect(await getProfile(t, ana.userId)).toBeNull();
-	expect(await authRows(t, "user", "_id", ana.userId)).toHaveLength(0);
-	expect(await authRows(t, "passkey", "userId", ana.userId)).toHaveLength(0);
-	expect(await authRows(t, "session", "userId", ana.userId)).toHaveLength(0);
-	expect(await authRows(t, "account", "userId", ana.userId)).toHaveLength(0);
 	expect(
-		await authRows(t, "verification", "identifier", `email-verification-otp-${EMAIL}`),
+		await authRows(t, {
+			model: "user",
+			where: [{ field: "_id", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(0);
+	expect(
+		await authRows(t, {
+			model: "passkey",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(0);
+	expect(
+		await authRows(t, {
+			model: "session",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(0);
+	expect(
+		await authRows(t, {
+			model: "account",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(0);
+	expect(
+		await authRows(t, {
+			model: "verification",
+			where: [{ field: "identifier", value: `email-verification-otp-${EMAIL}` }],
+			paginationOpts: PAGE,
+		}),
 	).toHaveLength(0);
 	const left = await t.run(async (ctx) => ({
 		spaces: (await ctx.db.query("spaces").take(10)).map((space) => space.ownerId),
@@ -266,7 +323,13 @@ test("when due it deletes the person's data, their sign-in rows and their profil
 		transactions: (await ctx.db.query("transactions").take(10)).map((row) => row.userId),
 	}));
 	expect(left).toEqual({ spaces: [renzo.userId], cycles: 1, transactions: [renzo.userId] });
-	expect(await authRows(t, "user", "_id", renzo.userId)).toHaveLength(1);
+	expect(
+		await authRows(t, {
+			model: "user",
+			where: [{ field: "_id", value: renzo.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(1);
 });
 
 test("more than 500 rows take several chained runs and all go", async () => {
@@ -287,12 +350,21 @@ test("more than 500 rows take several chained runs and all go", async () => {
 		}
 	});
 	await confirmDeletion(ana);
+	await signBackIn(t, ana);
 	vi.setSystemTime(RUNS_AT);
 	await t.mutation(internal.accountDeletion.purge, { userId: ana.userId });
 	const afterOneRun = await t.run(
 		async (ctx) => (await ctx.db.query("transactions").take(2_000)).length,
 	);
 	expect(afterOneRun).toBeGreaterThan(0);
+	expect(await getProfile(t, ana.userId)).not.toBeNull();
+	expect(
+		await authRows(t, {
+			model: "session",
+			where: [{ field: "userId", value: ana.userId }],
+			paginationOpts: PAGE,
+		}),
+	).toHaveLength(0);
 
 	await runScheduled(t);
 	expect(await t.run((ctx) => ctx.db.query("transactions").first())).toBeNull();
