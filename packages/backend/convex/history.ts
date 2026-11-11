@@ -7,7 +7,7 @@ import { receivedAportes } from "./model/budget";
 import { parseInput } from "./model/input";
 import { requireSpace } from "./model/spaces";
 import { envelope, movementKind } from "./schema";
-import { listedEnvelope } from "./transactions";
+import { listedEnvelope, newestFirst } from "./transactions";
 
 const MAX_CYCLE_ROWS = 1_000;
 
@@ -53,7 +53,7 @@ export const household = query({
 				.take(MAX_CYCLE_ROWS),
 			receivedAportes(ctx, cycle._id, MAX_CYCLE_ROWS),
 		]);
-		const rows = [...own, ...received].sort((a, b) => b._creationTime - a._creationTime);
+		const rows = [...own, ...received].sort(newestFirst);
 
 		const names = new Map<string, string | null>();
 		await Promise.all(

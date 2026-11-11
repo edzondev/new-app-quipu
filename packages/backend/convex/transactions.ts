@@ -44,8 +44,8 @@ const withdrawalOverFund = (max: number) =>
 	`Solo tienes ${moneyLabel(max)} en el fondo para este retiro. Baja el monto.`;
 const CONTRIBUTION_CLOSED =
 	"Este aporte ya no se puede cambiar: el ciclo de Nuestro espacio cerró.";
-const contributionAlreadyWithdrawn = (cents: number) =>
-	`No puedes borrar este aporte: en Nuestro espacio ya retiraron ${moneyLabel(cents)} de ese Ahorro.`;
+const contributionAlreadyUsed = (cents: number) =>
+	`No puedes borrar este aporte: en Nuestro espacio ya usaron ${moneyLabel(cents)} de ese Ahorro.`;
 
 /** Where a saving went, as the activity shows it: its goal or the fund. */
 async function savingDestination(ctx: MutationCtx, goalId: Id<"goals"> | undefined) {
@@ -297,7 +297,7 @@ async function moveContribution(
 		together = patchEnvelope(together, AMOUNT_KEYS[next.toEnvelope], next.amountCents);
 	}
 	if (together.savingsCents < 0) {
-		throw new ConvexError(contributionAlreadyWithdrawn(-together.savingsCents));
+		throw new ConvexError(contributionAlreadyUsed(-together.savingsCents));
 	}
 	await ctx.db.patch("cycles", cycle._id, { envelopes: personal });
 	await ctx.db.patch("cycles", toCycle._id, { envelopes: together });
@@ -578,6 +578,11 @@ export const deleteWithdrawal = mutation({
 	},
 });
 
+/** Newest day first; within a day, the newest recorded first. */
+export function newestFirst(a: Doc<"transactions">, b: Doc<"transactions">) {
+	return b.date.localeCompare(a.date) || b._creationTime - a._creationTime;
+}
+
 export function listedEnvelope(row: Doc<"transactions">, kind: SpaceKind) {
 	if (row.kind === "contribution") return kind === "household" ? row.toEnvelope : row.envelope;
 	if (row.kind === "expense") return row.envelope;
@@ -633,9 +638,7 @@ export const list = query({
 				.order("desc")
 				.take(take),
 		]);
-		const rows = [...own, ...received]
-			.sort((a, b) => b._creationTime - a._creationTime)
-			.slice(0, take);
+		const rows = [...own, ...received].sort(newestFirst).slice(0, take);
 
 		const whoByUser = new Map<string, string | null>();
 		if (space.kind === "household") {

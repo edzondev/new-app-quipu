@@ -1,10 +1,13 @@
+import { convexQuery } from "@convex-dev/react-query";
+import { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared/budget";
 import { formatDay, monthName } from "@quipu/backend/shared/dates";
+import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { cn } from "cn";
 import { ENVELOPE_DOT } from "#/lib/envelope-dot";
 import { canEdit, editDraft, type Movement } from "#/modules/register/movement-draft";
-import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
+import { useHouseholdGate, useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { useRegister } from "#/modules/register/register-dialog";
 
 const KIND = {
@@ -42,9 +45,15 @@ function rowText(row: Movement, inHousehold: boolean, when?: string) {
 
 export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 	const openRegister = useRegister();
-	const gate = useReadOnlyGate();
+	const readOnlyGate = useReadOnlyGate();
 	const { space } = useSearch({ from: "/_app" });
 	const inHousehold = space === "household";
+	// An aporte is changed in the household too: it needs one the person can still write in.
+	const aporte = row.kind === "contribution";
+	const household = useQuery(convexQuery(api.household.get, aporte ? {} : "skip"));
+	const householdGate = useHouseholdGate(aporte);
+	const gate = aporte ? householdGate : readOnlyGate;
+	const editable = canEdit(row, inHousehold) && (!aporte || Boolean(household.data));
 	const { name, envelope, sign } = rowText(row, inHousehold, when);
 	const adds = sign === "+";
 	// Personal leaves who null; household sends the author's first name. Only the author changes a row.
@@ -81,7 +90,7 @@ export function MovementRow({ row, when }: { row: Movement; when?: string }) {
 
 	return (
 		<li className="border-b border-border/60">
-			{canEdit(row, inHousehold) ? (
+			{editable ? (
 				<button
 					type="button"
 					onClick={() => openRegister(editDraft(row))}

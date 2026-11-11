@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "../convex/_generated/api";
 import { historyCsv } from "../shared/history";
-import { DAY, joinedCouple, setTrialEnd } from "./couple";
+import { DAY, householdSpaceId, joinedCouple, setTrialEnd, TODAY } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -76,12 +76,22 @@ test("the CSV has a BOM, signs expenses and withdrawals, and escapes what someon
 			who: "Ana",
 			auto: false,
 		},
+		{
+			date: "2026-10-23",
+			kind: "expense",
+			envelope: "wants",
+			note: "	cmd",
+			amountCents: 100,
+			who: "Ana",
+			auto: false,
+		},
 	]);
 	expect(csv.split("\r\n")).toEqual([
 		"﻿Fecha,Tipo,Sobre,Concepto,Monto,Quién",
 		'2026-10-20,Gasto,Necesidades,"Pan, ""rico""",-12.50,Ana',
 		"2026-10-21,Aporte,Ahorro,'=HYPERLINK(),50.00,Cuenta eliminada",
 		"2026-10-22,Retiro,Ahorro,,-3.00,Ana",
+		"2026-10-23,Gasto,Gustos,'	cmd,-1.00,Ana",
 	]);
 });
 
@@ -100,4 +110,37 @@ test("closing a cycle with Ahorro saves it as automatic, and the CSV says so", a
 	const first = await ana.as.query(api.history.household, {});
 	const closed = await ana.as.query(api.history.household, { before: first.next ?? undefined });
 	expect(historyCsv(closed.rows)).toContain("Ahorro,Ahorro,,200.00,Automático");
+});
+
+test("the history and Movimientos go by day, newest first, even when a row was recorded later", async () => {
+	const { t, ana } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "household",
+		amountCents: 1_000,
+		envelope: "needs",
+		note: "Hoy",
+	});
+	const spaceId = await householdSpaceId(t);
+	await t.run(async (ctx) => {
+		const cycle = await ctx.db
+			.query("cycles")
+			.withIndex("by_space_start", (q) => q.eq("spaceId", spaceId))
+			.first();
+		if (!cycle) throw new Error("missing cycle");
+		await ctx.db.insert("transactions", {
+			kind: "expense",
+			spaceId,
+			cycleId: cycle._id,
+			userId: ana.userId,
+			amountCents: 2_000,
+			date: "2026-10-18",
+			envelope: "needs",
+			note: "Antes",
+		});
+	});
+
+	const history = await ana.as.query(api.history.household, {});
+	expect(history.rows.map((row) => row.note)).toEqual(["Hoy", "Antes"]);
+	const { rows } = await ana.as.query(api.transactions.list, { space: "household", today: TODAY });
+	expect(rows.map((row) => row.note)).toEqual(["Hoy", "Antes"]);
 });

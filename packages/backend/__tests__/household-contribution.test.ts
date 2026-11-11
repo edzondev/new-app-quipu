@@ -138,7 +138,7 @@ test("an aporte cannot be deleted once the household already took that Ahorro to
 	await expect(
 		ana.as.mutation(api.transactions.deleteContribution, { id: await contributionId(ana) }),
 	).rejects.toThrow(
-		"No puedes borrar este aporte: en Nuestro espacio ya retiraron S/ 60.00 de ese Ahorro.",
+		"No puedes borrar este aporte: en Nuestro espacio ya usaron S/ 60.00 de ese Ahorro.",
 	);
 });
 

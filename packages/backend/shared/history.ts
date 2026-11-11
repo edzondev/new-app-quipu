@@ -27,7 +27,7 @@ const HEADER = ["Fecha", "Tipo", "Sobre", "Concepto", "Monto", "Quién"];
  * quote mark so a spreadsheet shows what someone wrote instead of running it as a formula.
  */
 function field(value: string) {
-	const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+	const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
 	return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 
