@@ -1,11 +1,11 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { planRowLine } from "@quipu/backend/shared/billing";
 import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
-import { Button } from "#/components/ui/button";
+import { ReloadError } from "#/components/reload-error";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
@@ -36,25 +36,6 @@ export function SettingsPage() {
 
 type Profile = NonNullable<FunctionReturnType<typeof api.profiles.myProfile>>;
 type Plan = NonNullable<Profile["plan"]>;
-
-export function ReloadError({ message }: { message: string }) {
-	const queryClient = useQueryClient();
-	return (
-		<div role="alert" className="pt-6">
-			<p className="text-sm text-warning-foreground">{message}</p>
-			<Button
-				variant="outline"
-				size="xl"
-				className="mt-3"
-				onClick={() => {
-					void queryClient.invalidateQueries();
-				}}
-			>
-				Reintentar
-			</Button>
-		</div>
-	);
-}
 
 function Loading() {
 	return (
