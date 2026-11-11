@@ -75,6 +75,7 @@ test("Ana invites Luis; Luis spends; Ana cannot delete Luis's expense", async ()
 
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	await ana.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
+	await ana.as.mutation(api.profiles.startTrial, {});
 	await ana.as.mutation(api.household.createHousehold, { name: "Casa" });
 	const { code } = await ana.as.mutation(api.household.createInvite, {});
 
@@ -146,6 +147,7 @@ async function startUser(t: ReturnType<typeof harness>, email: string, name: str
 		},
 	});
 	await user.as.mutation(api.profiles.completeOnboarding, { ...monthly15, name });
+	await user.as.mutation(api.profiles.startTrial, {});
 	return user.as;
 }
 

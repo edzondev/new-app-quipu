@@ -1,10 +1,12 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
+import { isEmptyHousehold } from "#/lib/empty-household";
 import { SavingsPage } from "#/modules/savings/components/savings-page";
 
 export const Route = createFileRoute("/_app/savings")({
 	loader: async ({ context }) => {
+		if (isEmptyHousehold(context)) return;
 		// Without a personal plan Personal has nothing to load.
 		if (context.space === "personal" && !context.hasPlan) return;
 		await Promise.all([

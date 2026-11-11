@@ -1,3 +1,4 @@
+import polarTest from "@convex-dev/polar/test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";
@@ -18,6 +19,7 @@ const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
 function harness() {
 	const t = convexTest(schema, modules);
 	t.registerComponent("betterAuth", authSchema, componentModules);
+	polarTest.register(t);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
 	return t;
@@ -412,6 +414,7 @@ test("the pending change applies when the next cycle starts: the short stretch j
 test("closing the household cycle does not apply my personal pending change", async () => {
 	const t = harness();
 	const ana = await startAna(t);
+	await ana.mutation(api.profiles.startTrial, {});
 	await ana.mutation(api.household.createHousehold, { name: "Casa" });
 	await ana.mutation(api.settings.updatePlan, MONTHLY_15);
 

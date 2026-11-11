@@ -5,7 +5,7 @@ import { useHouseholdGate } from "#/modules/household/use-read-only-gate";
 
 /**
  * A small action button that opens a dialog. The content mounts only while open, so each form
- * starts from the latest data every time. `gated`: it edits the household, so it is off when the
+ * starts from the latest data every time. `gated`: it edits the household, so it opens Plus when the
  * household is read-only.
  */
 export function ActionDialog({

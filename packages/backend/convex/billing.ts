@@ -4,6 +4,7 @@ import { customersCreate } from "@polar-sh/sdk/funcs/customersCreate.js";
 import { customersGetExternal } from "@polar-sh/sdk/funcs/customersGetExternal.js";
 import { ResourceNotFound } from "@polar-sh/sdk/models/errors/resourcenotfound.js";
 import { ConvexError, type Infer, v } from "convex/values";
+import { findOffer, returnUrl } from "../shared/billing";
 import { components } from "./_generated/api";
 import { type ActionCtx, action, query } from "./_generated/server";
 import { siteUrl } from "./auth";
@@ -20,7 +21,7 @@ const offerValidator = v.object({
 });
 type Offer = Infer<typeof offerValidator>;
 const urlValidator = v.object({ url: v.string() });
-const RETURN_URL = `${siteUrl}/settings`;
+const returnTo = v.string();
 
 type Products = Awaited<ReturnType<typeof polar.listProducts>>;
 
@@ -111,24 +112,20 @@ async function getPolarCustomerId(ctx: ActionCtx, userId: string, email: string)
 
 /** Polar checkout URL for the chosen plan and currency. Changing plan goes through the portal. */
 export const startCheckout = action({
-	args: { interval, currency },
+	args: { interval, currency, returnTo },
 	returns: urlValidator,
 	handler: async (ctx, args) => {
 		const user = await requireUser(ctx);
 		if (await getPlusSubscription(ctx, user._id)) {
 			throw new ConvexError("Ya tienes Plus. Cambia de plan desde el portal.");
 		}
-		const found = toOffers(await polar.listProducts(ctx)).find(
-			(item) =>
-				item.interval === args.interval &&
-				item.prices.some((price) => price.currency === args.currency),
-		);
+		const found = findOffer(toOffers(await polar.listProducts(ctx)), args.interval, args.currency);
 		if (!found) throw new ConvexError("Precio por confirmar.");
 		const checkout = await checkoutsCreate(polarCore, {
 			products: [found.productId],
 			customerId: await getPolarCustomerId(ctx, user._id, user.email),
 			currency: args.currency,
-			successUrl: RETURN_URL,
+			successUrl: returnUrl(siteUrl, args.returnTo, { checkout: "return" }),
 		});
 		if (!checkout.ok) throw checkout.error;
 		return { url: checkout.value.url };
@@ -137,15 +134,15 @@ export const startCheckout = action({
 
 /** Polar customer portal URL: change plan, update the card, cancel. */
 export const openPortal = action({
-	args: {},
+	args: { returnTo },
 	returns: urlValidator,
-	handler: async (ctx) => {
+	handler: async (ctx, args) => {
 		const user = await requireUser(ctx);
 		const customer = await polar.getCustomerByUserId(ctx, user._id);
 		if (!customer) throw new ConvexError("Aún no tienes una suscripción.");
 		const session = await customerSessionsCreate(polarCore, {
 			customerId: customer.id,
-			returnUrl: RETURN_URL,
+			returnUrl: returnUrl(siteUrl, args.returnTo),
 		});
 		if (!session.ok) throw session.error;
 		return { url: session.value.customerPortalUrl };

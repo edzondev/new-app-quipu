@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { Button } from "#/components/ui/button";
 import { ACTION, EYEBROW } from "#/lib/typography";
 import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
@@ -10,7 +11,7 @@ export function GoalsSection({
 	onEdit,
 }: {
 	goals: Goal[];
-	onNew: () => void;
+	onNew: (event: MouseEvent<HTMLElement>) => void;
 	onContribute: (id: Goal["id"]) => void;
 	onEdit: (id: Goal["id"]) => void;
 }) {

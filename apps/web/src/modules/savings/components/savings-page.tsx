@@ -1,5 +1,6 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
+import { FREE_PERSONAL_GOAL_CAP } from "@quipu/backend/shared/billing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import type { FunctionArgs } from "convex/server";
@@ -8,16 +9,18 @@ import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { useOpenPlus } from "#/modules/plus/plus-provider";
 import { ContributeDialog } from "./contribute-dialog";
 import { FundCard } from "./fund-card";
 import { FundGoalDialog } from "./fund-goal-dialog";
 import type { Goal } from "./goal-card";
-import { GoalFormDialog } from "./goal-form-dialog";
+import { GoalFormDialog, type GoalValues } from "./goal-form-dialog";
 import { GoalsSection } from "./goals-section";
 import { WithdrawDialog } from "./withdraw-dialog";
 
 type Panel =
-	| { kind: "contribute" | "withdraw" | "fundGoal" | "newGoal" }
+	| { kind: "contribute" | "withdraw" | "fundGoal" }
+	| { kind: "newGoal"; draft?: GoalValues }
 	| { kind: "contributeGoal" | "editGoal"; id: Goal["id"] }
 	| null;
 
@@ -45,6 +48,8 @@ function Savings({
 		convexQuery(api.balances.getBalances, ensureOpen.isSuccess ? { space } : "skip"),
 	);
 	const goals = useQuery(convexQuery(api.goals.list, ensureOpen.isSuccess ? { space } : "skip"));
+	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
+	const openPlus = useOpenPlus();
 	const close = () => setPanel(null);
 
 	if (ensureOpen.isError || fund.isError || balances.isError || goals.isError) {
@@ -76,6 +81,10 @@ function Savings({
 
 	const { savingsCents } = balances.data;
 	const goal = panel && "id" in panel ? goals.data.find((item) => item.id === panel.id) : undefined;
+	const goalNeedsPlus =
+		space === "personal" &&
+		goals.data.length >= FREE_PERSONAL_GOAL_CAP &&
+		profile.data?.hasPlus === false;
 	return (
 		<>
 			<header>
@@ -94,7 +103,11 @@ function Savings({
 
 			<GoalsSection
 				goals={goals.data}
-				onNew={() => setPanel({ kind: "newGoal" })}
+				onNew={(event) =>
+					goalNeedsPlus
+						? openPlus({ feature: "goals", opener: event.currentTarget })
+						: setPanel({ kind: "newGoal" })
+				}
 				onContribute={(id) => setPanel({ kind: "contributeGoal", id })}
 				onEdit={(id) => setPanel({ kind: "editGoal", id })}
 			/>
@@ -112,7 +125,12 @@ function Savings({
 				open={panel?.kind === "newGoal" || (panel?.kind === "editGoal" && !!goal)}
 				space={space}
 				goal={goal}
+				draft={panel?.kind === "newGoal" ? panel.draft : undefined}
 				onClose={close}
+				onNeedsPlus={(draft) => {
+					close();
+					openPlus({ feature: "goals", onClose: () => setPanel({ kind: "newGoal", draft }) });
+				}}
 			/>
 			<WithdrawDialog
 				open={panel?.kind === "withdraw"}

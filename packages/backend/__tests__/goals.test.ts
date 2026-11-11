@@ -1,3 +1,4 @@
+import polarTest from "@convex-dev/polar/test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";
@@ -16,6 +17,7 @@ const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
 function harness() {
 	const t = convexTest(schema, modules);
 	t.registerComponent("betterAuth", authSchema, componentModules);
+	polarTest.register(t);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
 	return t;
@@ -197,6 +199,7 @@ test("a fund goal of 0, negative or with decimals fails and keeps the old one", 
 async function householdPair() {
 	const t = harness();
 	const ana = await anaOnOct20(t);
+	await ana.mutation(api.profiles.startTrial, {});
 	await ana.mutation(api.household.createHousehold, { name: "Casa" });
 	const { code } = await ana.mutation(api.household.createInvite, {});
 	const luis = await signIn(t, "luis@correo.com", "Luis");
@@ -339,6 +342,7 @@ test("without an open cycle for today there is no suggestion", async () => {
 test("in a household there is no fund goal suggestion", async () => {
 	const t = harness();
 	const ana = await anaOnOct20(t);
+	await ana.mutation(api.profiles.startTrial, {});
 	await ana.mutation(api.household.createHousehold, { name: "Casa" });
 
 	const household = await ana.query(api.goals.fund, { space: "household", today: TODAY });

@@ -33,6 +33,7 @@ import { positiveMoney } from "#/lib/money-schema";
 import { readError } from "#/lib/read-error";
 import { AmountField } from "#/modules/commitments/components/amount-field";
 import { FieldError } from "#/modules/commitments/components/field-error";
+import { needsPlus } from "#/modules/plus/needs-plus";
 import type { Goal } from "./goal-card";
 
 const goalSchema = z.object({
@@ -41,15 +42,17 @@ const goalSchema = z.object({
 	month: z.string(),
 });
 
-type GoalValues = z.infer<typeof goalSchema>;
+export type GoalValues = z.infer<typeof goalSchema>;
 
 type GoalFormProps = {
 	space: FunctionArgs<typeof api.goals.add>["space"];
 	goal?: Goal;
+	draft?: GoalValues;
 	onClose: () => void;
+	onNeedsPlus: (draft: GoalValues) => void;
 };
 
-function GoalForm({ space, goal, onClose }: GoalFormProps) {
+function GoalForm({ space, goal, draft, onClose, onNeedsPlus }: GoalFormProps) {
 	const today = useLimaDate();
 	const add = useConvexMutation(api.goals.add);
 	const update = useConvexMutation(api.goals.update);
@@ -67,12 +70,15 @@ function GoalForm({ space, goal, onClose }: GoalFormProps) {
 			return goal ? update({ ...fields, id: goal.id }) : add(fields);
 		},
 		onSuccess: onClose,
+		onError: (error, value) => {
+			if (needsPlus(error)) onNeedsPlus(value);
+		},
 	});
 	const erase = useMutation({
 		mutationFn: (id: Goal["id"]) => remove({ space, id }),
 		onSuccess: onClose,
 	});
-	const defaultValues: GoalValues = {
+	const defaultValues: GoalValues = draft ?? {
 		name: goal?.name ?? "",
 		amount: goal ? formatCents(goal.targetCents) : "",
 		month: goal?.targetMonth ?? "",
@@ -154,7 +160,9 @@ function GoalForm({ space, goal, onClose }: GoalFormProps) {
 						)}
 					</form.Field>
 
-					{save.isError ? <FieldError>{readError(save.error)}</FieldError> : null}
+					{save.isError && !needsPlus(save.error) ? (
+						<FieldError>{readError(save.error)}</FieldError>
+					) : null}
 
 					{goal ? (
 						<div>

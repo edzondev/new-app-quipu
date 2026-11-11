@@ -1,3 +1,4 @@
+import polarTest from "@convex-dev/polar/test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";
@@ -18,6 +19,7 @@ const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
 function harness() {
 	const t = convexTest(schema, modules);
 	t.registerComponent("betterAuth", authSchema, componentModules);
+	polarTest.register(t);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
 	return t;
@@ -514,6 +516,7 @@ test("list in household is newest first with mine and author who", async () => {
 
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	await ana.as.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
+	await ana.as.mutation(api.profiles.startTrial, {});
 	await ana.as.mutation(api.household.createHousehold, { name: "Casa" });
 	const { code } = await ana.as.mutation(api.household.createInvite, {});
 

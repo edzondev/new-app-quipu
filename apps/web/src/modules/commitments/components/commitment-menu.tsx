@@ -33,11 +33,7 @@ import { Calendar } from "#/components/ui/calendar";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "#/components/ui/menu";
 import { toastManager } from "#/components/ui/toast";
 import { readError } from "#/lib/read-error";
-import {
-	readOnlyProps,
-	useIsReadOnly,
-	useReadOnlyGate,
-} from "#/modules/household/use-read-only-gate";
+import { useIsReadOnly, useReadOnlyGate } from "#/modules/household/use-read-only-gate";
 import { type CommitmentItem, dueMonthTitle, dueMonthToast, ruleDay } from "../commitment-view";
 import { FieldError } from "./field-error";
 
@@ -157,22 +153,16 @@ function RemoveDialog({
 	);
 }
 
-/** The "⋯" of a row. In a household without Plus it is off, like "+ Registrar". */
 export function CommitmentMenu(props: Props & { today: string }) {
 	const { item, space, today, onEdit } = props;
 	const readOnly = useIsReadOnly();
+	const gate = useReadOnlyGate();
 	const [panel, setPanel] = useState<"due" | "remove" | null>(null);
 	const label = `Más opciones de ${item.name}`;
 
 	if (readOnly) {
 		return (
-			<Button
-				variant="ghost"
-				size="icon"
-				aria-label={label}
-				className={TRIGGER_CLASS}
-				{...readOnlyProps}
-			>
+			<Button variant="ghost" size="icon" aria-label={label} className={TRIGGER_CLASS} {...gate}>
 				<MoreHorizontalIcon aria-hidden />
 			</Button>
 		);
@@ -227,7 +217,6 @@ export function BackToRuleButton({
 }) {
 	const clear = useConvexMutation(api.commitments.clearDueThisMonth);
 	const back = useMutation({ mutationFn: () => clear({ space, id: item.id }) });
-	// Like "+ Registrar": with the Plus lapsed it does nothing, and the server would refuse anyway.
 	const gate = useReadOnlyGate();
 	const day = ruleDay(item);
 	if (day === null) return null;

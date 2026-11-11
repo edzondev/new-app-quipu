@@ -1,14 +1,15 @@
-import { ConvexError, v } from "convex/values";
+import { ConvexError, type Infer, v } from "convex/values";
 import * as z from "zod/mini";
+import { TRIAL_MS } from "../shared/billing";
 import { applyIncome, ZERO_AMOUNTS } from "../shared/budget";
 import { getLimaDate } from "../shared/dates";
 import { nameSchema } from "../shared/name";
 import { isValidPlan, isValidSplit } from "../shared/plan";
 import { components } from "./_generated/api";
-import { mutation, type QueryCtx, query } from "./_generated/server";
+import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { createFirstCycle } from "./model/cycles";
 import { BAD_INPUT, parseInput } from "./model/input";
-import { hasPlus } from "./model/plus";
+import { hasPlus, plusHistory } from "./model/plus";
 import { checkAccess, getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
 
@@ -29,6 +30,11 @@ export const myProfile = query({
 			nextPlan: v.union(plan, v.null()),
 			hasHousehold: v.boolean(),
 			hasPlus: v.boolean(),
+			plusHistory: v.union(v.literal("none"), v.literal("trial"), v.literal("paid")),
+			trialEndsAt: v.union(v.number(), v.null()),
+			welcomeSeen: v.boolean(),
+			trialEndedSeen: v.boolean(),
+			trialReminderSeen: v.boolean(),
 		}),
 	),
 	handler: async (ctx) => {
@@ -42,9 +48,21 @@ export const myProfile = query({
 			nextPlan: profile.nextPlan ?? null,
 			hasHousehold: (await getHousehold(ctx, user._id)) !== null,
 			hasPlus: await hasPlus(ctx, user._id),
+			plusHistory: await plusHistory(ctx, user._id),
+			trialEndsAt: profile.trialEndsAt ?? null,
+			welcomeSeen: profile.welcomeSeenAt !== undefined,
+			trialEndedSeen: profile.trialEndedSeenAt !== undefined,
+			trialReminderSeen: profile.trialReminderSeenAt !== undefined,
 		};
 	},
 });
+
+async function requireProfile(ctx: MutationCtx) {
+	const user = await requireUser(ctx);
+	const profile = await getProfile(ctx, user._id);
+	if (!profile) throw new ConvexError("No encontramos tu perfil.");
+	return { user, profile };
+}
 
 export const completeOnboarding = mutation({
 	args: {
@@ -55,9 +73,7 @@ export const completeOnboarding = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, { name, split: splitValue, todayCents, ...planValue }) => {
-		const user = await requireUser(ctx);
-		const profile = await getProfile(ctx, user._id);
-		if (!profile) throw new ConvexError("No encontramos tu perfil.");
+		const { user, profile } = await requireProfile(ctx);
 
 		const cleanName = parseInput(nameSchema, name);
 		parseInput(z.int().check(z.nonnegative()), todayCents);
@@ -76,8 +92,7 @@ export const completeOnboarding = mutation({
 			},
 		});
 		const today = getLimaDate();
-		const trialEndsAt = Date.now() + 14 * 24 * 60 * 60 * 1000;
-		await ctx.db.patch("profiles", profile._id, { plan: planValue, trialEndsAt });
+		await ctx.db.patch("profiles", profile._id, { plan: planValue });
 		const spaceId = await ctx.db.insert("spaces", {
 			kind: "personal",
 			ownerId: user._id,
@@ -100,3 +115,44 @@ export const completeOnboarding = mutation({
 		return null;
 	},
 });
+
+const trialResult = v.union(
+	v.object({ status: v.literal("active"), trialEndsAt: v.number() }),
+	v.object({ status: v.literal("used") }),
+);
+
+/** One 14-day trial per person, only when they ask. A second call while it runs keeps its end. */
+export const startTrial = mutation({
+	args: {},
+	returns: trialResult,
+	handler: async (ctx): Promise<Infer<typeof trialResult>> => {
+		const { user, profile } = await requireProfile(ctx);
+		const now = Date.now();
+		if (profile.trialEndsAt !== undefined && profile.trialEndsAt > now) {
+			return { status: "active", trialEndsAt: profile.trialEndsAt };
+		}
+		if ((await plusHistory(ctx, user._id)) !== "none") return { status: "used" };
+		const trialEndsAt = now + TRIAL_MS;
+		await ctx.db.patch("profiles", profile._id, { trialEndsAt });
+		return { status: "active", trialEndsAt };
+	},
+});
+
+/** A notice closed on one device stays closed on all of them; the first close is the one kept. */
+function markSeen(field: "welcomeSeenAt" | "trialEndedSeenAt" | "trialReminderSeenAt") {
+	return mutation({
+		args: {},
+		returns: v.null(),
+		handler: async (ctx) => {
+			const { profile } = await requireProfile(ctx);
+			if (profile[field] === undefined) {
+				await ctx.db.patch("profiles", profile._id, { [field]: Date.now() });
+			}
+			return null;
+		},
+	});
+}
+
+export const markWelcomeSeen = markSeen("welcomeSeenAt");
+export const markTrialEndedSeen = markSeen("trialEndedSeenAt");
+export const markTrialReminderSeen = markSeen("trialReminderSeenAt");

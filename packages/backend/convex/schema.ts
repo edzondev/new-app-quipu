@@ -108,9 +108,15 @@ export default defineSchema({
 		lastSeenHouseholdClosedCycleId: v.optional(v.id("cycles")),
 		// Withdrawals from the household fund by the other person up to this time were already seen.
 		seenWithdrawalAt: v.optional(v.number()),
-		// Quipu Plus trial end (ms). Set by us on the server for 14 days, no card.
+		// Quipu Plus trial end (ms). Set by us on the server for 14 days, no card, when the person asks.
 		// Polar (web) and RevenueCat (mobile) only charge.
 		trialEndsAt: v.optional(v.number()),
+		// The B1 welcome was closed. On the server so another device does not show it again.
+		welcomeSeenAt: v.optional(v.number()),
+		// The notice that the trial ended (V1) was closed. The same, one time across devices.
+		trialEndedSeenAt: v.optional(v.number()),
+		// The notice 2 days before the trial ends was closed. The same, one time across devices.
+		trialReminderSeenAt: v.optional(v.number()),
 	}).index("by_userId", ["userId"]),
 
 	spaces: defineTable({

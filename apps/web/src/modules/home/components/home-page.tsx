@@ -14,10 +14,11 @@ import { EYEBROW } from "#/lib/typography";
 import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import type { Movement } from "#/modules/register/movement-draft";
 import { firstName } from "@quipu/backend/shared/household";
-import { EmptyHousehold } from "#/modules/household/components/empty-household";
 import { HouseholdNotices } from "#/modules/household/components/household-notices";
 import { InviteStrip } from "#/modules/household/components/invite-strip";
 import { JoinedNotice } from "#/modules/household/components/joined-notice";
+import { PlanNotice } from "#/modules/plus/components/plan-notice";
+import { TrialReminder } from "#/modules/plus/components/trial-reminder";
 import { useRegister } from "#/modules/register/register-dialog";
 import { CloseNotice } from "./close-notice";
 import { EnvelopeCards } from "./envelope-cards";
@@ -30,25 +31,16 @@ type HouseholdData = FunctionReturnType<typeof api.household.get>;
 
 export function HomePage() {
 	const today = useLimaDate();
+	const { space = "personal" } = useSearch({ from: "/_app" });
 	// Remount when the Lima day flips so ensureOpen runs again for the new cycle.
 	return (
 		<>
 			<JoinedNotice />
-			<Home key={today} today={today} />
+			<PlanNotice />
+			<TrialReminder key={today} />
+			<SpaceHome key={today} space={space} today={today} />
 		</>
 	);
-}
-
-function Home({ today }: { today: string }) {
-	const { space = "personal" } = useSearch({ from: "/_app" });
-	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
-	// No household yet: its queries would fail, so none of them runs.
-	if (space === "household" && profile.data && !profile.data.hasHousehold) {
-		return (
-			<EmptyHousehold firstName={firstName(profile.data.name)} hasPlus={profile.data.hasPlus} />
-		);
-	}
-	return <SpaceHome space={space} today={today} />;
 }
 
 function SpaceHome({ space, today }: { space: Space; today: string }) {

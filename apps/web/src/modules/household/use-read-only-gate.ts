@@ -2,21 +2,26 @@ import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
+import type { MouseEvent } from "react";
+import { useOpenPlus } from "#/modules/plus/plus-provider";
 
 const NO_PLUS = "Activa Plus para seguir anotando";
 
-export const readOnlyProps = {
-	"aria-disabled": true,
-	title: NO_PLUS,
-	onClick: (event: { preventDefault: () => void }) => event.preventDefault(),
-};
+function useGate(blocked: boolean) {
+	const openPlus = useOpenPlus();
+	if (!blocked) return {};
+	return {
+		"aria-haspopup": "dialog" as const,
+		title: NO_PLUS,
+		onClick: (event: MouseEvent<HTMLElement>) => {
+			event.preventDefault();
+			openPlus({ feature: "household", opener: event.currentTarget });
+		},
+	};
+}
 
-/**
- * Props to spread after a button's own `onClick` when Nuestro espacio is read-only (the Plus
- * lapsed): the button stays visible, says why on hover and does nothing. The server decides anyway.
- */
 export function useReadOnlyGate() {
-	return useIsReadOnly() ? readOnlyProps : {};
+	return useGate(useIsReadOnly());
 }
 
 /** Whether the space in the address is a household without Plus. */
@@ -29,5 +34,5 @@ export function useIsReadOnly() {
 /** The same for what is about the household whatever the address says, like its settings. */
 export function useHouseholdGate(enabled: boolean) {
 	const household = useQuery(convexQuery(api.household.get, enabled ? {} : "skip"));
-	return enabled && household.data?.plus.active === false ? readOnlyProps : {};
+	return useGate(enabled && household.data?.plus.active === false);
 }
