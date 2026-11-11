@@ -75,7 +75,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 				otpLength: 6,
 				allowedAttempts: 3,
 				storeOTP: "hashed",
-				sendVerificationOTP: async ({ email, otp }) => {
+				sendVerificationOTP: async ({ email, otp, type }) => {
 					if (env.OTP_DELIVERY === "log") {
 						console.log(`OTP ${email}: ${otp}`);
 						return;
@@ -83,11 +83,15 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 					if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
 					if (!env.RESEND_FROM) throw new Error("Falta RESEND_FROM");
 
+					// "email-verification" is only used to confirm deleting the account.
+					const deletion = type === "email-verification";
 					await resend.sendEmail(ctx, {
 						from: env.RESEND_FROM,
 						to: email,
-						subject: "Tu código de Quipu",
-						text: `Tu código es ${otp}. Vence en 5 minutos.`,
+						subject: deletion ? "Código para eliminar tu cuenta de Quipu" : "Tu código de Quipu",
+						text: deletion
+							? `Tu código es ${otp}. Vence en 5 minutos. Si no pediste eliminar tu cuenta, ignora este correo.`
+							: `Tu código es ${otp}. Vence en 5 minutos.`,
 					});
 				},
 			}),

@@ -119,6 +119,8 @@ export default defineSchema({
 		trialEndedSeenAt: v.optional(v.number()),
 		// The notice 2 days before the trial ends was closed. The same, one time across devices.
 		trialReminderSeenAt: v.optional(v.number()),
+		// The person asked to delete the account: everything goes at this time (ms) unless they cancel first.
+		deletionRunsAt: v.optional(v.number()),
 	}).index("by_userId", ["userId"]),
 
 	spaces: defineTable({

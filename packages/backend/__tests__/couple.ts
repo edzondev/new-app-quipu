@@ -26,7 +26,7 @@ export function harness() {
 
 export type Harness = ReturnType<typeof harness>;
 
-function post(t: Harness, path: string, body: object) {
+export function post(t: Harness, path: string, body: object) {
 	return t.fetch(`/api/auth${path}`, {
 		method: "POST",
 		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
@@ -34,19 +34,26 @@ function post(t: Harness, path: string, body: object) {
 	});
 }
 
-async function sendCode(t: Harness, email: string) {
+/** Runs `send` with the code going to the log, and returns the code that was sent to `email`. */
+export async function captureOtp(email: string, send: () => Promise<unknown>) {
 	process.env.OTP_DELIVERY = "log";
 	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	const lines: string[] = [];
 	const log = console.log;
 	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
 	try {
-		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
-		expect(sent.ok, await sent.clone().text()).toBe(true);
+		await send();
 	} finally {
 		console.log = log;
 	}
 	return lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
+}
+
+async function sendCode(t: Harness, email: string) {
+	return await captureOtp(email, async () => {
+		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
+		expect(sent.ok, await sent.clone().text()).toBe(true);
+	});
 }
 
 export async function signUp(t: Harness, email: string, name: string) {
