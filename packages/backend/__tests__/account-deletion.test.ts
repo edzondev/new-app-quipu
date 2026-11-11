@@ -20,17 +20,16 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
+const CODE_WAIT_MS = 91_000;
 const WRONG = "Código incorrecto.";
 const WAIT = "Espera un momento antes de intentarlo otra vez.";
 const EMAIL = "camila@correo.com";
-// Lima midnight of the 20th of October plus 15 days.
 const RUNS_AT = Date.parse("2026-11-04T05:00:00Z");
 
 type Person = Awaited<ReturnType<typeof startUser>>;
 
 async function ask(person: Person, email = EMAIL) {
-	// The code limit is 1 per 90 s per email, shared with sign-in.
-	vi.advanceTimersByTime(91_000);
+	vi.advanceTimersByTime(CODE_WAIT_MS);
 	const code = await captureOtp(email, () =>
 		person.as.mutation(api.accountDeletion.requestCode, {}),
 	);
@@ -44,9 +43,8 @@ async function confirmDeletion(person: Person, email = EMAIL) {
 	).toEqual({ ok: true });
 }
 
-/** Signing in again after the request: every session was closed, and signing in does not undo it. */
 async function signBackIn(t: Harness, person: Person, email = EMAIL) {
-	vi.advanceTimersByTime(91_000);
+	vi.advanceTimersByTime(CODE_WAIT_MS);
 	const code = await captureOtp(email, async () => {
 		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
 		expect(sent.ok).toBe(true);
@@ -66,7 +64,6 @@ async function alone() {
 	return { t, ana };
 }
 
-/** Lets every scheduled function run, jumping the clock to each one. */
 async function runScheduled(t: Harness) {
 	await t.finishAllScheduledFunctions(vi.runAllTimers);
 }
@@ -89,7 +86,6 @@ function getProfile(t: Harness, userId: string) {
 	);
 }
 
-/** Nothing was deleted: the person, their space, its cycle and its movement are all there. */
 async function expectIntact(t: Harness, userId: string) {
 	expect(await getProfile(t, userId)).not.toBeNull();
 	expect(await authRows(t, "user", "_id", userId)).toHaveLength(1);
@@ -116,7 +112,6 @@ function scheduledPurges(t: Harness) {
 }
 
 test("runsAtFor is Lima midnight of today plus 15 days, even at 23:30 in Lima", () => {
-	// 23:30 on the 20th in Lima is already the 21st in UTC.
 	expect(runsAtFor(getLimaDate(new Date("2026-10-21T04:30:00Z")))).toBe(RUNS_AT);
 	expect(runsAtFor("2026-10-20")).toBe(RUNS_AT);
 });
@@ -139,7 +134,7 @@ test("requestCode is refused while the deletion is pending", async () => {
 	const { t, ana } = await alone();
 	await confirmDeletion(ana);
 	const back = await signBackIn(t, ana);
-	vi.advanceTimersByTime(91_000);
+	vi.advanceTimersByTime(CODE_WAIT_MS);
 	await expect(back.mutation(api.accountDeletion.requestCode, {})).rejects.toThrow(
 		"Tu cuenta ya se está eliminando.",
 	);
@@ -239,7 +234,6 @@ test("cancelling and asking again: the old purge deletes nothing, the new date h
 	const again = await signBackIn(t, ana);
 	expect((await again.query(api.profiles.myProfile, {}))?.deletionRunsAt).toBe(RUNS_AT + DAY);
 
-	// The next timer is the old purge, at the old date.
 	await vi.advanceTimersToNextTimerAsync();
 	await t.finishInProgressScheduledFunctions();
 	expect(Date.now()).toBe(RUNS_AT);

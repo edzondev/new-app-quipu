@@ -9,6 +9,7 @@ import { emailOTP } from "better-auth/plugins";
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { env } from "./_generated/server";
+import { DELETION_CODE_TYPE } from "../shared/deletion";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
 
@@ -83,8 +84,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 					if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
 					if (!env.RESEND_FROM) throw new Error("Falta RESEND_FROM");
 
-					// "email-verification" is only used to confirm deleting the account.
-					const deletion = type === "email-verification";
+					const deletion = type === DELETION_CODE_TYPE;
 					await resend.sendEmail(ctx, {
 						from: env.RESEND_FROM,
 						to: email,

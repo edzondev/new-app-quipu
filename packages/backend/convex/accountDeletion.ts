@@ -1,7 +1,7 @@
 import { APIError } from "better-auth/api";
 import { ConvexError, type Infer, v } from "convex/values";
 import { getLimaDate } from "../shared/dates";
-import { runsAtFor } from "../shared/deletion";
+import { DELETION_CODE_TYPE, runsAtFor } from "../shared/deletion";
 import { internal } from "./_generated/api";
 import { internalMutation, type MutationCtx, mutation } from "./_generated/server";
 import { authComponent, createAuth } from "./auth";
@@ -20,7 +20,7 @@ const CODE_ERRORS: Record<string, string> = {
 	TOO_MANY_ATTEMPTS: WRONG_CODE,
 };
 // The codes Better Auth keeps per email: the ones we send for signing in and for this.
-const CODE_TYPES = ["sign-in", "email-verification"];
+const CODE_TYPES = ["sign-in", DELETION_CODE_TYPE];
 
 /** Sends a code to the email of the account, never to one the client names. */
 export const requestCode = mutation({
@@ -31,7 +31,7 @@ export const requestCode = mutation({
 		if (profile.deletionRunsAt !== undefined) throw new ConvexError(PENDING);
 		try {
 			await createAuth(ctx).api.sendVerificationOTP({
-				body: { email: user.email, type: "email-verification" },
+				body: { email: user.email, type: DELETION_CODE_TYPE },
 			});
 		} catch (error) {
 			if (error instanceof APIError && error.statusCode === 429) throw new ConvexError(WAIT);
@@ -48,8 +48,7 @@ const confirmResult = v.union(
 
 /**
  * A wrong or expired code is a result, not a thrown error: a throw would undo the failed attempt
- * Better Auth just counted, and the 3-attempt limit would never be reached. A good code stores the
- * date, closes every session and schedules the purge for that date.
+ * Better Auth just counted, and the 3-attempt limit would never be reached.
  */
 export const confirm = mutation({
 	args: { code: v.string() },
@@ -60,7 +59,7 @@ export const confirm = mutation({
 		const auth = createAuth(ctx);
 		try {
 			await auth.api.checkVerificationOTP({
-				body: { email: user.email, type: "email-verification", otp: code },
+				body: { email: user.email, type: DELETION_CODE_TYPE, otp: code },
 			});
 		} catch (error) {
 			const message = error instanceof APIError ? CODE_ERRORS[String(error.body?.code)] : undefined;
@@ -70,7 +69,6 @@ export const confirm = mutation({
 		const deletionRunsAt = runsAtFor(getLimaDate());
 		await ctx.db.patch("profiles", profile._id, { deletionRunsAt });
 		await (await auth.$context).internalAdapter.deleteUserSessions(user._id);
-		// Cancelling does not unschedule it: purge checks the profile when it runs.
 		await ctx.scheduler.runAt(deletionRunsAt, internal.accountDeletion.purge, { userId: user._id });
 		return { ok: true };
 	},
@@ -91,8 +89,7 @@ export const cancel = mutation({
 
 type Leaving = { _id: string; name: string; email: string };
 
-/** One batch of the purge. True when nothing is left: the profile goes last, with the user. */
-async function purgeStep(ctx: MutationCtx, user: Leaving) {
+async function purgeBatch(ctx: MutationCtx, user: Leaving) {
 	const household = await getHousehold(ctx, user._id);
 	if (household) {
 		const members = await getMembers(ctx, household._id);
@@ -113,7 +110,6 @@ async function purgeStep(ctx: MutationCtx, user: Leaving) {
 	for (const type of CODE_TYPES) {
 		await internalAdapter.deleteVerificationByIdentifier(`${type}-otp-${user.email}`);
 	}
-	// Sessions and accounts too; the onDelete trigger removes the profile.
 	await internalAdapter.deleteUser(user._id);
 	return true;
 }
@@ -130,7 +126,8 @@ export const purge = internalMutation({
 		if (profile?.deletionRunsAt === undefined || profile.deletionRunsAt > Date.now()) return null;
 		const user = await authComponent.getAnyUserById(ctx, userId);
 		if (!user) return null;
-		if (!(await purgeStep(ctx, user))) {
+		const done = await purgeBatch(ctx, user);
+		if (!done) {
 			await ctx.scheduler.runAfter(0, internal.accountDeletion.purge, { userId });
 		}
 		return null;

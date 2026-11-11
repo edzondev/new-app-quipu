@@ -6,3 +6,5 @@ export const DELETION_DAYS = 15;
 export function runsAtFor(today: string): number {
 	return Date.parse(`${addDays(today, DELETION_DAYS)}T05:00:00Z`);
 }
+
+export const DELETION_CODE_TYPE = "email-verification";
