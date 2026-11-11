@@ -23,15 +23,13 @@ export function CloseNotice({
 			<p className="wrap-break-word">
 				{space === "household" ? householdCloseNoticeText(closed) : closeNoticeText(closed)}
 			</p>
-			{space === "personal" ? (
-				<Link
-					to="/progress"
-					search={{ space: undefined }}
-					className="flex min-h-11 items-center font-semibold underline underline-offset-4"
-				>
-					Ver en Progreso
-				</Link>
-			) : null}
+			<Link
+				to="/progress"
+				search={{ space: space === "household" ? "household" : undefined }}
+				className="flex min-h-11 items-center font-semibold underline underline-offset-4"
+			>
+				Ver en Progreso
+			</Link>
 		</NoticeBar>
 	);
 }

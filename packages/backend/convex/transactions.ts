@@ -16,11 +16,19 @@ import { displayName } from "../shared/household";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
-import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
+import { ensureOpenCycle, requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
 import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
+import { requireWritableSpace } from "./model/plus";
 import { requirePlan } from "./model/spaces";
-import { extraType, movementKind, spaceKind, spendable, withdrawalReason } from "./schema";
+import {
+	envelope,
+	extraType,
+	movementKind,
+	spaceKind,
+	spendable,
+	withdrawalReason,
+} from "./schema";
 
 type SpaceKind = Doc<"spaces">["kind"];
 type TxKind = Doc<"transactions">["kind"];
@@ -34,6 +42,10 @@ const savingOverAhorro = (max: number) =>
 	`Solo tienes ${moneyLabel(max)} para este ahorro. Baja el monto.`;
 const withdrawalOverFund = (max: number) =>
 	`Solo tienes ${moneyLabel(max)} en el fondo para este retiro. Baja el monto.`;
+const CONTRIBUTION_CLOSED =
+	"Este aporte ya no se puede cambiar: el ciclo de Nuestro espacio cerró.";
+const contributionAlreadyWithdrawn = (cents: number) =>
+	`No puedes borrar este aporte: en Nuestro espacio ya retiraron ${moneyLabel(cents)} de ese Ahorro.`;
 
 /** Where a saving went, as the activity shows it: its goal or the fund. */
 async function savingDestination(ctx: MutationCtx, goalId: Id<"goals"> | undefined) {
@@ -253,6 +265,121 @@ export const deleteIncome = mutation({
 	},
 });
 
+async function requireHouseholdTarget(ctx: MutationCtx, userId: string, today: string) {
+	const { space } = await requireWritableSpace(ctx, "household");
+	const cycle = await ensureOpenCycle(ctx, space, today, userId);
+	return { household: space, toCycle: cycle };
+}
+
+async function requireOwnContribution(ctx: MutationCtx, id: Id<"transactions">) {
+	const open = await requireOwnOpenRow(ctx, "personal", id, "contribution");
+	const { row } = open;
+	if (row.kind !== "contribution") throw new ConvexError(NOT_FOUND);
+	const target = await requireHouseholdTarget(ctx, open.userId, open.today);
+	if (row.toCycleId !== target.toCycle._id) throw new ConvexError(CONTRIBUTION_CLOSED);
+	return { ...open, ...target, row };
+}
+
+type ContributionMove = Pick<
+	Extract<Doc<"transactions">, { kind: "contribution" }>,
+	"amountCents" | "envelope" | "toEnvelope"
+>;
+
+async function moveContribution(
+	ctx: MutationCtx,
+	{ cycle, toCycle, row }: Awaited<ReturnType<typeof requireOwnContribution>>,
+	next: ContributionMove | null,
+) {
+	let personal = patchEnvelope(cycle.envelopes, AMOUNT_KEYS[row.envelope], row.amountCents);
+	let together = patchEnvelope(toCycle.envelopes, AMOUNT_KEYS[row.toEnvelope], -row.amountCents);
+	if (next) {
+		personal = patchEnvelope(personal, AMOUNT_KEYS[next.envelope], -next.amountCents);
+		together = patchEnvelope(together, AMOUNT_KEYS[next.toEnvelope], next.amountCents);
+	}
+	if (together.savingsCents < 0) {
+		throw new ConvexError(contributionAlreadyWithdrawn(-together.savingsCents));
+	}
+	await ctx.db.patch("cycles", cycle._id, { envelopes: personal });
+	await ctx.db.patch("cycles", toCycle._id, { envelopes: together });
+}
+
+/** Money from a Personal envelope to an envelope of the household. A transfer: nobody's spending. */
+export const addContribution = mutation({
+	args: {
+		amountCents: v.number(),
+		envelope: spendable,
+		toEnvelope: envelope,
+		note: v.optional(v.string()),
+	},
+	returns: v.null(),
+	handler: async (ctx, { amountCents, envelope: from, toEnvelope, note }) => {
+		const { userId, space, cycle, today } = await requireOpenCycle(ctx, "personal");
+		parseInput(centsSchema, amountCents);
+		const { toCycle } = await requireHouseholdTarget(ctx, userId, today);
+		await ctx.db.insert("transactions", {
+			kind: "contribution",
+			spaceId: space._id,
+			cycleId: cycle._id,
+			userId,
+			amountCents,
+			date: today,
+			envelope: from,
+			toCycleId: toCycle._id,
+			toEnvelope,
+			note: parseInput(noteSchema, note),
+		});
+		await ctx.db.patch("cycles", cycle._id, {
+			envelopes: patchEnvelope(cycle.envelopes, AMOUNT_KEYS[from], -amountCents),
+		});
+		await ctx.db.patch("cycles", toCycle._id, {
+			envelopes: patchEnvelope(toCycle.envelopes, AMOUNT_KEYS[toEnvelope], amountCents),
+		});
+		return null;
+	},
+});
+
+export const updateContribution = mutation({
+	args: {
+		id: v.id("transactions"),
+		amountCents: v.number(),
+		envelope: spendable,
+		toEnvelope: envelope,
+		note: v.optional(v.string()),
+	},
+	returns: v.null(),
+	handler: async (ctx, { id, amountCents, envelope: from, toEnvelope, note }) => {
+		const found = await requireOwnContribution(ctx, id);
+		parseInput(centsSchema, amountCents);
+		await moveContribution(ctx, found, { amountCents, envelope: from, toEnvelope });
+		await ctx.db.patch("transactions", id, {
+			amountCents,
+			envelope: from,
+			toEnvelope,
+			note: parseInput(noteSchema, note),
+		});
+		await logEvent(ctx, found.household, found.userId, "contribution_edited", {
+			detail: found.row.note,
+			before: moneyLabel(found.row.amountCents),
+			after: moneyLabel(amountCents),
+		});
+		return null;
+	},
+});
+
+export const deleteContribution = mutation({
+	args: { id: v.id("transactions") },
+	returns: v.null(),
+	handler: async (ctx, { id }) => {
+		const found = await requireOwnContribution(ctx, id);
+		await moveContribution(ctx, found, null);
+		await ctx.db.delete("transactions", id);
+		await logEvent(ctx, found.household, found.userId, "contribution_deleted", {
+			detail: rowLabel(found.row.note, found.row.amountCents),
+		});
+		return null;
+	},
+});
+
 export const addSaving = mutation({
 	args: {
 		space: spaceKind,
@@ -451,8 +578,9 @@ export const deleteWithdrawal = mutation({
 	},
 });
 
-function listedEnvelope(row: Doc<"transactions">) {
-	if (row.kind === "expense" || row.kind === "contribution") return row.envelope;
+export function listedEnvelope(row: Doc<"transactions">, kind: SpaceKind) {
+	if (row.kind === "contribution") return kind === "household" ? row.toEnvelope : row.envelope;
+	if (row.kind === "expense") return row.envelope;
 	if (row.kind === "saving" || row.kind === "withdrawal") return "savings" as const;
 	return null;
 }
@@ -477,7 +605,8 @@ export const list = query({
 				amountCents: v.number(),
 				date: v.string(),
 				note: v.union(v.string(), v.null()),
-				envelope: v.union(v.literal("needs"), v.literal("wants"), v.literal("savings"), v.null()),
+				envelope: v.union(envelope, v.null()),
+				toEnvelope: v.union(envelope, v.null()),
 				goalId: v.union(v.id("goals"), v.null()),
 				reason: v.union(withdrawalReason, v.null()),
 				extra: v.boolean(),
@@ -491,11 +620,22 @@ export const list = query({
 		parseInput(isoDateSchema, today);
 		parseInput(limitSchema, limit);
 		const { userId, space, cycle } = await requireOpenCycle(ctx, kind, today);
-		const rows = await ctx.db
-			.query("transactions")
-			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-			.order("desc")
-			.take(limit ?? MAX_LISTED);
+		const take = limit ?? MAX_LISTED;
+		const [own, received] = await Promise.all([
+			ctx.db
+				.query("transactions")
+				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+				.order("desc")
+				.take(take),
+			ctx.db
+				.query("transactions")
+				.withIndex("by_toCycleId", (q) => q.eq("toCycleId", cycle._id))
+				.order("desc")
+				.take(take),
+		]);
+		const rows = [...own, ...received]
+			.sort((a, b) => b._creationTime - a._creationTime)
+			.slice(0, take);
 
 		const whoByUser = new Map<string, string | null>();
 		if (space.kind === "household") {
@@ -517,7 +657,8 @@ export const list = query({
 				amountCents: row.amountCents,
 				date: row.date,
 				note: row.note ?? null,
-				envelope: listedEnvelope(row),
+				envelope: listedEnvelope(row, space.kind),
+				toEnvelope: row.kind === "contribution" ? row.toEnvelope : null,
 				goalId: (row.kind === "saving" && row.goalId) || null,
 				reason: row.kind === "withdrawal" ? row.reason : null,
 				extra: row.kind === "income" && row.extraType !== undefined,

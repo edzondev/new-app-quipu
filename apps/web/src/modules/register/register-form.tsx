@@ -31,15 +31,17 @@ import { toastManager } from "#/components/ui/toast";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
 import { positiveMoney } from "#/lib/money-schema";
+import { useHouseholdGate } from "#/modules/household/use-read-only-gate";
 import { DeleteButton } from "./delete-button";
 import type { Draft, Kind } from "./movement-draft";
 import { useMovementActions } from "./use-movement-actions";
 
 const registerSchema = z.object({
-	kind: z.enum(["expense", "income"]),
+	kind: z.enum(["expense", "income", "contribution"]),
 	amount: positiveMoney("Escribe un monto."),
 	note: z.string(),
 	envelope: z.enum(["needs", "wants"]),
+	toEnvelope: z.enum(["needs", "wants", "savings"]),
 	incomeType: z.enum(["cycle", "extra"]),
 	extraType: z.enum(["gratification", "bonus", "repayment", "other"]),
 	destination: z.enum(["envelopes", "savings"]),
@@ -52,6 +54,10 @@ type Envelope = RegisterValues["envelope"];
 const KINDS: { value: Kind; label: string }[] = [
 	{ value: "expense", label: "Gasto" },
 	{ value: "income", label: "Ingreso" },
+];
+const KINDS_WITH_APORTE: { value: Kind; label: string }[] = [
+	...KINDS,
+	{ value: "contribution", label: "Aporte" },
 ];
 
 const INCOME_TYPES: { value: RegisterValues["incomeType"]; label: string }[] = [
@@ -72,6 +78,16 @@ const DESTINATIONS: { value: RegisterValues["destination"]; label: string }[] = 
 ];
 
 const ENVELOPES: Envelope[] = ["needs", "wants"];
+const TO_ENVELOPES = (["needs", "wants", "savings"] as const).map((value) => ({
+	value,
+	label: ENVELOPE_LABELS[value],
+}));
+
+const DELETE_PROMPTS: Record<Kind, string> = {
+	expense: "¿Eliminar este gasto? El monto vuelve a su sobre.",
+	income: "¿Eliminar este ingreso?",
+	contribution: "¿Eliminar este aporte? El monto vuelve a su sobre.",
+};
 
 export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => void }) {
 	const { space = "personal" } = useSearch({ from: "/_app" });
@@ -81,6 +97,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		? { space, today }
 		: "skip";
 	const homeQuery = useQuery(convexQuery(api.balances.getHome, homeArgs));
+	const household = useQuery(convexQuery(api.household.get, space === "personal" ? {} : "skip"));
 	const home = homeQuery.data;
 	// Saving waits for the cycle: it decides where an income goes and what the envelopes show.
 	// A cached home is not enough while ensureOpen runs or after the home query failed.
@@ -105,6 +122,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		amount: draft.amount,
 		note: draft.note ?? "",
 		envelope: draft.envelope ?? "needs",
+		toEnvelope: draft.toEnvelope ?? "needs",
 		incomeType: "cycle",
 		extraType: "other",
 		destination: "envelopes",
@@ -126,6 +144,11 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 				toNext && names
 					? `Listo. Sueldo de S/ ${formatCents(amountCents)} para ${names.next}. Empieza el ${formatDay(names.nextStart)}.`
 					: null;
+			if (value.kind === "contribution") {
+				const { envelope: from, toEnvelope } = value;
+				save({ kind: value.kind, id: editId, amountCents, envelope: from, toEnvelope, note });
+				return;
+			}
 			save(
 				value.kind === "expense"
 					? { kind: value.kind, id: editId, amountCents, envelope: value.envelope, note }
@@ -147,6 +170,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		form.store,
 		(state) => state.values,
 	);
+	const gate = useHouseholdGate(kind === "contribution");
 
 	if (confirmation) {
 		return (
@@ -169,7 +193,10 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 	const amountCents = toCents(amount);
 	const originalCents = editId ? toCents(draft.amount) : 0;
 	const isExpense = kind === "expense";
-	const asksCycle = Boolean(home?.earlyWindow) && !isExpense && !editId && incomeType === "cycle";
+	const isAporte = kind === "contribution";
+	const takesFromEnvelope = isExpense || isAporte;
+	const asksCycle =
+		kind === "income" && Boolean(home?.earlyWindow) && !editId && incomeType === "cycle";
 	const toNext = asksCycle && cycleChoice === "next";
 
 	const envelopeOptions = ENVELOPES.map((value) => ({
@@ -193,10 +220,11 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		: 0;
 	// A new expense is dated today. An older one changes the free money, not what you spent today.
 	const changeCents = amountCents - originalCents;
+	const spentChangeCents = isAporte || (editId && draft.date !== today) ? 0 : changeCents;
 	const dailyAfter = home
 		? getDailyBudget({
 				freeCents: home.needsCents + home.wantsCents - home.pendingCents - changeCents,
-				spentTodayCents: home.spentTodayCents + (editId && draft.date !== today ? 0 : changeCents),
+				spentTodayCents: home.spentTodayCents + spentChangeCents,
 				daysLeft: home.daysLeft,
 			})
 		: null;
@@ -224,7 +252,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 							{(field) => (
 								<ChoiceChips
 									label="Tipo"
-									options={KINDS}
+									options={household.data ? KINDS_WITH_APORTE : KINDS}
 									value={field.state.value}
 									onChange={field.handleChange}
 								/>
@@ -264,52 +292,80 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 						}}
 					</form.Field>
 
-					{isExpense ? (
+					{takesFromEnvelope ? (
+						<div className="flex flex-col gap-2">
+							<p aria-hidden className="text-sm text-muted-foreground">
+								Sale de
+							</p>
+							<form.Field name="envelope">
+								{(field) => (
+									<ChoiceChips
+										label="Sale de"
+										options={envelopeOptions}
+										value={field.state.value}
+										onChange={field.handleChange}
+									/>
+								)}
+							</form.Field>
+							{home && amountCents > room ? (
+								<p role="status" className="text-xs text-warning-foreground">
+									Supera lo que queda en {ENVELOPE_LABELS[envelope]} (S/{" "}
+									{formatCents(Math.max(0, room))})
+								</p>
+							) : null}
+						</div>
+					) : null}
+
+					{isAporte ? (
 						<>
 							<div className="flex flex-col gap-2">
 								<p aria-hidden className="text-sm text-muted-foreground">
-									Sale de
+									Entra a · Nuestro espacio
 								</p>
-								<form.Field name="envelope">
+								<form.Field name="toEnvelope">
 									{(field) => (
 										<ChoiceChips
-											label="Sale de"
-											options={envelopeOptions}
+											label="Entra a · Nuestro espacio"
+											options={TO_ENVELOPES}
 											value={field.state.value}
 											onChange={field.handleChange}
 										/>
 									)}
 								</form.Field>
-								{home && amountCents > room ? (
-									<p role="status" className="text-xs text-warning-foreground">
-										Supera lo que queda en {ENVELOPE_LABELS[envelope]} (S/{" "}
-										{formatCents(Math.max(0, room))})
-									</p>
-								) : null}
 							</div>
 							{home && dailyAfter && amountCents > 0 ? (
-								dailyAfter.overCents > 0 ? (
-									<p role="status" className="text-sm text-warning-foreground">
-										{together ? "Hoy se pasarán" : "Hoy te pasarás"} S/{" "}
-										{formatCents(dailyAfter.overCents)}
-									</p>
-								) : (
-									<p className="text-sm text-muted-foreground">
-										<span aria-hidden>
-											{together ? "Les queda hoy" : "Te queda hoy"}: S/{" "}
-											{formatCents(home.leftCents)} → S/ {formatCents(dailyAfter.leftCents)}
-										</span>
-										<span className="sr-only">
-											{together ? "Les quedará hoy" : "Te quedará hoy"} S/{" "}
-											{formatCents(dailyAfter.leftCents)}
-										</span>
-									</p>
-								)
+								<p className="text-sm text-muted-foreground">
+									Hoy en Personal: S/ {formatCents(home.leftCents)} → S/{" "}
+									{formatCents(dailyAfter.leftCents)}
+								</p>
 							) : null}
+							<p className="text-sm text-muted-foreground">
+								Transferencia entre espacios. No cuenta como gasto.
+							</p>
 						</>
 					) : null}
 
-					{!isExpense && !editId ? (
+					{isExpense && home && dailyAfter && amountCents > 0 ? (
+						dailyAfter.overCents > 0 ? (
+							<p role="status" className="text-sm text-warning-foreground">
+								{together ? "Hoy se pasarán" : "Hoy te pasarás"} S/{" "}
+								{formatCents(dailyAfter.overCents)}
+							</p>
+						) : (
+							<p className="text-sm text-muted-foreground">
+								<span aria-hidden>
+									{together ? "Les queda hoy" : "Te queda hoy"}: S/ {formatCents(home.leftCents)} →
+									S/ {formatCents(dailyAfter.leftCents)}
+								</span>
+								<span className="sr-only">
+									{together ? "Les quedará hoy" : "Te quedará hoy"} S/{" "}
+									{formatCents(dailyAfter.leftCents)}
+								</span>
+							</p>
+						)
+					) : null}
+
+					{kind === "income" && !editId ? (
 						<>
 							<form.Field name="incomeType">
 								{(field) => (
@@ -412,23 +468,21 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 				<FormSheetFooter>
 					{editId ? (
 						<DeleteButton
-							prompt={
-								isExpense
-									? "¿Eliminar este gasto? El monto vuelve a su sobre."
-									: "¿Eliminar este ingreso?"
-							}
+							prompt={DELETE_PROMPTS[draft.kind]}
 							disabled={pending}
 							onDelete={() => remove(draft.kind, editId)}
 						/>
 					) : null}
-					<Button type="submit" loading={pending || loading} disabled={pending || !ready}>
+					<Button type="submit" loading={pending || loading} disabled={pending || !ready} {...gate}>
 						{editId
 							? "Guardar"
-							: isExpense
-								? "Guardar gasto"
-								: toNext && names
-									? `Guardar para ${names.next}`
-									: "Guardar ingreso"}
+							: isAporte
+								? "Aportar"
+								: isExpense
+									? "Guardar gasto"
+									: toNext && names
+										? `Guardar para ${names.next}`
+										: "Guardar ingreso"}
 					</Button>
 				</FormSheetFooter>
 			</form>

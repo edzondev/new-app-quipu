@@ -4,6 +4,7 @@ import { query } from "./_generated/server";
 import { parseInput } from "./model/input";
 import { closedCycle, scanClosedCycles } from "./model/progress";
 import { requireSpace } from "./model/spaces";
+import { spaceKind } from "./schema";
 
 const PAGE_ROWS = 12;
 const PAGE_BUDGET = 200;
@@ -11,14 +12,14 @@ const STREAK_BUDGET = 500;
 
 /** One page of the history of closed cycles with activity, newest first. Follow `next` for more. */
 export const list = query({
-	args: { before: v.optional(v.string()) },
+	args: { space: spaceKind, before: v.optional(v.string()) },
 	returns: v.object({
 		cycles: v.array(closedCycle),
 		hidden: v.number(),
 		next: v.union(v.string(), v.null()),
 	}),
-	handler: async (ctx, { before }) => {
-		const { space } = await requireSpace(ctx, "personal");
+	handler: async (ctx, { space: kind, before }) => {
+		const { space } = await requireSpace(ctx, kind);
 		if (before !== undefined) parseInput(isoDateSchema, before);
 		const { rows, hidden, next, reads } = await scanClosedCycles(ctx, space._id, {
 			before,
@@ -42,10 +43,10 @@ export const list = query({
 
 /** Cycles in a row without running out of margin, from the latest. `exact` is false if the read budget ran out first. */
 export const streak = query({
-	args: {},
+	args: { space: spaceKind },
 	returns: v.object({ streak: v.number(), exact: v.boolean(), hasActive: v.boolean() }),
-	handler: async (ctx) => {
-		const { space } = await requireSpace(ctx, "personal");
+	handler: async (ctx, { space: kind }) => {
+		const { space } = await requireSpace(ctx, kind);
 		const { rows, next } = await scanClosedCycles(ctx, space._id, {
 			budget: STREAK_BUDGET,
 			stopAfter: (row) => row.marginCents < 0,

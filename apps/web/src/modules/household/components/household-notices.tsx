@@ -6,6 +6,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Button } from "#/components/ui/button";
 import { NoticeBar } from "#/modules/home/components/notice-bar";
 import { useOpenPlus } from "#/modules/plus/plus-provider";
+import { DownloadHistoryButton } from "./download-history-button";
 
 type Household = NonNullable<FunctionReturnType<typeof api.household.get>>;
 
@@ -22,13 +23,19 @@ function ReadOnlyStrip({ payerName, payerIsMe }: { payerName: string | null; pay
 					? "Pueden ver todo, pero no anotar."
 					: `El Plus de ${payerName} venció. Pueden ver todo, pero no anotar.`}
 			</p>
-			<Button
-				variant="outline"
-				className="rounded-full pointer-coarse:min-h-11"
-				onClick={(event) => openPlus({ feature: "household", opener: event.currentTarget })}
-			>
-				{payerIsMe ? "Renovar" : "Pagar yo"}
-			</Button>
+			<div className="flex flex-wrap gap-2">
+				<DownloadHistoryButton
+					label="Descargar historial"
+					className="rounded-full pointer-coarse:min-h-11"
+				/>
+				<Button
+					variant="outline"
+					className="rounded-full pointer-coarse:min-h-11"
+					onClick={(event) => openPlus({ feature: "household", opener: event.currentTarget })}
+				>
+					{payerIsMe ? "Renovar" : "Pagar yo"}
+				</Button>
+			</div>
 		</div>
 	);
 }

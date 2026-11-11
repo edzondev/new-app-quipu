@@ -47,9 +47,7 @@ const NAV_LINKS = [
 ] as const;
 
 function NavLinks({ onSelect }: { onSelect?: () => void }) {
-	const { space } = useSearch({ from: "/_app" });
-	// Progreso only knows Personal: in Nuestro espacio the link would change space without saying so.
-	return NAV_LINKS.filter(({ to }) => to !== "/progress" || !space).map(({ to, label }) => (
+	return NAV_LINKS.map(({ to, label }) => (
 		<Link
 			key={to}
 			to={to}

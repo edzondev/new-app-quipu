@@ -4,6 +4,7 @@ import { addDays, getFirstCycleRange, getLimaDate, getNextCycleRange } from "../
 import type { Plan, Split } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { receivedAportes } from "./budget";
 import { type CloseSummary, summarizeClose } from "./closeSummary";
 import { requireWritable } from "./plus";
 import { requireOwnerProfile, requirePlan, requireSpace, type SpaceKind } from "./spaces";
@@ -149,10 +150,14 @@ export async function closeCycle(
 	});
 	// Read after the early incomes moved out, so they are not counted in the cycle that closes, and
 	// before the automatic saving below, so it does not take a place among the person's movements.
-	const rows = await ctx.db
-		.query("transactions")
-		.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-		.take(MAX_SUMMARY_ROWS + 1);
+	const [own, received] = await Promise.all([
+		ctx.db
+			.query("transactions")
+			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+			.take(MAX_SUMMARY_ROWS + 1),
+		receivedAportes(ctx, cycle._id, MAX_SUMMARY_ROWS + 1),
+	]);
+	const rows = [...own, ...received];
 	const summary: CloseSummary =
 		rows.length > MAX_SUMMARY_ROWS
 			? { status: "tooManyMovements" }
@@ -166,6 +171,7 @@ export async function closeCycle(
 			userId,
 			amountCents: savingsCents,
 			date: cycle.endDate,
+			auto: true,
 		});
 		// Re-read: ensureOpen may close several cycles in one call with a stale space doc.
 		const fresh = await ctx.db.get("spaces", space._id);

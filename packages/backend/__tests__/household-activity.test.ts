@@ -145,6 +145,27 @@ test("every shared change and every withdrawal leaves its event, with who did it
 	await step("income_deleted", () =>
 		ana.as.mutation(api.transactions.deleteIncome, { space: household, id: income.id }),
 	);
+	await step(null, () =>
+		ana.as.mutation(api.transactions.addContribution, {
+			amountCents: 2_000,
+			envelope: "needs",
+			toEnvelope: "needs",
+		}),
+	);
+	const aporte = (await ana.as.query(api.transactions.list, { space: household, today: TODAY }))
+		.rows[0];
+	if (aporte?.kind !== "contribution") throw new Error("missing aporte");
+	await step("contribution_edited", () =>
+		ana.as.mutation(api.transactions.updateContribution, {
+			id: aporte.id,
+			amountCents: 3_000,
+			envelope: "needs",
+			toEnvelope: "needs",
+		}),
+	);
+	await step("contribution_deleted", () =>
+		ana.as.mutation(api.transactions.deleteContribution, { id: aporte.id }),
+	);
 
 	await step("saving_added", () =>
 		ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 8_000 }),

@@ -8,6 +8,7 @@ import authSchema from "../convex/betterAuth/schema";
 import { closeCycle } from "../convex/model/cycles";
 import schema from "../convex/schema";
 import { addDays } from "../shared/dates";
+import { joinedCouple } from "./couple";
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -72,6 +73,8 @@ const onboard = {
 	split: { needs: 50, wants: 30, savings: 20 },
 };
 
+const PERSONAL = { space: "personal" as const };
+
 type Ana = Awaited<ReturnType<typeof signIn>>;
 
 // Sign in under the fake clock, then stretch the session (7 days) to reach 2027.
@@ -114,7 +117,10 @@ async function readHistory(ana: Ana) {
 	let pages = 0;
 	let before: string | undefined;
 	for (;;) {
-		const page = await ana.query(api.progress.list, before === undefined ? {} : { before });
+		const page = await ana.query(
+			api.progress.list,
+			before === undefined ? PERSONAL : { ...PERSONAL, before },
+		);
 		cycles.push(...page.cycles);
 		hidden += page.hidden;
 		pages += 1;
@@ -188,12 +194,12 @@ test("two valid closes give a streak of 2 and exact amounts per envelope", async
 	await spend(ana, "2026-11-15", "wants", 5_000);
 	await closeOn(ana, "2026-12-01");
 
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 2,
 		exact: true,
 		hasActive: true,
 	});
-	expect(await ana.query(api.progress.list, {})).toEqual({
+	expect(await ana.query(api.progress.list, PERSONAL)).toEqual({
 		hidden: 0,
 		next: null,
 		cycles: [
@@ -231,7 +237,7 @@ test("Necesidades −20 and Gustos +50 leave +30: the cycle counts even though o
 	await spend(ana, "2026-10-25", "wants", 10_000);
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles).toEqual([
 		october({
 			marginCents: 3_000,
@@ -244,7 +250,7 @@ test("Necesidades −20 and Gustos +50 leave +30: the cycle counts even though o
 			},
 		}),
 	]);
-	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 1, exact: true });
+	expect(await ana.query(api.progress.streak, PERSONAL)).toMatchObject({ streak: 1, exact: true });
 });
 
 test("a cycle that spends exactly everything has margin 0 and still counts", async () => {
@@ -254,10 +260,13 @@ test("a cycle that spends exactly everything has margin 0 and still counts", asy
 	await spend(ana, "2026-10-25", "wants", 15_000);
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles).toHaveLength(1);
 	expect(cycles[0]).toMatchObject({ marginCents: 0, detail: { kind: "ok", fundedCents: 10_000 } });
-	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 1, hasActive: true });
+	expect(await ana.query(api.progress.streak, PERSONAL)).toMatchObject({
+		streak: 1,
+		hasActive: true,
+	});
 });
 
 test("a negative margin cuts the streak and Ahorro does not make up for it", async () => {
@@ -266,13 +275,13 @@ test("a negative margin cuts the streak and Ahorro does not make up for it", asy
 	await spend(ana, "2026-10-25", "needs", 45_000);
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles[0]).toMatchObject({
 		marginCents: -5_000,
 		left: { needsCents: -20_000, wantsCents: 15_000 },
 		detail: { kind: "ok", fundedCents: 10_000 },
 	});
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 0,
 		exact: true,
 		hasActive: true,
@@ -289,9 +298,9 @@ test("the streak counts from the latest cycle back and stops at the first cycle 
 	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 100_000 });
 	await closeOn(ana, "2027-01-01"); // December: needs 25_000, wants 45_000
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles.map((cycle) => cycle.marginCents)).toEqual([70_000, -10_000, 40_000]);
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 1,
 		exact: true,
 		hasActive: true,
@@ -305,12 +314,12 @@ test("when the latest cycle went over the streak is 0 but the history is still l
 	await spend(ana, "2026-11-10", "needs", 50_000);
 	await closeOn(ana, "2026-12-01");
 
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 0,
 		exact: true,
 		hasActive: true,
 	});
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles.map((cycle) => cycle.marginCents)).toEqual([-10_000, 40_000]);
 });
 
@@ -328,7 +337,7 @@ test("cycles with no activity are hidden and neither add to the streak nor cut i
 	const history = await readHistory(ana);
 	expect(history.cycles.map((cycle) => cycle.startDate)).toEqual(["2027-01-01", "2026-10-20"]);
 	expect(history.hidden).toBe(2);
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 2,
 		exact: true,
 		hasActive: true,
@@ -341,7 +350,7 @@ test("a negative carry with no movements is not idle: it shows with its negative
 	await spend(ana, "2026-10-25", "needs", 45_000);
 	await closeOn(ana, "2026-12-01");
 
-	const { cycles, hidden } = await ana.query(api.progress.list, {});
+	const { cycles, hidden } = await ana.query(api.progress.list, PERSONAL);
 	expect(hidden).toBe(0);
 	expect(cycles[0]).toMatchObject({
 		startDate: "2026-11-01",
@@ -353,7 +362,7 @@ test("a negative carry with no movements is not idle: it shows with its negative
 			fundedCents: 0,
 		},
 	});
-	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 0 });
+	expect(await ana.query(api.progress.streak, PERSONAL)).toMatchObject({ streak: 0 });
 });
 
 test("a positive carry with no movements is not idle: it shows and adds to the streak", async () => {
@@ -361,7 +370,7 @@ test("a positive carry with no movements is not idle: it shows and adds to the s
 	const ana = await startAna(t);
 	await closeOn(ana, "2026-12-01");
 
-	const { cycles, hidden } = await ana.query(api.progress.list, {});
+	const { cycles, hidden } = await ana.query(api.progress.list, PERSONAL);
 	expect(hidden).toBe(0);
 	expect(cycles[0]).toMatchObject({
 		startDate: "2026-11-01",
@@ -373,7 +382,7 @@ test("a positive carry with no movements is not idle: it shows and adds to the s
 			fundedCents: 0,
 		},
 	});
-	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 2 });
+	expect(await ana.query(api.progress.streak, PERSONAL)).toMatchObject({ streak: 2 });
 });
 
 test("a carry that nets to zero (−50 and +50) is still a carry: the cycle is not idle", async () => {
@@ -383,7 +392,7 @@ test("a carry that nets to zero (−50 and +50) is still a carry: the cycle is n
 	await spend(ana, "2026-10-25", "wants", 10_000);
 	await closeOn(ana, "2026-12-01");
 
-	const { cycles, hidden } = await ana.query(api.progress.list, {});
+	const { cycles, hidden } = await ana.query(api.progress.list, PERSONAL);
 	expect(hidden).toBe(0);
 	expect(cycles.map((cycle) => cycle.startDate)).toEqual(["2026-11-01", "2026-10-20"]);
 	expect(cycles[0]).toMatchObject({
@@ -394,15 +403,19 @@ test("a carry that nets to zero (−50 and +50) is still a carry: the cycle is n
 			spent: { needsCents: 0, wantsCents: 0 },
 		},
 	});
-	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 2 });
+	expect(await ana.query(api.progress.streak, PERSONAL)).toMatchObject({ streak: 2 });
 });
 
 test("no closed cycle yet: empty history that is complete", async () => {
 	const t = harness();
 	const ana = await startAna(t);
 
-	expect(await ana.query(api.progress.list, {})).toEqual({ cycles: [], hidden: 0, next: null });
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.list, PERSONAL)).toEqual({
+		cycles: [],
+		hidden: 0,
+		next: null,
+	});
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 0,
 		exact: true,
 		hasActive: false,
@@ -414,8 +427,12 @@ test("only cycles with no activity: nothing to show, but it is told apart from n
 	const ana = await startAna(t, { ...onboard, todayCents: 0 });
 	await closeOn(ana, "2026-11-01");
 
-	expect(await ana.query(api.progress.list, {})).toEqual({ cycles: [], hidden: 1, next: null });
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.list, PERSONAL)).toEqual({
+		cycles: [],
+		hidden: 1,
+		next: null,
+	});
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 0,
 		exact: true,
 		hasActive: false,
@@ -429,7 +446,7 @@ test("a cycle closed before summaries existed shows by its margin, without detai
 	const { cycle } = await firstCycle(t);
 	await t.run((ctx) => ctx.db.patch("cycles", cycle._id, { closeSummary: undefined }));
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles).toEqual([
 		october({
 			marginCents: 40_000,
@@ -437,7 +454,7 @@ test("a cycle closed before summaries existed shows by its margin, without detai
 			detail: { kind: "unavailable", reason: "legacy" },
 		}),
 	]);
-	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 1 });
+	expect(await ana.query(api.progress.streak, PERSONAL)).toMatchObject({ streak: 1 });
 });
 
 test("old cycles with margin 0 and no carry show only if they had movements", async () => {
@@ -487,7 +504,7 @@ test("more than 500 movements: the close still works, margin and streak are righ
 	});
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles).toEqual([
 		october({
 			marginCents: 40_000,
@@ -495,7 +512,7 @@ test("more than 500 movements: the close still works, margin and streak are righ
 			detail: { kind: "unavailable", reason: "tooManyMovements" },
 		}),
 	]);
-	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 1 });
+	expect(await ana.query(api.progress.streak, PERSONAL)).toMatchObject({ streak: 1 });
 });
 
 test("exactly 500 movements keep their detail: the automatic saving of the close is not one of them", async () => {
@@ -521,7 +538,7 @@ test("exactly 500 movements keep their detail: the automatic saving of the close
 	});
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles[0]?.detail).toEqual({
 		kind: "ok",
 		assigned: { needsCents: 25_000, wantsCents: 15_000 },
@@ -548,7 +565,7 @@ test("money that moved outside the records does not block the close and is never
 		needsCents: 100,
 		wantsCents: 0,
 	});
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles).toEqual([
 		october({
 			marginCents: 40_100,
@@ -565,13 +582,13 @@ test("the history comes in pages of 12 and following next reaches every cycle on
 	const ana = await startAna(t);
 	await insertClosed(t, 30, positive);
 
-	const first = await ana.query(api.progress.list, {});
+	const first = await ana.query(api.progress.list, PERSONAL);
 	expect(first.cycles).toHaveLength(12);
 	expect(first.next).not.toBeNull();
 	const history = await readHistory(ana);
 	expect(history.pages).toBe(3);
 	expect(history.cycles.map((cycle) => cycle.startDate)).toEqual(newestFirst(30));
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 30,
 		exact: true,
 		hasActive: true,
@@ -583,7 +600,7 @@ test("exactly 12 cycles fill one page and there is no next page", async () => {
 	const ana = await startAna(t);
 	await insertClosed(t, 12, positive);
 
-	const page = await ana.query(api.progress.list, {});
+	const page = await ana.query(api.progress.list, PERSONAL);
 	expect(page.cycles).toHaveLength(12);
 	expect(page.next).toBeNull();
 });
@@ -593,10 +610,10 @@ test("13 cycles give a full page and a last page with the one left, never an emp
 	const ana = await startAna(t);
 	await insertClosed(t, 13, positive);
 
-	const first = await ana.query(api.progress.list, {});
+	const first = await ana.query(api.progress.list, PERSONAL);
 	expect(first.cycles).toHaveLength(12);
 	expect(first.next).not.toBeNull();
-	const last = await ana.query(api.progress.list, { before: first.next ?? undefined });
+	const last = await ana.query(api.progress.list, { ...PERSONAL, before: first.next ?? undefined });
 	expect(last.cycles.map((cycle) => cycle.startDate)).toEqual([weekStart(0)]);
 	expect(last.next).toBeNull();
 });
@@ -607,7 +624,7 @@ test("a full page followed only by idle cycles is the last page: no empty page a
 	// Weeks 0-2 are idle and oldest; weeks 3-14 are the 12 active ones.
 	await insertClosed(t, 15, (i) => (i < 3 ? idle() : positive()));
 
-	const page = await ana.query(api.progress.list, {});
+	const page = await ana.query(api.progress.list, PERSONAL);
 	expect(page.cycles).toHaveLength(12);
 	expect(page.next).toBeNull();
 });
@@ -632,7 +649,7 @@ test("a long idle stretch never hides the cycles behind it: later pages reach th
 	// Weeks 0-4 are active, weeks 5-154 are idle and newer.
 	await insertClosed(t, 155, (i) => (i < 5 ? positive() : idle()));
 
-	const first = await ana.query(api.progress.list, {});
+	const first = await ana.query(api.progress.list, PERSONAL);
 	expect(first.cycles).toEqual([]);
 	expect(first.next).not.toBeNull();
 	const history = await readHistory(ana);
@@ -646,10 +663,10 @@ test("a malformed cursor is rejected and a cursor before the first cycle gives a
 	const ana = await startAna(t);
 	await insertClosed(t, 3, positive);
 
-	await expect(ana.query(api.progress.list, { before: "ayer" })).rejects.toThrow(
+	await expect(ana.query(api.progress.list, { ...PERSONAL, before: "ayer" })).rejects.toThrow(
 		"Revisa los datos e inténtalo otra vez.",
 	);
-	expect(await ana.query(api.progress.list, { before: "2000-01-01" })).toEqual({
+	expect(await ana.query(api.progress.list, { ...PERSONAL, before: "2000-01-01" })).toEqual({
 		cycles: [],
 		hidden: 0,
 		next: null,
@@ -662,7 +679,7 @@ test("a streak longer than the read budget is a lower bound, not an exact number
 	const ana = await startAna(t);
 	await insertClosed(t, 600, positive);
 
-	const result = await ana.query(api.progress.streak, {});
+	const result = await ana.query(api.progress.streak, PERSONAL);
 	expect(result.exact).toBe(false);
 	expect(result.hasActive).toBe(true);
 	expect(result.streak).toBeGreaterThan(0);
@@ -675,7 +692,7 @@ test("a cycle that went over inside the budget makes the streak exact even if th
 	// The 10th newest cycle (week 590) is the one that went over.
 	await insertClosed(t, 600, (i) => (i === 590 ? { needsCents: -1, wantsCents: 0 } : positive()));
 
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 9,
 		exact: true,
 		hasActive: true,
@@ -688,7 +705,7 @@ test("the activity checks count against the read budget", async () => {
 	// 300 idle cycles cost 300 documents + 300 checks: over 500, so the end is not reached.
 	await insertClosed(t, 300, idle);
 
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 0,
 		exact: false,
 		hasActive: false,
@@ -700,7 +717,7 @@ test("200 idle cycles fit in the read budget and the empty history is known to b
 	const ana = await startAna(t);
 	await insertClosed(t, 200, idle);
 
-	expect(await ana.query(api.progress.streak, {})).toEqual({
+	expect(await ana.query(api.progress.streak, PERSONAL)).toEqual({
 		streak: 0,
 		exact: true,
 		hasActive: false,
@@ -720,7 +737,7 @@ test("a split change mid-cycle counts as assigned money and spent never goes neg
 	await spend(ana, "2026-10-24", "wants", 2_000);
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles).toEqual([
 		october({
 			marginCents: 38_500,
@@ -751,7 +768,7 @@ test("paying a commitment counts as spent in its envelope", async () => {
 	await ana.mutation(api.commitments.markPaid, { space: "personal", id });
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles[0]).toMatchObject({
 		left: { needsCents: 20_000, wantsCents: 15_000 },
 		detail: {
@@ -774,7 +791,7 @@ test("a withdrawal from the fund counts as assigned to Necesidades", async () =>
 	});
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles[0]).toMatchObject({
 		left: { needsCents: 27_000, wantsCents: 15_000 },
 		detail: {
@@ -797,7 +814,7 @@ test("an early salary belongs to the next cycle's assigned, not to the one that 
 	});
 	await closeOn(ana, "2026-12-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles.map((cycle) => cycle.detail)).toEqual([
 		{
 			kind: "ok",
@@ -822,7 +839,7 @@ test("what passed to the fund is the real transfer: a saving movement at the end
 	await ana.mutation(api.transactions.addSaving, { space: "personal", amountCents: 3_000 });
 	await closeOn(ana, "2026-11-01");
 
-	const { cycles } = await ana.query(api.progress.list, {});
+	const { cycles } = await ana.query(api.progress.list, PERSONAL);
 	expect(cycles[0]).toMatchObject({ detail: { kind: "ok", fundedCents: 7_000 } });
 	const fund = await ana.query(api.goals.fund, { space: "personal", today: "2026-11-01" });
 	expect(fund.fundCents).toBe(10_000);
@@ -841,7 +858,7 @@ test("closing a cycle again does not recompute its summary", async () => {
 	const t = harness();
 	const ana = await startAna(t);
 	await closeOn(ana, "2026-11-01");
-	const before = await ana.query(api.progress.list, {});
+	const before = await ana.query(api.progress.list, PERSONAL);
 	const { space, cycle } = await firstCycle(t);
 	await t.run(async (ctx) => {
 		await ctx.db.insert("transactions", {
@@ -858,15 +875,15 @@ test("closing a cycle again does not recompute its summary", async () => {
 		await closeCycle(ctx, space, closed, "someone");
 	});
 
-	expect(await ana.query(api.progress.list, {})).toEqual(before);
+	expect(await ana.query(api.progress.list, PERSONAL)).toEqual(before);
 });
 
 test("without a session nobody can read the progress", async () => {
 	const t = harness();
 	await startAna(t);
 
-	await expect(t.query(api.progress.list, {})).rejects.toThrow();
-	await expect(t.query(api.progress.streak, {})).rejects.toThrow();
+	await expect(t.query(api.progress.list, PERSONAL)).rejects.toThrow();
+	await expect(t.query(api.progress.streak, PERSONAL)).rejects.toThrow();
 });
 
 test("each person sees only their own cycles, and a closed household cycle is not in the personal history", async () => {
@@ -890,8 +907,35 @@ test("each person sees only their own cycles, and a closed household cycle is no
 	const luis = await signIn(t, "luis@correo.com", "Luis");
 	await luis.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Luis" });
 
-	const anas = await ana.query(api.progress.list, {});
+	const anas = await ana.query(api.progress.list, PERSONAL);
 	expect(anas.cycles.map((cycle) => cycle.startDate)).toEqual(["2026-10-20"]);
-	expect(await luis.query(api.progress.list, {})).toEqual({ cycles: [], hidden: 0, next: null });
-	expect(await luis.query(api.progress.streak, {})).toMatchObject({ streak: 0, hasActive: false });
+	expect(await luis.query(api.progress.list, PERSONAL)).toEqual({
+		cycles: [],
+		hidden: 0,
+		next: null,
+	});
+	expect(await luis.query(api.progress.streak, PERSONAL)).toMatchObject({
+		streak: 0,
+		hasActive: false,
+	});
+});
+
+test("Progreso of the household lists its closed cycles for both, and Personal does not show them", async () => {
+	const { ana, luis } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addIncome, { space: "household", amountCents: 100_000 });
+	await luis.as.mutation(api.transactions.addExpense, {
+		space: "household",
+		amountCents: 10_000,
+		envelope: "needs",
+	});
+	at("2026-11-16");
+	await ana.as.mutation(api.cycles.ensureOpen, { space: "household" });
+
+	const seenByAna = await ana.as.query(api.progress.list, { space: "household" });
+	expect(seenByAna.cycles.map((cycle) => cycle.marginCents)).toEqual([70_000]);
+	expect(await luis.as.query(api.progress.list, { space: "household" })).toEqual(seenByAna);
+	expect(await luis.as.query(api.progress.streak, { space: "household" })).toMatchObject({
+		streak: 1,
+	});
+	expect((await ana.as.query(api.progress.list, PERSONAL)).cycles).toEqual([]);
 });

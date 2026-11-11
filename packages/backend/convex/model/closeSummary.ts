@@ -2,13 +2,15 @@ import type { Infer } from "convex/values";
 import { AMOUNT_KEYS } from "../../shared/budget";
 import type { Doc } from "../_generated/dataModel";
 import type { closeSummary } from "../schema";
+import { assignedChange } from "./budget";
 
 export type CloseSummary = Infer<typeof closeSummary>;
 
 /**
- * Adds up what entered (carry, income shares, fund withdrawals, split moves) and left (expenses)
- * Necesidades and Gustos from the cycle's own records. It only answers "ok" when that agrees with
- * the balance the cycle ended with, so an unrecorded flow is flagged instead of shown as fact.
+ * Adds up what entered (carry, income shares, aportes, fund withdrawals, split moves) and left
+ * (expenses, aportes sent) Necesidades and Gustos from the cycle's own records and the aportes it
+ * got. It only answers "ok" when that agrees with the balance the cycle ended with, so an
+ * unrecorded flow is flagged instead of shown as fact.
  */
 export function summarizeClose(
 	cycle: Doc<"cycles">,
@@ -22,10 +24,10 @@ export function summarizeClose(
 	};
 	const spent = { needsCents: 0, wantsCents: 0 };
 	for (const row of rows) {
-		if (row.kind === "income") {
-			assigned.needsCents += row.allocation.needsCents;
-			assigned.wantsCents += row.allocation.wantsCents;
-		} else if (row.kind === "withdrawal") {
+		const change = assignedChange(row, cycle._id);
+		assigned.needsCents += change.needsCents;
+		assigned.wantsCents += change.wantsCents;
+		if (row.kind === "withdrawal") {
 			assigned.needsCents += row.amountCents;
 		} else if (row.kind === "expense") {
 			spent[AMOUNT_KEYS[row.envelope]] += row.amountCents;
