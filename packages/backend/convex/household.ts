@@ -76,11 +76,17 @@ async function isEmptyHousehold(ctx: QueryCtx, space: Doc<"spaces">) {
 	]);
 	if (commitment || goal || cycles.length > MAX_EMPTY_CYCLES) return false;
 	for (const cycle of cycles) {
-		const row = await ctx.db
-			.query("transactions")
-			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-			.first();
-		if (row) return false;
+		const [row, aporte] = await Promise.all([
+			ctx.db
+				.query("transactions")
+				.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+				.first(),
+			ctx.db
+				.query("transactions")
+				.withIndex("by_toCycleId", (q) => q.eq("toCycleId", cycle._id))
+				.first(),
+		]);
+		if (row || aporte) return false;
 	}
 	return true;
 }
@@ -420,7 +426,7 @@ export const isEmpty = query({
 	},
 });
 
-/** What each one put into this cycle: their direct incomes to the household. */
+/** What each one put into this cycle: their direct incomes to the household and their aportes. */
 export const contributions = query({
 	args: { today: v.string() },
 	returns: v.object({ mineCents: v.number(), partnerCents: v.number() }),
@@ -434,11 +440,17 @@ export const contributions = query({
 		const incomes = ctx.db
 			.query("transactions")
 			.withIndex("by_kind_cycleId", (q) => q.eq("kind", "income").eq("cycleId", cycle._id));
-		for await (const row of incomes) {
-			if (row.kind !== "income" || row.forNextCycle) continue;
+		const aportes = ctx.db
+			.query("transactions")
+			.withIndex("by_toCycleId", (q) => q.eq("toCycleId", cycle._id));
+		const add = (row: Doc<"transactions">) => {
 			if (row.userId === userId) totals.mineCents += row.amountCents;
 			else totals.partnerCents += row.amountCents;
+		};
+		for await (const row of incomes) {
+			if (row.kind === "income" && !row.forNextCycle) add(row);
 		}
+		for await (const row of aportes) add(row);
 		return totals;
 	},
 });

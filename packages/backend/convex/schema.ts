@@ -197,6 +197,7 @@ export default defineSchema({
 				...movement,
 				kind: v.literal("saving"),
 				goalId: v.optional(v.id("goals")),
+				auto: v.optional(v.literal(true)),
 			}),
 			v.object({
 				...movement,

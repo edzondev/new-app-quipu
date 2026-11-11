@@ -51,16 +51,14 @@ export const Route = createFileRoute("/_app")({
 	component: AppLayout,
 });
 
-// The pages that show one space. Progreso only knows Personal: its route sends Nuestro espacio back there.
-const SPACE_SCREENS = ["/home", "/movements", "/savings", "/commitments"];
-const PERSONAL_SCREENS = [...SPACE_SCREENS, "/progress"];
+const SPACE_SCREENS = ["/home", "/movements", "/progress", "/savings", "/commitments"];
 
 function AppLayout() {
 	const context = Route.useRouteContext();
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const pathname = useRouterState({ select: (state) => state.location.pathname });
 	const needsPlan =
-		context.space === "personal" && !context.hasPlan && PERSONAL_SCREENS.includes(pathname);
+		context.space === "personal" && !context.hasPlan && SPACE_SCREENS.includes(pathname);
 	// The live profile, not the beforeLoad snapshot: creating, leaving or losing the household on this
 	// page swaps the screen at once. The snapshot only covers the first load.
 	const needsHousehold =

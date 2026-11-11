@@ -16,8 +16,16 @@ const ENVELOPES = ["needs", "wants"] as const;
 const rowLayout =
 	"flex min-h-11 w-full flex-col items-start gap-1 py-3 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-x-4";
 
-function Summary({ cycle, children }: { cycle: Cycle; children?: ReactNode }) {
-	const { text, tone } = describeMargin(cycle.marginCents);
+function Summary({
+	cycle,
+	together,
+	children,
+}: {
+	cycle: Cycle;
+	together: boolean;
+	children?: ReactNode;
+}) {
+	const { text, tone } = describeMargin(cycle.marginCents, together);
 	return (
 		<>
 			<span className="min-w-0 wrap-break-word font-semibold">
@@ -40,7 +48,15 @@ function Line({ label, cents }: { label: string; cents: number }) {
 	);
 }
 
-function Breakdown({ left, detail }: { left: Cycle["left"]; detail: Detail }) {
+function Breakdown({
+	left,
+	detail,
+	together,
+}: {
+	left: Cycle["left"];
+	detail: Detail;
+	together: boolean;
+}) {
 	return (
 		<div className="space-y-4 pb-4">
 			{ENVELOPES.map((envelope) => {
@@ -60,13 +76,23 @@ function Breakdown({ left, detail }: { left: Cycle["left"]; detail: Detail }) {
 				);
 			})}
 			{detail.fundedCents > 0 ? (
-				<p className="text-sm">Ahorro: {formatMoney(detail.fundedCents)} pasó a tu fondo.</p>
+				<p className="text-sm">
+					Ahorro: {formatMoney(detail.fundedCents)} pasó a {together ? "su" : "tu"} fondo.
+				</p>
 			) : null}
 		</div>
 	);
 }
 
-export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: boolean }) {
+export function CycleRow({
+	cycle,
+	together,
+	defaultOpen,
+}: {
+	cycle: Cycle;
+	together: boolean;
+	defaultOpen: boolean;
+}) {
 	const { detail } = cycle;
 	return (
 		<li className="border-b border-border/60">
@@ -74,7 +100,7 @@ export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: bo
 				<Collapsible defaultOpen={defaultOpen}>
 					<h3>
 						<CollapsibleTrigger className={cn(rowLayout, "group")}>
-							<Summary cycle={cycle}>
+							<Summary cycle={cycle} together={together}>
 								<ChevronDown
 									aria-hidden
 									className="size-4 shrink-0 transition-transform group-data-panel-open:rotate-180"
@@ -83,13 +109,13 @@ export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: bo
 						</CollapsibleTrigger>
 					</h3>
 					<CollapsiblePanel>
-						<Breakdown left={cycle.left} detail={detail} />
+						<Breakdown left={cycle.left} detail={detail} together={together} />
 					</CollapsiblePanel>
 				</Collapsible>
 			) : (
 				<>
 					<h3 className={rowLayout}>
-						<Summary cycle={cycle} />
+						<Summary cycle={cycle} together={together} />
 					</h3>
 					<p className="-mt-1.5 pb-3 text-sm text-muted-foreground">
 						Detalle no disponible para este ciclo

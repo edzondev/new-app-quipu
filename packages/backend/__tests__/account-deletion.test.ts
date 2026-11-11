@@ -412,6 +412,44 @@ test("the owner deletes: the partner stays as owner with the fund, the history a
 	).toBe(30_000);
 });
 
+test("an aporte of who deletes stays in the household as their income, and its cycle closes adding up", async () => {
+	const { t, ana, luis } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addContribution, {
+		amountCents: 10_000,
+		envelope: "needs",
+		toEnvelope: "needs",
+		note: "Mercado",
+	});
+
+	await confirmDeletion(ana);
+	await runScheduled(t);
+
+	const { rows } = await luis.as.query(api.transactions.list, {
+		space: "household",
+		today: "2026-10-20",
+	});
+	expect(rows).toEqual([
+		expect.objectContaining({ kind: "income", amountCents: 10_000, note: "Mercado" }),
+	]);
+	expect(
+		(await luis.as.query(api.balances.getHome, { space: "household", today: "2026-10-20" }))
+			.needsCents,
+	).toBe(10_000);
+
+	vi.setSystemTime(new Date("2026-11-16T17:00:00.000Z"));
+	await luis.as.mutation(api.cycles.ensureOpen, { space: "household" });
+	const space = await getHouseholdSpace(t);
+	const closed = await t.run(async (ctx) =>
+		space
+			? ctx.db
+					.query("cycles")
+					.withIndex("by_space_start", (q) => q.eq("spaceId", space._id))
+					.first()
+			: null,
+	);
+	expect(closed?.closeSummary?.status).toBe("ok");
+});
+
 test("the invited one deletes: the owner keeps the household and is told who left", async () => {
 	const { t, ana, luis } = await joinedCouple();
 	await confirmDeletion(luis, "renzo@correo.com");

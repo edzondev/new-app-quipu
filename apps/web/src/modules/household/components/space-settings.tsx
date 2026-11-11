@@ -25,6 +25,7 @@ import { CycleDialog } from "#/modules/settings/components/cycle-dialog";
 import { SettingsGroup, SettingsRow } from "#/modules/settings/components/settings-row";
 import { SplitDialog } from "#/modules/settings/components/split-dialog";
 import { getCycleLines } from "#/modules/settings/cycle-summary";
+import { DownloadHistoryButton } from "./download-history-button";
 
 const DEFAULT_NAME = "Nuestro espacio";
 
@@ -116,6 +117,7 @@ function LeaveEditor({ partnerName, onDone }: { partnerName: string; onDone: () 
 				</FormSheetPanel>
 			) : null}
 			<FormSheetFooter variant="bare">
+				<DownloadHistoryButton label="Descargar mi historial" size="xl" className="rounded-full" />
 				<Button
 					size="xl"
 					className="rounded-full"

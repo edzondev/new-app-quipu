@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
-import { emptyMessage, LOAD_ERROR } from "../progress-text";
+import { emptyMessage, loadError } from "../progress-text";
 import { CycleRow } from "./cycle-row";
 
 export function RowsSkeleton() {
@@ -25,21 +25,23 @@ const MAX_EMPTY_SKIPS = 3;
  * `first`: nothing is shown above this page, so it carries the heading and the empty messages.
  */
 export function CyclesPage({
+	space,
 	before,
 	first = before === undefined,
 	skips = 0,
 }: {
+	space: "personal" | "household";
 	before?: string;
 	first?: boolean;
 	skips?: number;
 }) {
 	const [showNext, setShowNext] = useState(false);
-	const page = useQuery(convexQuery(api.progress.list, { before }));
+	const page = useQuery(convexQuery(api.progress.list, { space, before }));
 
 	if (page.isError) {
 		return (
 			<p role="alert" className="pt-4 text-sm text-warning-foreground">
-				{LOAD_ERROR}
+				{loadError(space === "household")}
 			</p>
 		);
 	}
@@ -47,7 +49,7 @@ export function CyclesPage({
 
 	const { cycles, hidden, next } = page.data;
 	if (cycles.length === 0 && next !== null && skips < MAX_EMPTY_SKIPS) {
-		return <CyclesPage before={next} first={first} skips={skips + 1} />;
+		return <CyclesPage space={space} before={next} first={first} skips={skips + 1} />;
 	}
 	const firstWithDetail = first ? cycles.findIndex((c) => c.detail.kind === "ok") : -1;
 
@@ -62,15 +64,22 @@ export function CyclesPage({
 					) : null}
 					<ul className="mt-2">
 						{cycles.map((cycle, index) => (
-							<CycleRow key={cycle.id} cycle={cycle} defaultOpen={index === firstWithDetail} />
+							<CycleRow
+								key={cycle.id}
+								cycle={cycle}
+								together={space === "household"}
+								defaultOpen={index === firstWithDetail}
+							/>
 						))}
 					</ul>
 				</>
 			) : next === null ? (
-				<p className="pt-4 text-sm text-muted-foreground">{emptyMessage(first, hidden)}</p>
+				<p className="pt-4 text-sm text-muted-foreground">
+					{emptyMessage(first, hidden, space === "household")}
+				</p>
 			) : null}
 			{next === null ? null : showNext ? (
-				<CyclesPage before={next} />
+				<CyclesPage space={space} before={next} />
 			) : (
 				<Button
 					type="button"

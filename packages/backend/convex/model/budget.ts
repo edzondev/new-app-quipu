@@ -8,7 +8,7 @@ import {
 } from "../../shared/budget";
 import { isReserved } from "../../shared/commitments";
 import { daysBetween } from "../../shared/dates";
-import type { Doc } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { getCommitmentOccurrences } from "./commitments";
 
@@ -36,6 +36,21 @@ export async function getReserved(
 	return held.reduce(addAmounts, ZERO_AMOUNTS);
 }
 
+export function assignedChange(tx: Doc<"transactions">, cycleId: Id<"cycles">): EnvelopeAmounts {
+	if (tx.kind === "income") return tx.forNextCycle ? ZERO_AMOUNTS : tx.allocation;
+	if (tx.kind !== "contribution") return ZERO_AMOUNTS;
+	return tx.toCycleId === cycleId
+		? { ...ZERO_AMOUNTS, [AMOUNT_KEYS[tx.toEnvelope]]: tx.amountCents }
+		: { ...ZERO_AMOUNTS, [AMOUNT_KEYS[tx.envelope]]: -tx.amountCents };
+}
+
+export function receivedAportes(ctx: QueryCtx | MutationCtx, cycleId: Id<"cycles">, cap: number) {
+	return ctx.db
+		.query("transactions")
+		.withIndex("by_toCycleId", (q) => q.eq("toCycleId", cycleId))
+		.take(cap);
+}
+
 /** The day's number and what feeds it. Shared by every read of the live budget. */
 export async function getDayBudget(
 	ctx: QueryCtx,
@@ -45,14 +60,16 @@ export async function getDayBudget(
 ) {
 	const { needsCents, wantsCents, savingsCents } = cycle.envelopes;
 
-	const [reserved, cycleTx] = await Promise.all([
+	const [reserved, cycleTx, received] = await Promise.all([
 		getReserved(ctx, spaceId, cycle.endDate, today),
 		ctx.db
 			.query("transactions")
 			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
 			.take(500),
+		receivedAportes(ctx, cycle._id, 500),
 	]);
-	const hasIncome = cycleTx.some((tx) => tx.kind === "income" && !tx.forNextCycle);
+	const hasIncome =
+		received.length > 0 || cycleTx.some((tx) => tx.kind === "income" && !tx.forNextCycle);
 	const earlyCents = cycleTx.reduce(
 		(sum, tx) => (tx.kind === "income" && tx.forNextCycle ? sum + tx.amountCents : sum),
 		0,
@@ -65,8 +82,8 @@ export async function getDayBudget(
 		wantsCents: Math.max(0, cycle.carryIn.wantsCents),
 		savingsCents: 0,
 	};
-	const assigned = cycleTx.reduce(
-		(sum, tx) => (tx.kind === "income" && !tx.forNextCycle ? addAmounts(sum, tx.allocation) : sum),
+	const assigned = [...cycleTx, ...received].reduce(
+		(sum, tx) => addAmounts(sum, assignedChange(tx, cycle._id)),
 		carried,
 	);
 	const pendingCents = sumAmounts(reserved);
