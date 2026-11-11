@@ -1,7 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { planRowLine } from "@quipu/backend/shared/billing";
 import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
@@ -13,6 +13,7 @@ import { ACTION } from "#/lib/typography";
 import { getCycleLines } from "../cycle-summary";
 import { passkeysQuery } from "../auth-queries";
 import { CycleDialog } from "./cycle-dialog";
+import { DeleteAccountDialog } from "./delete-account-dialog";
 import { SecurityDialog } from "./security-dialog";
 import { SettingsGroup, SettingsRow } from "./settings-row";
 import { SplitDialog } from "./split-dialog";
@@ -105,6 +106,7 @@ function PlusRow({ today }: { today: string }) {
 function Settings({ today }: { today: string }) {
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const passkeys = useQuery(passkeysQuery);
+	const { eliminar } = useSearch({ from: "/_app/settings" });
 
 	if (profile.isError) return <ReloadError message="No pudimos cargar tus ajustes." />;
 	if (!profile.data) return <Loading />;
@@ -145,6 +147,10 @@ function Settings({ today }: { today: string }) {
 					/>
 				))}
 			</SettingsGroup>
+
+			<div className="mt-8">
+				<DeleteAccountDialog hasHousehold={hasHousehold} defaultOpen={!!eliminar} />
+			</div>
 		</div>
 	);
 }

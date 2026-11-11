@@ -51,7 +51,7 @@ test("Ajustes tiene Ciclo, Reparto, Llaves y sesiones y Legal, y nada de lo que 
 		await expect(page.getByText(title, { exact: true })).toBeVisible();
 	}
 	await expect(page.getByText("Necesidades 50% · Gustos 30% · Ahorro 20%")).toBeVisible();
-	for (const missing of ["Apariencia", "Cerrar sesión", "Eliminar cuenta", "Suscripción"]) {
+	for (const missing of ["Apariencia", "Cerrar sesión", "Suscripción"]) {
 		await expect(page.getByText(missing)).toHaveCount(0);
 	}
 });
