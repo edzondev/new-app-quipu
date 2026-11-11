@@ -6,7 +6,13 @@ import { ShieldCheck, Target, Users } from "lucide-react";
 import { type ComponentProps, useRef } from "react";
 import { Button } from "#/components/ui/button";
 import { toastManager } from "#/components/ui/toast";
-import { PLUS_CARD_BUTTON as BIG, PlusCard, type PlusRow } from "./plus-card";
+import {
+	PLUS_CARD_BUTTON as BIG,
+	PlusCard,
+	PlusCardHeading,
+	type PlusRow,
+	PlusRows,
+} from "./plus-card";
 import type { PlusFeature } from "./plus-features";
 
 const PITCH: Record<PlusFeature, { title: string; description: string; rows: PlusRow[] }> = {
@@ -55,25 +61,31 @@ export function PlusPitch({
 	onTrialStarted: () => void;
 	finalFocus: ComponentProps<typeof PlusCard>["finalFocus"];
 }) {
+	const { title, description, rows } = PITCH[feature];
+	const titleRef = useRef<HTMLHeadingElement>(null);
 	return (
-		<PlusCard
-			pill="Plus"
-			{...PITCH[feature]}
-			foot={trialAvailable ? "Sin tarjeta. Al terminar vuelves a Gratis." : undefined}
-			finalFocus={finalFocus}
-		>
+		<PlusCard initialFocus={titleRef} finalFocus={finalFocus}>
+			<PlusCardHeading pill="Plus" title={title} description={description} titleRef={titleRef} />
+			<PlusRows rows={rows} />
+			<div className="mt-6 grid gap-2.5">
+				{trialAvailable ? (
+					<TrialActions onPlans={onPlans} onStarted={onTrialStarted} />
+				) : (
+					<>
+						<Button size="xl" className={BIG} onClick={onPlans}>
+							Suscribirme
+						</Button>
+						<Button size="xl" variant="outline" className={BIG} onClick={onDismiss}>
+							Ahora no
+						</Button>
+					</>
+				)}
+			</div>
 			{trialAvailable ? (
-				<TrialActions onPlans={onPlans} onStarted={onTrialStarted} />
-			) : (
-				<>
-					<Button size="xl" className={BIG} onClick={onPlans}>
-						Suscribirme
-					</Button>
-					<Button size="xl" variant="outline" className={BIG} onClick={onDismiss}>
-						Ahora no
-					</Button>
-				</>
-			)}
+				<p className="mt-3.5 text-center text-xs text-muted-foreground">
+					Sin tarjeta. Al terminar vuelves a Gratis.
+				</p>
+			) : null}
 		</PlusCard>
 	);
 }

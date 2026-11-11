@@ -1,86 +1,105 @@
+import { cn } from "cn";
 import type { LucideIcon } from "lucide-react";
-import { type ComponentProps, type ReactNode, useRef } from "react";
+import type { ComponentProps, ReactNode, Ref } from "react";
 import { QuipuMark } from "#/components/quipu-mark";
-import { DialogDescription, DialogPanel, DialogPopup, DialogTitle } from "#/components/ui/dialog";
+import { DialogDescription, DialogPopup, DialogTitle } from "#/components/ui/dialog";
 
 export const PLUS_CARD_BUTTON = "h-12 w-full rounded-full sm:h-12";
 
 export type PlusRow = { Icon: LucideIcon; name: string; detail: string };
 
-/** B1 and T1: a centered card under the envelope cords, with the plan pill and what it brings. */
+/** B1 and T1: a centered card under the envelope cords. It scrolls inside on short screens. */
 export function PlusCard({
-	pill,
-	title,
-	description,
-	rows,
-	note,
-	foot,
+	initialFocus,
 	finalFocus,
+	corner,
+	className,
 	children,
 }: {
-	pill: string;
-	title: string;
-	description: string;
-	rows: PlusRow[];
-	note?: ReactNode;
-	foot?: string;
+	initialFocus: ComponentProps<typeof DialogPopup>["initialFocus"];
 	finalFocus?: ComponentProps<typeof DialogPopup>["finalFocus"];
+	/** Sits over the cords on the right, across from the X. */
+	corner?: ReactNode;
+	className?: string;
 	children: ReactNode;
 }) {
-	const titleRef = useRef<HTMLHeadingElement>(null);
 	return (
 		<DialogPopup
 			bottomStickOnMobile={false}
-			initialFocus={titleRef}
+			initialFocus={initialFocus}
 			finalFocus={finalFocus}
-			className="max-w-110 rounded-3xl before:rounded-[inherit] md:rounded-[28px]"
+			// @starting-style: it also enters when it mounts already open (B1), which Base UI does not animate.
+			className={cn(
+				"max-w-110 overflow-y-auto rounded-3xl before:rounded-[inherit] starting:opacity-0 md:rounded-[28px] motion-safe:sm:starting:scale-98",
+				className,
+			)}
 			closeProps={{
 				className:
 					"absolute start-3 top-3 size-11 rounded-full border border-border bg-popover sm:size-11",
 			}}
 		>
-			<DialogPanel className="p-0" scrollFade={false}>
-				<div className="relative grid h-29 place-items-center overflow-hidden rounded-t-3xl bg-muted md:h-32 md:rounded-t-[28px]">
-					<Cords />
-					<span className="relative grid size-19.5 place-items-center rounded-full bg-popover shadow-md/5">
-						<QuipuMark className="h-10 w-11" />
-					</span>
-				</div>
-				<div className="px-6 pt-6 pb-6 md:px-7.5 md:pb-7">
-					<span className="mb-3 inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-						{pill}
-					</span>
-					<DialogTitle
-						ref={titleRef}
-						tabIndex={-1}
-						className="font-sans text-[31px] leading-tight font-semibold tracking-tight outline-none md:text-[34px]"
-					>
-						{title}
-					</DialogTitle>
-					<DialogDescription className="mt-3 text-[13px] leading-relaxed">
-						{description}
-					</DialogDescription>
-					<ul className="mt-5.5 grid gap-4">
-						{rows.map(({ Icon, name, detail }) => (
-							<li key={name} className="flex items-start gap-3 text-[13px]">
-								<Icon aria-hidden className="mt-px size-5 shrink-0 text-envelope-savings" />
-								<span className="min-w-0">
-									{name}
-									<span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
-								</span>
-							</li>
-						))}
-					</ul>
-					{note ? (
-						<p className="mt-5.5 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-							{note}
-						</p>
-					) : null}
-					<div className="mt-6 grid gap-2.5">{children}</div>
-					{foot ? <p className="mt-3.5 text-center text-xs text-muted-foreground">{foot}</p> : null}
-				</div>
-			</DialogPanel>
+			<div className="relative grid h-29 shrink-0 place-items-center overflow-hidden rounded-t-[inherit] bg-muted md:h-32">
+				<Cords />
+				<span className="relative grid size-19.5 place-items-center rounded-full bg-popover shadow-md/5">
+					<QuipuMark className="h-10 w-11" />
+				</span>
+			</div>
+			{corner}
+			<div className="flex flex-1 flex-col px-6 pt-6 pb-6 md:px-7.5 md:pb-7">{children}</div>
 		</DialogPopup>
+	);
+}
+
+export function PlusCardHeading({
+	pill,
+	title,
+	description,
+	titleRef,
+	className,
+}: {
+	pill?: string;
+	title: string;
+	description: string;
+	titleRef: Ref<HTMLHeadingElement>;
+	className?: string;
+}) {
+	return (
+		<>
+			{pill ? (
+				<span className="mb-3 inline-flex self-start rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+					{pill}
+				</span>
+			) : null}
+			<DialogTitle
+				ref={titleRef}
+				tabIndex={-1}
+				className={cn(
+					"font-sans text-[31px] leading-tight font-semibold tracking-tight wrap-anywhere outline-none md:text-[34px]",
+					className,
+				)}
+			>
+				{title}
+			</DialogTitle>
+			<DialogDescription className="mt-3 max-w-89 text-[13px] leading-relaxed">
+				{description}
+			</DialogDescription>
+		</>
+	);
+}
+
+export function PlusRows({ rows, className }: { rows: PlusRow[]; className?: string }) {
+	return (
+		<ul className={cn("mt-5.5 grid gap-4 text-[13px]", className)}>
+			{rows.map(({ Icon, name, detail }) => (
+				<li key={name} className="flex items-start gap-3">
+					<Icon aria-hidden className="mt-px size-5 shrink-0 text-envelope-savings" />
+					<span className="min-w-0">
+						{name}
+						<span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
+					</span>
+				</li>
+			))}
+		</ul>
 	);
 }
 
