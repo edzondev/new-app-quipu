@@ -15,7 +15,7 @@ function useGate(blocked: boolean) {
 		title: NO_PLUS,
 		onClick: (event: MouseEvent<HTMLElement>) => {
 			event.preventDefault();
-			openPlus({ highlight: "household", opener: event.currentTarget });
+			openPlus({ feature: "household", opener: event.currentTarget });
 		},
 	};
 }

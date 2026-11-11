@@ -25,7 +25,7 @@ function ReadOnlyStrip({ payerName, payerIsMe }: { payerName: string | null; pay
 			<Button
 				variant="outline"
 				className="rounded-full pointer-coarse:min-h-11"
-				onClick={(event) => openPlus({ highlight: "household", opener: event.currentTarget })}
+				onClick={(event) => openPlus({ feature: "household", opener: event.currentTarget })}
 			>
 				{payerIsMe ? "Renovar" : "Pagar yo"}
 			</Button>

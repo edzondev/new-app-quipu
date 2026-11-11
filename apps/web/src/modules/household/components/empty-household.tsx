@@ -17,7 +17,7 @@ export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasP
 			await shareInvite(code, firstName);
 		},
 		onError: (error) => {
-			if (needsPlus(error)) openPlus({ highlight: "household" });
+			if (needsPlus(error)) openPlus({ feature: "household" });
 		},
 	});
 
@@ -37,7 +37,7 @@ export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasP
 					onClick={(event) =>
 						hasPlus
 							? invite.mutate()
-							: openPlus({ highlight: "household", opener: event.currentTarget })
+							: openPlus({ feature: "household", opener: event.currentTarget })
 					}
 				>
 					Invitar a tu pareja

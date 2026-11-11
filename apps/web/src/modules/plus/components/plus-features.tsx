@@ -8,12 +8,12 @@ const FEATURES = [
 	{ key: "progress", Icon: ChartLine, name: "Progreso completo", detail: "Compara tus ciclos." },
 ] as const;
 
-export type PlusHighlight = "household" | "goals";
+export type PlusFeature = "household" | "goals";
 
 const HEAD = "pb-3 text-xs font-medium text-muted-foreground";
 const MARK = "border-t border-border text-center";
 
-export function PlusFeatures({ highlight }: { highlight?: PlusHighlight }) {
+export function PlusFeatures({ highlight }: { highlight?: PlusFeature }) {
 	return (
 		<table className="w-full table-fixed border-separate border-spacing-0 text-left">
 			<caption className="sr-only">Funciones de Gratis y Quipu Plus</caption>

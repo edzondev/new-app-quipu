@@ -105,7 +105,7 @@ function Savings({
 				goals={goals.data}
 				onNew={(event) =>
 					goalNeedsPlus
-						? openPlus({ highlight: "goals", opener: event.currentTarget })
+						? openPlus({ feature: "goals", opener: event.currentTarget })
 						: setPanel({ kind: "newGoal" })
 				}
 				onContribute={(id) => setPanel({ kind: "contributeGoal", id })}
@@ -129,7 +129,7 @@ function Savings({
 				onClose={close}
 				onNeedsPlus={(draft) => {
 					close();
-					openPlus({ highlight: "goals", onClose: () => setPanel({ kind: "newGoal", draft }) });
+					openPlus({ feature: "goals", onClose: () => setPanel({ kind: "newGoal", draft }) });
 				}}
 			/>
 			<WithdrawDialog

@@ -12,13 +12,13 @@ import { QuipuMark } from "#/components/quipu-mark";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useCheckout } from "../use-checkout";
-import { type PlusHighlight, PlusFeatures } from "./plus-features";
+import { type PlusFeature, PlusFeatures } from "./plus-features";
 
 export function PlusOffer({
 	highlight,
 	finalFocus,
 }: {
-	highlight?: PlusHighlight;
+	highlight?: PlusFeature;
 	finalFocus: ComponentProps<typeof FormSheetPopup>["finalFocus"];
 }) {
 	const checkout = useCheckout();
