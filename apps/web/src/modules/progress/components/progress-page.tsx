@@ -45,12 +45,12 @@ function Progress({ today }: { today: string }) {
 	if (!streak.data) return <RowsSkeleton />;
 
 	return (
-		<div className="mx-auto w-full max-w-150">
+		<>
 			<header>
 				<h1 className="font-heading text-4xl font-medium tracking-tight">Progreso</h1>
 				{streak.data.hasActive ? <Streak {...streak.data} /> : null}
 			</header>
 			<CyclesPage />
-		</div>
+		</>
 	);
 }
