@@ -3,10 +3,11 @@ import { api } from "../convex/_generated/api";
 import { planPrices } from "../shared/billing";
 import { addProduct, harness, startUser, subscribe } from "./couple";
 
-const sent = vi.hoisted(() => ({
-	checkouts: [] as { products: string[]; currency: string; successUrl: string }[],
-	portals: [] as { returnUrl: string }[],
-}));
+const sent = vi.hoisted(() => {
+	const checkouts: { products: string[]; currency: string; successUrl: string }[] = [];
+	const portals: { returnUrl: string }[] = [];
+	return { checkouts, portals };
+});
 
 vi.mock("@polar-sh/sdk/funcs/customersGetExternal.js", () => ({
 	customersGetExternal: async () => ({ ok: true, value: { id: "cus_polar" } }),
@@ -85,6 +86,21 @@ test("a return path to another site comes back to Inicio", async () => {
 	expect(sent.checkouts.map((checkout) => checkout.successUrl)).toEqual(
 		outside.map(() => "http://localhost:3000/home?checkout=return"),
 	);
+});
+
+test("a return path longer than 512 characters comes back to Inicio", async () => {
+	const { user } = await withPlans();
+	for (const returnTo of [`/${"a".repeat(511)}`, `/${"a".repeat(512)}`]) {
+		await user.as.action(api.billing.startCheckout, {
+			interval: "month",
+			currency: "pen",
+			returnTo,
+		});
+	}
+	expect(sent.checkouts.map((checkout) => checkout.successUrl)).toEqual([
+		`http://localhost:3000/${"a".repeat(511)}?checkout=return`,
+		"http://localhost:3000/home?checkout=return",
+	]);
 });
 
 test("the portal sends the person back to the same page, without the payment flag", async () => {
