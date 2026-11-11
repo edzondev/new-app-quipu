@@ -11,20 +11,24 @@ import { useHouseholdGate } from "#/modules/household/use-read-only-gate";
 export function ActionDialog({
 	label,
 	gated = false,
+	defaultOpen = false,
+	className = ACTION,
 	children,
 }: {
 	label: string;
 	gated?: boolean;
+	defaultOpen?: boolean;
+	className?: string;
 	children: (close: () => void) => ReactNode;
 }) {
-	const [open, setOpen] = useState(false);
+	const [open, setOpen] = useState(defaultOpen);
 	const gate = useHouseholdGate(gated);
 	return (
 		<>
 			<button
 				type="button"
 				aria-haspopup="dialog"
-				className={ACTION}
+				className={className}
 				onClick={() => setOpen(true)}
 				{...gate}
 			>

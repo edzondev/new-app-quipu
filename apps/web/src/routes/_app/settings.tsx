@@ -5,6 +5,8 @@ import { ensureOpenCycle } from "#/lib/ensure-open-cycle";
 import { SettingsPage } from "#/modules/settings/components/settings-page";
 
 export const Route = createFileRoute("/_app/settings")({
+	validateSearch: (search: Record<string, unknown>): { eliminar?: true } =>
+		search.eliminar === true ? { eliminar: true } : {},
 	loader: async ({ context }) => {
 		await context.queryClient.query(convexQuery(api.profiles.myProfile, {}));
 		// The plan and split are always the personal ones, even with `?space=household` in the URL.

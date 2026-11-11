@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as EliminandoCuentaRouteImport } from './routes/eliminando-cuenta'
+import { Route as EliminarCuentaRouteImport } from './routes/eliminar-cuenta'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -39,6 +41,16 @@ const AppRoute = AppRouteImport.update({
 } as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EliminandoCuentaRoute = EliminandoCuentaRouteImport.update({
+  id: '/eliminando-cuenta',
+  path: '/eliminando-cuenta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EliminarCuentaRoute = EliminarCuentaRouteImport.update({
+  id: '/eliminar-cuenta',
+  path: '/eliminar-cuenta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -119,6 +131,8 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/eliminando-cuenta': typeof EliminandoCuentaRoute
+  '/eliminar-cuenta': typeof EliminarCuentaRoute
   '/onboarding': typeof OnboardingRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -137,6 +151,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/eliminando-cuenta': typeof EliminandoCuentaRoute
+  '/eliminar-cuenta': typeof EliminarCuentaRoute
   '/onboarding': typeof OnboardingRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -158,6 +174,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/eliminando-cuenta': typeof EliminandoCuentaRoute
+  '/eliminar-cuenta': typeof EliminarCuentaRoute
   '/onboarding': typeof OnboardingRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -178,6 +196,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/eliminando-cuenta'
+    | '/eliminar-cuenta'
     | '/onboarding'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -196,6 +216,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/eliminando-cuenta'
+    | '/eliminar-cuenta'
     | '/onboarding'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -216,6 +238,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/eliminando-cuenta'
+    | '/eliminar-cuenta'
     | '/onboarding'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -237,6 +261,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  EliminandoCuentaRoute: typeof EliminandoCuentaRoute
+  EliminarCuentaRoute: typeof EliminarCuentaRoute
   OnboardingRoute: typeof OnboardingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -266,6 +292,20 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/eliminando-cuenta': {
+      id: '/eliminando-cuenta'
+      path: '/eliminando-cuenta'
+      fullPath: '/eliminando-cuenta'
+      preLoaderRoute: typeof EliminandoCuentaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/eliminar-cuenta': {
+      id: '/eliminar-cuenta'
+      path: '/eliminar-cuenta'
+      fullPath: '/eliminar-cuenta'
+      preLoaderRoute: typeof EliminarCuentaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -414,6 +454,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  EliminandoCuentaRoute: EliminandoCuentaRoute,
+  EliminarCuentaRoute: EliminarCuentaRoute,
   OnboardingRoute: OnboardingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

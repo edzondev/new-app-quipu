@@ -33,6 +33,7 @@ export const Route = createFileRoute("/_app")({
 	beforeLoad: async ({ context, search }) => {
 		if (!context.isAuthenticated) throw redirect({ to: "/sign-in" });
 		const profile = await context.queryClient.query(convexQuery(api.profiles.myProfile, {}));
+		if (profile?.deletionRunsAt) throw redirect({ to: "/eliminando-cuenta" });
 		// Someone who joined Nuestro espacio can arm their Personal later.
 		if (!profile || (!profile.plan && !profile.hasHousehold)) throw redirect({ to: "/onboarding" });
 		const hasPlan = profile.plan !== null;
