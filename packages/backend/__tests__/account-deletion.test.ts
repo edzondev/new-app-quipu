@@ -103,14 +103,6 @@ function getHouseholdSpace(t: Harness) {
 	);
 }
 
-function scheduledPurges(t: Harness) {
-	return t.run(async (ctx) =>
-		(await ctx.db.system.query("_scheduled_functions").take(20)).filter((job) =>
-			job.name.includes("accountDeletion:purge"),
-		),
-	);
-}
-
 test("runsAtFor is Lima midnight of today plus 15 days, even at 23:30 in Lima", () => {
 	expect(runsAtFor(getLimaDate(new Date("2026-10-21T04:30:00Z")))).toBe(RUNS_AT);
 	expect(runsAtFor("2026-10-20")).toBe(RUNS_AT);
@@ -140,7 +132,7 @@ test("requestCode is refused while the deletion is pending", async () => {
 	);
 });
 
-test("a good code stores the date, closes every session and schedules the purge for that date", async () => {
+test("a good code stores the date and closes every session", async () => {
 	const { t, ana } = await alone();
 	await t.mutation(components.betterAuth.adapter.create, {
 		input: {
@@ -161,10 +153,9 @@ test("a good code stores the date, closes every session and schedules the purge 
 	expect(await ana.as.query(api.profiles.myProfile, {})).toBeNull();
 	const back = await signBackIn(t, ana);
 	expect((await back.query(api.profiles.myProfile, {}))?.deletionRunsAt).toBe(RUNS_AT);
-	expect((await scheduledPurges(t)).map((job) => job.scheduledTime)).toEqual([RUNS_AT]);
 });
 
-test("a wrong code says so and stores and schedules nothing", async () => {
+test("a wrong code says so, stores nothing and nothing runs at the date", async () => {
 	const { t, ana } = await alone();
 	await ask(ana);
 	expect(await ana.as.mutation(api.accountDeletion.confirm, { code: "000000" })).toEqual({
@@ -173,7 +164,8 @@ test("a wrong code says so and stores and schedules nothing", async () => {
 	});
 	expect((await ana.as.query(api.profiles.myProfile, {}))?.deletionRunsAt).toBeNull();
 	expect(await authRows(t, "session", "userId", ana.userId)).toHaveLength(1);
-	expect(await scheduledPurges(t)).toHaveLength(0);
+	await runScheduled(t);
+	await expectIntact(t, ana.userId);
 });
 
 test("after three wrong codes the right one is refused too", async () => {
