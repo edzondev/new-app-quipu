@@ -1,9 +1,11 @@
 import { ConvexError } from "convex/values";
-import { NEED_PLUS, type PlusHistory } from "../../shared/billing";
+import { NEED_PLUS, type PlusHistory, type PlusStatus, toInterval } from "../../shared/billing";
+import { displayName } from "../../shared/household";
 import { components } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
-import { getMemberIds, requireSpace, type SpaceKind } from "./spaces";
+import { authComponent } from "../auth";
+import { getHousehold, getMemberIds, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -41,9 +43,14 @@ export async function getPlusSubscription(ctx: Ctx | ActionCtx, userId: string) 
 		.at(0);
 }
 
+/** When the trial ends, or null if there is none open. */
+async function getTrialEnd(ctx: Ctx, userId: string) {
+	const endsAt = (await getProfile(ctx, userId))?.trialEndsAt;
+	return endsAt !== undefined && endsAt > Date.now() ? endsAt : null;
+}
+
 async function hasTrial(ctx: Ctx, userId: string) {
-	const profile = await getProfile(ctx, userId);
-	return profile?.trialEndsAt !== undefined && profile.trialEndsAt > Date.now();
+	return (await getTrialEnd(ctx, userId)) !== null;
 }
 
 /** Plus = our 14-day trial still open, or a paid Polar subscription. */
@@ -93,6 +100,52 @@ export async function getPayerId(ctx: Ctx, space: Doc<"spaces">) {
 	for (const userId of ownerFirst) if (await hasTrial(ctx, userId)) return userId;
 	for (const userId of ownerFirst) if ((await plusHistory(ctx, userId)) !== "none") return userId;
 	return null;
+}
+
+type Subscription = NonNullable<Awaited<ReturnType<typeof getPlusSubscription>>>;
+
+function subscriptionStatus(sub: Subscription): PlusStatus {
+	const interval = toInterval(sub.recurringInterval);
+	const periodEnd = sub.currentPeriodEnd === null ? null : Date.parse(sub.currentPeriodEnd);
+	if (sub.status === "past_due") return { kind: "pastDue", interval };
+	if (sub.cancelAtPeriodEnd || sub.status === "canceled") {
+		return { kind: "ending", interval, endsAt: periodEnd };
+	}
+	return {
+		kind: "paid",
+		interval,
+		// Only soles: a USD amount would be shown with an S/.
+		amountCents: sub.currency === "pen" ? sub.amount : null,
+		renewsAt: periodEnd,
+	};
+}
+
+/**
+ * What Tu plan says about this person: their own subscription, else the household's Plus when the
+ * partner pays, else their trial, else whether a trial or a subscription ended, else Gratis.
+ */
+export async function getPlusStatus(ctx: Ctx, userId: string): Promise<PlusStatus> {
+	const sub = await getPlusSubscription(ctx, userId);
+	if (sub) return subscriptionStatus(sub);
+
+	const space = await getHousehold(ctx, userId);
+	const payerId = space ? await getPayerId(ctx, space) : null;
+	if (space && payerId && payerId !== userId && (await householdHasPlus(ctx, space._id))) {
+		const payer = await authComponent.getAnyUserById(ctx, payerId);
+		return {
+			kind: "household",
+			payerName: displayName(payer?.name ?? ""),
+			payerOnTrial: !(await getPlusSubscription(ctx, payerId)),
+		};
+	}
+
+	const trialEndsAt = await getTrialEnd(ctx, userId);
+	if (trialEndsAt !== null) return { kind: "trial", endsAt: trialEndsAt };
+
+	const history = await plusHistory(ctx, userId);
+	if (history === "trial") return { kind: "trialEnded" };
+	if (history === "paid") return { kind: "lapsed", payerIsMe: !space || payerId === userId };
+	return { kind: "free" };
 }
 
 /** Personal is never read-only. A household without Plus can be read, closed and left, not written. */

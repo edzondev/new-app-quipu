@@ -9,12 +9,14 @@ import {
 	intervalValidator,
 	type Offer,
 	offerValidator,
+	plusStatusValidator,
 	returnUrl,
+	toInterval,
 } from "../shared/billing";
 import { components } from "./_generated/api";
 import { type ActionCtx, action, query } from "./_generated/server";
 import { siteUrl } from "./auth";
-import { getPlusSubscription } from "./model/plus";
+import { getPlusStatus, getPlusSubscription } from "./model/plus";
 import { checkAccess, requireUser } from "./model/spaces";
 import { polar, polarCore } from "./polar";
 
@@ -23,10 +25,6 @@ const urlValidator = v.object({ url: v.string() });
 const returnTo = v.string();
 
 type Products = Awaited<ReturnType<typeof polar.listProducts>>;
-
-function toInterval(recurringInterval: string | null | undefined) {
-	return recurringInterval === "month" || recurringInterval === "year" ? recurringInterval : null;
-}
 
 /** Monthly and yearly Plus with their current prices per currency, from the synced (non-archived) products. */
 function toOffers(products: Products) {
@@ -53,32 +51,13 @@ export const offer = query({
 	},
 });
 
-/** The paid subscription that gives Plus now, or null (a trial alone is not a subscription). */
-export const subscription = query({
+/** What Tu plan says about the signed-in person. Null when signed out. */
+export const status = query({
 	args: {},
-	returns: v.union(
-		v.object({
-			status: v.string(),
-			interval: v.union(v.string(), v.null()),
-			cancelAtPeriodEnd: v.boolean(),
-			currentPeriodEnd: v.union(v.string(), v.null()),
-			amountCents: v.union(v.number(), v.null()),
-			currency: v.union(v.string(), v.null()),
-		}),
-		v.null(),
-	),
+	returns: v.union(plusStatusValidator, v.null()),
 	handler: async (ctx) => {
 		const user = await checkAccess(ctx);
-		const sub = user ? await getPlusSubscription(ctx, user._id) : undefined;
-		if (!sub) return null;
-		return {
-			status: sub.status,
-			interval: sub.recurringInterval,
-			cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
-			currentPeriodEnd: sub.currentPeriodEnd,
-			amountCents: sub.amount,
-			currency: sub.currency,
-		};
+		return user ? await getPlusStatus(ctx, user._id) : null;
 	},
 });
 

@@ -1,9 +1,11 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { planRowLine } from "@quipu/backend/shared/billing";
+import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
-import { Button } from "#/components/ui/button";
+import { ReloadError } from "#/components/reload-error";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
@@ -34,25 +36,6 @@ export function SettingsPage() {
 
 type Profile = NonNullable<FunctionReturnType<typeof api.profiles.myProfile>>;
 type Plan = NonNullable<Profile["plan"]>;
-
-function ReloadError() {
-	const queryClient = useQueryClient();
-	return (
-		<div role="alert" className="pt-6">
-			<p className="text-sm text-warning-foreground">No pudimos cargar tus ajustes.</p>
-			<Button
-				variant="outline"
-				size="xl"
-				className="mt-3"
-				onClick={() => {
-					void queryClient.invalidateQueries();
-				}}
-			>
-				Reintentar
-			</Button>
-		</div>
-	);
-}
 
 function Loading() {
 	return (
@@ -102,11 +85,28 @@ function SpaceRow() {
 	);
 }
 
+/** The whole row opens Tu plan: the tap area of the link stretches over it. */
+function PlusRow({ today }: { today: string }) {
+	const status = useQuery(convexQuery(api.billing.status, {}));
+	return (
+		<SettingsRow
+			title="Quipu Plus"
+			action={
+				<Link to="/settings/subscription" className={cn(ACTION, "static after:inset-0")}>
+					Abrir
+				</Link>
+			}
+		>
+			{status.data ? <p>{planRowLine(status.data, today)}</p> : null}
+		</SettingsRow>
+	);
+}
+
 function Settings({ today }: { today: string }) {
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const passkeys = useQuery(passkeysQuery);
 
-	if (profile.isError) return <ReloadError />;
+	if (profile.isError) return <ReloadError message="No pudimos cargar tus ajustes." />;
 	if (!profile.data) return <Loading />;
 	const { plan, nextPlan, hasHousehold } = profile.data;
 
@@ -120,6 +120,10 @@ function Settings({ today }: { today: string }) {
 			</header>
 
 			{plan ? <PlanGroup today={today} plan={plan} nextPlan={nextPlan} /> : <NoPlanGroup />}
+
+			<SettingsGroup title="Suscripción">
+				<PlusRow today={today} />
+			</SettingsGroup>
 
 			<SettingsGroup title="Cuenta">
 				{hasHousehold ? <SpaceRow /> : null}
@@ -159,7 +163,8 @@ function PlanGroup({
 	const home = useQuery(
 		convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space: "personal", today } : "skip"),
 	);
-	if (ensureOpen.isError || home.isError) return <ReloadError />;
+	if (ensureOpen.isError || home.isError)
+		return <ReloadError message="No pudimos cargar tus ajustes." />;
 	if (!home.data) return <Skeleton className="mt-10 h-40" />;
 	const { split } = home.data;
 	return (

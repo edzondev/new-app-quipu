@@ -158,7 +158,10 @@ test("someone else's subscription is not one's own: nothing to confirm after a c
 	const { t, user } = await withPlans();
 	const other = await startUser(t, "renzo@correo.com", "Renzo Paz");
 	await subscribe(t, other.userId);
-	expect(await user.as.query(api.billing.subscription, {})).toBeNull();
+	expect(await user.as.query(api.billing.status, {})).toEqual({
+		kind: "trial",
+		endsAt: expect.any(Number),
+	});
 });
 
 test("a customer Polar already has under our userId is linked and checks out, none is created", async () => {

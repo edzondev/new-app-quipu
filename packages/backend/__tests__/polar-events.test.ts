@@ -274,8 +274,8 @@ test("an event for a customer other than the one linked to the person is logged 
 });
 
 test("an event for the customer already linked logs nothing", async () => {
-	const { t } = await payer();
+	const { t, user } = await payer();
 	const error = vi.spyOn(console, "error").mockImplementation(() => {});
-	await deliver(t, "subscription.created");
+	await deliver(t, "subscription.created", customer(null, { userId: user.userId }));
 	expect(error).not.toHaveBeenCalled();
 });
