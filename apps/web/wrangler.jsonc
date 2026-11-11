@@ -29,7 +29,7 @@
 			"name": "quipu-web-production",
 			"workers_dev": false,
 			"preview_urls": false,
-			"routes": [{ "pattern": "quipu-finance.app", "custom_domain": true }],
+			"routes": [{ "pattern": "beta.quipu-finance.app", "custom_domain": true }],
 		},
 	},
 }
