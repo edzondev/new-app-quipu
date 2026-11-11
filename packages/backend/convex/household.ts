@@ -242,6 +242,21 @@ export const joinHousehold = mutation({
 	},
 });
 
+/** What was shared stays with who stays, who also takes over inviting. */
+export async function leaveSpace(
+	ctx: MutationCtx,
+	space: Doc<"spaces">,
+	membership: Doc<"spaceMembers">,
+	user: { _id: string; name: string },
+	partnerId: string,
+) {
+	await ctx.db.delete("spaceMembers", membership._id);
+	await ctx.db.patch("spaces", space._id, {
+		partnerLeft: { name: displayName(user.name) },
+		...(space.ownerId === user._id ? { ownerId: partnerId } : {}),
+	});
+}
+
 export const leaveHousehold = mutation({
 	args: {},
 	returns: v.null(),
@@ -256,12 +271,7 @@ export const leaveHousehold = mutation({
 		if (!space) throw new ConvexError(NEED_HOUSEHOLD);
 		const partnerId = (await getMemberIds(ctx, space._id)).find((id) => id !== user._id);
 		if (!partnerId) throw new ConvexError(ALONE);
-		await ctx.db.delete("spaceMembers", membership._id);
-		// What was shared stays with who stays, who also takes over inviting.
-		await ctx.db.patch("spaces", space._id, {
-			partnerLeft: { name: displayName(user.name) },
-			...(space.ownerId === user._id ? { ownerId: partnerId } : {}),
-		});
+		await leaveSpace(ctx, space, membership, user, partnerId);
 		return null;
 	},
 });

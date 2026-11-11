@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accountDeletion from "../accountDeletion.js";
 import type * as activity from "../activity.js";
 import type * as auth from "../auth.js";
 import type * as balances from "../balances.js";
@@ -27,6 +28,7 @@ import type * as model_plus from "../model/plus.js";
 import type * as model_polarEvents from "../model/polarEvents.js";
 import type * as model_polarWebhook from "../model/polarWebhook.js";
 import type * as model_progress from "../model/progress.js";
+import type * as model_purge from "../model/purge.js";
 import type * as model_spaces from "../model/spaces.js";
 import type * as polar from "../polar.js";
 import type * as profiles from "../profiles.js";
@@ -42,6 +44,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountDeletion: typeof accountDeletion;
   activity: typeof activity;
   auth: typeof auth;
   balances: typeof balances;
@@ -61,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "model/polarEvents": typeof model_polarEvents;
   "model/polarWebhook": typeof model_polarWebhook;
   "model/progress": typeof model_progress;
+  "model/purge": typeof model_purge;
   "model/spaces": typeof model_spaces;
   polar: typeof polar;
   profiles: typeof profiles;

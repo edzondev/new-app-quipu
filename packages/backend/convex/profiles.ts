@@ -13,7 +13,7 @@ import { hasPlus, plusHistory } from "./model/plus";
 import { checkAccess, getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
 
-function getProfile(ctx: QueryCtx, userId: string) {
+export function getProfile(ctx: QueryCtx, userId: string) {
 	return ctx.db
 		.query("profiles")
 		.withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -35,6 +35,8 @@ export const myProfile = query({
 			welcomeSeen: v.boolean(),
 			trialEndedSeen: v.boolean(),
 			trialReminderSeen: v.boolean(),
+			// When the account will be deleted unless the person cancels; null when no deletion is pending.
+			deletionRunsAt: v.union(v.number(), v.null()),
 		}),
 	),
 	handler: async (ctx) => {
@@ -53,11 +55,12 @@ export const myProfile = query({
 			welcomeSeen: profile.welcomeSeenAt !== undefined,
 			trialEndedSeen: profile.trialEndedSeenAt !== undefined,
 			trialReminderSeen: profile.trialReminderSeenAt !== undefined,
+			deletionRunsAt: profile.deletionRunsAt ?? null,
 		};
 	},
 });
 
-async function requireProfile(ctx: MutationCtx) {
+export async function requireProfile(ctx: MutationCtx) {
 	const user = await requireUser(ctx);
 	const profile = await getProfile(ctx, user._id);
 	if (!profile) throw new ConvexError("No encontramos tu perfil.");

@@ -9,6 +9,7 @@ import { emailOTP } from "better-auth/plugins";
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { env } from "./_generated/server";
+import { DELETION_CODE_TYPE } from "../shared/deletion";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
 
@@ -75,7 +76,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 				otpLength: 6,
 				allowedAttempts: 3,
 				storeOTP: "hashed",
-				sendVerificationOTP: async ({ email, otp }) => {
+				sendVerificationOTP: async ({ email, otp, type }) => {
 					if (env.OTP_DELIVERY === "log") {
 						console.log(`OTP ${email}: ${otp}`);
 						return;
@@ -83,11 +84,14 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 					if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
 					if (!env.RESEND_FROM) throw new Error("Falta RESEND_FROM");
 
+					const deletion = type === DELETION_CODE_TYPE;
 					await resend.sendEmail(ctx, {
 						from: env.RESEND_FROM,
 						to: email,
-						subject: "Tu código de Quipu",
-						text: `Tu código es ${otp}. Vence en 5 minutos.`,
+						subject: deletion ? "Código para eliminar tu cuenta de Quipu" : "Tu código de Quipu",
+						text: deletion
+							? `Tu código es ${otp}. Vence en 5 minutos. Si no fuiste tú, no lo compartas con nadie.`
+							: `Tu código es ${otp}. Vence en 5 minutos.`,
 					});
 				},
 			}),
