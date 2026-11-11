@@ -1,6 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
+import { isEmptyHousehold } from "#/lib/empty-household";
 import { HomePage } from "#/modules/home/components/home-page";
 
 export const Route = createFileRoute("/_app/home")({
@@ -10,8 +11,7 @@ export const Route = createFileRoute("/_app/home")({
 		...(search.left === true || search.left === "true" ? { left: true as const } : {}),
 	}),
 	loader: async ({ context }) => {
-		// Nuestro espacio without a household has no cycle to load: Inicio shows the invite screen.
-		if (context.space === "household" && !context.hasHousehold) return;
+		if (isEmptyHousehold(context)) return;
 		// Without a personal plan Personal has nothing to load.
 		if (context.space === "personal" && !context.hasPlan) return;
 		const args = { space: context.space, today: context.today };
