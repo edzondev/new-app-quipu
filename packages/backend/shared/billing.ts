@@ -9,6 +9,33 @@ export type Interval = "month" | "year";
 /** Where the Plus a person ever had came from. */
 export type PlusHistory = "none" | "trial" | "paid";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Our Plus trial: 14 days, no card. */
+export const TRIAL_MS = 14 * DAY_MS;
+
+const TRIAL_REMINDER_MS = 2 * DAY_MS;
+
+type ReminderProfile = {
+	trialEndsAt: number | null;
+	plusHistory: PlusHistory;
+	trialReminderSeen: boolean;
+};
+
+/** Inicio says the trial is about to end once, in its last 2 days, unless the person already pays. */
+export function showTrialReminder<T extends ReminderProfile>(
+	profile: T,
+	now: number,
+): profile is T & { trialEndsAt: number } {
+	return (
+		profile.trialEndsAt !== null &&
+		now < profile.trialEndsAt &&
+		profile.trialEndsAt - now <= TRIAL_REMINDER_MS &&
+		profile.plusHistory !== "paid" &&
+		!profile.trialReminderSeen
+	);
+}
+
 type Offer = {
 	productId: string;
 	interval: Interval;

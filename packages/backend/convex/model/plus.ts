@@ -41,8 +41,6 @@ export async function getPlusSubscription(ctx: Ctx | ActionCtx, userId: string) 
 		.at(0);
 }
 
-export const TRIAL_MS = 14 * 24 * 60 * 60 * 1000;
-
 async function hasTrial(ctx: Ctx, userId: string) {
 	const profile = await getProfile(ctx, userId);
 	return profile?.trialEndsAt !== undefined && profile.trialEndsAt > Date.now();

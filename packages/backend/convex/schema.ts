@@ -115,6 +115,8 @@ export default defineSchema({
 		welcomeSeenAt: v.optional(v.number()),
 		// The notice that the trial ended (V1) was closed. The same, one time across devices.
 		trialEndedSeenAt: v.optional(v.number()),
+		// The notice 2 days before the trial ends was closed. The same, one time across devices.
+		trialReminderSeenAt: v.optional(v.number()),
 	}).index("by_userId", ["userId"]),
 
 	spaces: defineTable({

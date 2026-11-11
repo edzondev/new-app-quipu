@@ -1,5 +1,6 @@
 import { ConvexError, type Infer, v } from "convex/values";
 import * as z from "zod/mini";
+import { TRIAL_MS } from "../shared/billing";
 import { applyIncome, ZERO_AMOUNTS } from "../shared/budget";
 import { getLimaDate } from "../shared/dates";
 import { nameSchema } from "../shared/name";
@@ -8,7 +9,7 @@ import { components } from "./_generated/api";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { createFirstCycle } from "./model/cycles";
 import { BAD_INPUT, parseInput } from "./model/input";
-import { hasPlus, plusHistory, TRIAL_MS } from "./model/plus";
+import { hasPlus, plusHistory } from "./model/plus";
 import { checkAccess, getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
 
@@ -30,8 +31,10 @@ export const myProfile = query({
 			hasHousehold: v.boolean(),
 			hasPlus: v.boolean(),
 			plusHistory: v.union(v.literal("none"), v.literal("trial"), v.literal("paid")),
+			trialEndsAt: v.union(v.number(), v.null()),
 			welcomeSeen: v.boolean(),
 			trialEndedSeen: v.boolean(),
+			trialReminderSeen: v.boolean(),
 		}),
 	),
 	handler: async (ctx) => {
@@ -46,8 +49,10 @@ export const myProfile = query({
 			hasHousehold: (await getHousehold(ctx, user._id)) !== null,
 			hasPlus: await hasPlus(ctx, user._id),
 			plusHistory: await plusHistory(ctx, user._id),
+			trialEndsAt: profile.trialEndsAt ?? null,
 			welcomeSeen: profile.welcomeSeenAt !== undefined,
 			trialEndedSeen: profile.trialEndedSeenAt !== undefined,
+			trialReminderSeen: profile.trialReminderSeenAt !== undefined,
 		};
 	},
 });
@@ -134,7 +139,7 @@ export const startTrial = mutation({
 });
 
 /** A notice closed on one device stays closed on all of them; the first close is the one kept. */
-function markSeen(field: "welcomeSeenAt" | "trialEndedSeenAt") {
+function markSeen(field: "welcomeSeenAt" | "trialEndedSeenAt" | "trialReminderSeenAt") {
 	return mutation({
 		args: {},
 		returns: v.null(),
@@ -150,3 +155,4 @@ function markSeen(field: "welcomeSeenAt" | "trialEndedSeenAt") {
 
 export const markWelcomeSeen = markSeen("welcomeSeenAt");
 export const markTrialEndedSeen = markSeen("trialEndedSeenAt");
+export const markTrialReminderSeen = markSeen("trialReminderSeenAt");
