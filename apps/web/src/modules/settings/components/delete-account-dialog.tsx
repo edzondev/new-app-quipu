@@ -68,7 +68,7 @@ function DeleteAccount({ hasHousehold }: { hasHousehold: boolean }) {
 				<FormSheetTitle>{codeSent ? "Revisa tu correo" : "Eliminar tu cuenta"}</FormSheetTitle>
 				<FormSheetDescription className="wrap-anywhere">
 					{codeSent
-						? `Escribe el código que enviamos a ${session.data?.user.email}.`
+						? `Escribe el código que enviamos a ${session.data?.user.email ?? "tu correo"}.`
 						: `El ${runsOn} borraremos tu cuenta y tus datos en Quipu. Hasta ese día puedes cancelar.`}
 				</FormSheetDescription>
 			</FormSheetHeader>
