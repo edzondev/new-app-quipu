@@ -157,3 +157,39 @@ export async function subscribe(t: Harness, userId: string, over: Partial<Subscr
 		},
 	});
 }
+
+/** A product as the component stores it, for billing.offer. */
+export async function addProduct(
+	t: Harness,
+	id: string,
+	interval: "month" | "year" | null,
+	prices: { currency: string; amount: number; archived?: boolean }[],
+) {
+	await t.mutation(components.polar.lib.createProduct, {
+		product: {
+			id,
+			organizationId: "org_test",
+			name: "Quipu Plus",
+			description: null,
+			isRecurring: interval !== null,
+			isArchived: false,
+			createdAt: START,
+			modifiedAt: null,
+			recurringInterval: interval,
+			medias: [],
+			prices: prices.map((price) => ({
+				id: `${id}_${price.currency}`,
+				productId: id,
+				amountType: "fixed",
+				isArchived: price.archived ?? false,
+				createdAt: START,
+				modifiedAt: null,
+				recurringInterval: interval,
+				type: "recurring",
+				source: "catalog",
+				priceAmount: price.amount,
+				priceCurrency: price.currency,
+			})),
+		},
+	});
+}

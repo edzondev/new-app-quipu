@@ -1,7 +1,11 @@
-import { checkoutsUpdate } from "@polar-sh/sdk/funcs/checkoutsUpdate.js";
+import { checkoutsCreate } from "@polar-sh/sdk/funcs/checkoutsCreate.js";
 import { customerSessionsCreate } from "@polar-sh/sdk/funcs/customerSessionsCreate.js";
+import { customersCreate } from "@polar-sh/sdk/funcs/customersCreate.js";
+import { customersGetExternal } from "@polar-sh/sdk/funcs/customersGetExternal.js";
+import { ResourceNotFound } from "@polar-sh/sdk/models/errors/resourcenotfound.js";
 import { ConvexError, type Infer, v } from "convex/values";
-import { action, query } from "./_generated/server";
+import { components } from "./_generated/api";
+import { type ActionCtx, action, query } from "./_generated/server";
 import { siteUrl } from "./auth";
 import { getPlusSubscription } from "./model/plus";
 import { checkAccess, requireUser } from "./model/spaces";
@@ -24,17 +28,18 @@ function toInterval(recurringInterval: string | null | undefined) {
 	return recurringInterval === "month" || recurringInterval === "year" ? recurringInterval : null;
 }
 
-/** Monthly and yearly Plus with their prices per currency, from the synced (non-archived) products. */
+/** Monthly and yearly Plus with their current prices per currency, from the synced (non-archived) products. */
 function toOffers(products: Products) {
 	return products.flatMap((product): Offer[] => {
 		const productInterval = toInterval(product.recurringInterval);
-		if (!productInterval) return [];
 		const prices = product.prices.flatMap((price) =>
 			!price.isArchived && price.priceAmount !== undefined && price.priceCurrency
 				? [{ currency: price.priceCurrency, amountCents: price.priceAmount }]
 				: [],
 		);
-		return [{ productId: product.id, interval: productInterval, prices }];
+		return productInterval && prices.length > 0
+			? [{ productId: product.id, interval: productInterval, prices }]
+			: [];
 	});
 }
 
@@ -77,6 +82,33 @@ export const subscription = query({
 	},
 });
 
+/**
+ * The person's Polar customer, found by our userId (Polar's externalId) and never by email.
+ * Created there if missing, then linked in the component so webhooks and the portal find it.
+ */
+async function getPolarCustomerId(ctx: ActionCtx, userId: string, email: string) {
+	const linked = await polar.getCustomerByUserId(ctx, userId);
+	if (linked) return linked.id;
+
+	const existing = await customersGetExternal(polarCore, { externalId: userId });
+	let customerId: string;
+	if (existing.ok) {
+		customerId = existing.value.id;
+	} else if (existing.error instanceof ResourceNotFound) {
+		const created = await customersCreate(polarCore, {
+			email,
+			externalId: userId,
+			metadata: { userId },
+		});
+		if (!created.ok) throw created.error;
+		customerId = created.value.id;
+	} else {
+		throw existing.error;
+	}
+	await ctx.runMutation(components.polar.lib.insertCustomer, { id: customerId, userId });
+	return customerId;
+}
+
 /** Polar checkout URL for the chosen plan and currency. Changing plan goes through the portal. */
 export const startCheckout = action({
 	args: { interval, currency },
@@ -92,20 +124,14 @@ export const startCheckout = action({
 				item.prices.some((price) => price.currency === args.currency),
 		);
 		if (!found) throw new ConvexError("Precio por confirmar.");
-		const checkout = await polar.createCheckoutSession(ctx, {
-			productIds: [found.productId],
-			userId: user._id,
-			email: user.email,
-			origin: siteUrl,
+		const checkout = await checkoutsCreate(polarCore, {
+			products: [found.productId],
+			customerId: await getPolarCustomerId(ctx, user._id, user.email),
+			currency: args.currency,
 			successUrl: RETURN_URL,
 		});
-		// The component cannot choose the currency, so set it on the checkout it created.
-		const updated = await checkoutsUpdate(polarCore, {
-			id: checkout.id,
-			checkoutUpdate: { currency: args.currency },
-		});
-		if (!updated.ok) throw updated.error;
-		return { url: updated.value.url };
+		if (!checkout.ok) throw checkout.error;
+		return { url: checkout.value.url };
 	},
 });
 

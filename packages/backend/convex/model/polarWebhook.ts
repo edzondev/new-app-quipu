@@ -18,7 +18,9 @@ export async function verifyWebhook(secret: string, headers: Headers, body: stri
 	const id = headers.get("webhook-id");
 	const timestamp = headers.get("webhook-timestamp");
 	const signatures = headers.get("webhook-signature");
-	const key = decodeBase64(secret.startsWith(SECRET_PREFIX) ? secret.slice(6) : secret);
+	const key = decodeBase64(
+		secret.startsWith(SECRET_PREFIX) ? secret.slice(SECRET_PREFIX.length) : secret,
+	);
 	if (!id || !timestamp || !signatures || !key) return false;
 
 	const seconds = Number(timestamp);

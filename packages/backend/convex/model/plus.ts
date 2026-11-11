@@ -30,11 +30,16 @@ export function subscriptionGivesPlus(
 	return PAID_STATUSES.includes(sub.status);
 }
 
-/** The Polar subscription that gives Plus right now. The component already drops ended ones and expired trials. */
+/** Of the subscriptions that give Plus now (a plan change leaves two), the one that runs the longest. */
 export async function getPlusSubscription(ctx: Ctx | ActionCtx, userId: string) {
 	const subscriptions = await ctx.runQuery(components.polar.lib.listUserSubscriptions, { userId });
 	const now = Date.now();
-	return subscriptions.find((sub) => subscriptionGivesPlus(sub, now));
+	const periodEnd = (sub: { currentPeriodEnd: string | null }) =>
+		sub.currentPeriodEnd === null ? Infinity : Date.parse(sub.currentPeriodEnd);
+	return subscriptions
+		.filter((sub) => subscriptionGivesPlus(sub, now))
+		.sort((a, b) => periodEnd(b) - periodEnd(a))
+		.at(0);
 }
 
 async function hasTrial(ctx: Ctx, userId: string) {
@@ -75,7 +80,7 @@ async function hadPlus(ctx: Ctx, userId: string) {
  */
 export async function getPayerId(ctx: Ctx, space: Doc<"spaces">) {
 	const members = await getMemberIds(ctx, space._id);
-	const ownerFirst = members.sort(
+	const ownerFirst = [...members].sort(
 		(a, b) => Number(b === space.ownerId) - Number(a === space.ownerId),
 	);
 

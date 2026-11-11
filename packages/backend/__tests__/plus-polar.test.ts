@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "../convex/_generated/api";
 import {
+	addProduct,
 	couple,
 	DAY,
 	harness,
@@ -48,9 +49,15 @@ const states: [string, Parameters<typeof subscribe>[2], boolean][] = [
 		true,
 	],
 	["canceled and the paid period closed", { status: "canceled", currentPeriodEnd: past }, false],
-	["canceled and ended", { status: "canceled", endedAt: past, currentPeriodEnd: past }, false],
+	[
+		"revoked: ended, though its paid period was still open",
+		{ status: "canceled", endedAt: past, currentPeriodEnd: future },
+		false,
+	],
 	["unpaid", { status: "unpaid" }, false],
 	["incomplete", { status: "incomplete" }, false],
+	["incomplete_expired", { status: "incomplete_expired" }, false],
+	["paused", { status: "paused" }, false],
 ];
 
 test.each(states)(
@@ -97,6 +104,66 @@ test("billing.subscription shows the paid subscription, and nothing for a trial"
 test("billing.offer is empty until products are synced", async () => {
 	const { user } = await singleUser();
 	expect(await user.as.query(api.billing.offer, {})).toEqual([]);
+});
+
+test("billing.offer lists only current prices, and no product without any", async () => {
+	const { t, user } = await singleUser();
+	await addProduct(t, "prod_month", "month", [
+		{ currency: "pen", amount: 1490 },
+		{ currency: "usd", amount: 499, archived: true },
+	]);
+	await addProduct(t, "prod_year", "year", [{ currency: "pen", amount: 11990 }]);
+	await addProduct(t, "prod_empty", "month", []);
+	await addProduct(t, "prod_once", null, [{ currency: "pen", amount: 500 }]);
+	const offers = await user.as.query(api.billing.offer, {});
+	expect(offers.toSorted((a, b) => a.productId.localeCompare(b.productId))).toEqual([
+		{
+			productId: "prod_month",
+			interval: "month",
+			prices: [{ currency: "pen", amountCents: 1490 }],
+		},
+		{ productId: "prod_year", interval: "year", prices: [{ currency: "pen", amountCents: 11990 }] },
+	]);
+});
+
+test("billing.startCheckout says the price is pending when there is none in that currency", async () => {
+	const { t, user } = await singleUser();
+	await addProduct(t, "prod_month", "month", [
+		{ currency: "pen", amount: 1490 },
+		{ currency: "usd", amount: 499, archived: true },
+	]);
+	const pending = "Precio por confirmar";
+	await expect(
+		user.as.action(api.billing.startCheckout, { interval: "month", currency: "usd" }),
+	).rejects.toThrow(pending);
+	await expect(
+		user.as.action(api.billing.startCheckout, { interval: "year", currency: "pen" }),
+	).rejects.toThrow(pending);
+});
+
+test("billing.openPortal needs a Polar customer", async () => {
+	const { user } = await singleUser();
+	await expect(user.as.action(api.billing.openPortal, {})).rejects.toThrow(
+		"Aún no tienes una suscripción",
+	);
+});
+
+test("with a monthly set to cancel and an annual running, the annual is the subscription shown", async () => {
+	const { t, user } = await singleUser();
+	await setTrialEnd(t, user.userId, NOW - 1);
+	await subscribe(t, user.userId, {
+		id: "sub_monthly",
+		cancelAtPeriodEnd: true,
+		currentPeriodEnd: future,
+	});
+	await subscribe(t, user.userId, {
+		id: "sub_annual",
+		recurringInterval: "year",
+		amount: 11990,
+		currentPeriodEnd: new Date(NOW + 300 * DAY).toISOString(),
+	});
+	expect(await hasPlus(user)).toBe(true);
+	expect((await user.as.query(api.billing.subscription, {}))?.interval).toBe("year");
 });
 
 test("billing.startCheckout refuses someone who already pays", async () => {
