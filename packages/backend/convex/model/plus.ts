@@ -1,5 +1,5 @@
 import { ConvexError } from "convex/values";
-import { NEED_PLUS } from "../../shared/billing";
+import { NEED_PLUS, type PlusHistory } from "../../shared/billing";
 import { components } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
@@ -67,11 +67,17 @@ export async function householdHasPlus(ctx: Ctx, spaceId: Id<"spaces">) {
 	return false;
 }
 
-/** Had a trial or any subscription at some point, even a lapsed one. */
-export async function hadPlus(ctx: Ctx, userId: string) {
-	if ((await getProfile(ctx, userId))?.trialEndsAt !== undefined) return true;
+// A checkout that was never completed or a first charge that failed: Polar never took any money.
+const NEVER_CHARGED = ["incomplete", "incomplete_expired"];
+
+/**
+ * Where the Plus this person ever had came from, even a lapsed one. A subscription of their own that
+ * was charged at least once outranks the trial. startTrial and getPayerId read it the same way.
+ */
+export async function plusHistory(ctx: Ctx, userId: string): Promise<PlusHistory> {
 	const all = await ctx.runQuery(components.polar.lib.listAllUserSubscriptions, { userId });
-	return all.length > 0;
+	if (all.some((sub) => !NEVER_CHARGED.includes(sub.status))) return "paid";
+	return (await getProfile(ctx, userId))?.trialEndsAt !== undefined ? "trial" : "none";
 }
 
 /**
@@ -87,7 +93,7 @@ export async function getPayerId(ctx: Ctx, space: Doc<"spaces">) {
 
 	for (const userId of ownerFirst) if (await getPlusSubscription(ctx, userId)) return userId;
 	for (const userId of ownerFirst) if (await hasTrial(ctx, userId)) return userId;
-	for (const userId of ownerFirst) if (await hadPlus(ctx, userId)) return userId;
+	for (const userId of ownerFirst) if ((await plusHistory(ctx, userId)) !== "none") return userId;
 	return null;
 }
 

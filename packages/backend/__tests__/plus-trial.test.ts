@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "../convex/_generated/api";
 import { NEED_PLUS } from "../shared/billing";
-import { DAY, harness, onboardUser, setTrialEnd, START, subscribe } from "./couple";
+import { DAY, type Harness, harness, onboardUser, setTrialEnd, START, subscribe } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -25,8 +25,9 @@ test("a new person is on Gratis, with the trial available and the welcome unseen
 	const { user, profile } = await newUser();
 	expect(await profile()).toMatchObject({
 		hasPlus: false,
-		trialAvailable: true,
+		plusHistory: "none",
 		welcomeSeen: false,
+		trialEndedSeen: false,
 	});
 	await expect(user.as.mutation(api.household.createHousehold, {})).rejects.toThrow(NEED_PLUS);
 });
@@ -34,7 +35,7 @@ test("a new person is on Gratis, with the trial available and the welcome unseen
 test("asking for the trial gives Plus for 14 days and uses it up", async () => {
 	const { user, profile, startTrial } = await newUser();
 	expect(await startTrial()).toEqual({ status: "active", trialEndsAt: TRIAL_END });
-	expect(await profile()).toMatchObject({ hasPlus: true, trialAvailable: false });
+	expect(await profile()).toMatchObject({ hasPlus: true, plusHistory: "trial" });
 	await expect(user.as.mutation(api.household.createHousehold, {})).resolves.toMatchObject({
 		code: expect.any(String),
 	});
@@ -55,44 +56,85 @@ test("a lapsed trial is not given again", async () => {
 	await startTrial();
 	vi.setSystemTime(TRIAL_END);
 	expect(await startTrial()).toEqual({ status: "used" });
-	expect(await profile()).toMatchObject({ hasPlus: false, trialAvailable: false });
+	expect(await profile()).toMatchObject({ hasPlus: false, plusHistory: "trial" });
 });
 
 test("someone who already paid gets no trial, even after the subscription ended", async () => {
 	const { t, user, profile, startTrial } = await newUser();
 	await subscribe(t, user.userId);
-	expect(await profile()).toMatchObject({ hasPlus: true, trialAvailable: false });
+	expect(await profile()).toMatchObject({ hasPlus: true, plusHistory: "paid" });
 	expect(await startTrial()).toEqual({ status: "used" });
 
 	vi.setSystemTime(NOW + 31 * DAY);
-	expect(await profile()).toMatchObject({ hasPlus: true, trialAvailable: false });
+	expect(await profile()).toMatchObject({ hasPlus: true, plusHistory: "paid" });
 	await subscribe(t, user.userId, {
 		status: "canceled",
 		currentPeriodEnd: new Date(NOW + 30 * DAY).toISOString(),
 	});
-	expect(await profile()).toMatchObject({ hasPlus: false, trialAvailable: false });
+	expect(await profile()).toMatchObject({ hasPlus: false, plusHistory: "paid" });
 	expect(await startTrial()).toEqual({ status: "used" });
 	expect((await profile())?.hasPlus).toBe(false);
+});
+
+test("a subscription that was never charged does not use up the trial", async () => {
+	const { t, user, profile, startTrial } = await newUser();
+	await subscribe(t, user.userId, { status: "incomplete_expired" });
+	expect(await profile()).toMatchObject({ hasPlus: false, plusHistory: "none" });
+	expect(await startTrial()).toEqual({ status: "active", trialEndsAt: TRIAL_END });
+	expect(await profile()).toMatchObject({ hasPlus: true, plusHistory: "trial" });
 });
 
 test("an account that had the old automatic trial counts it as used", async () => {
 	const { t, user, profile, startTrial } = await newUser();
 	await setTrialEnd(t, user.userId, NOW - DAY);
-	expect((await profile())?.trialAvailable).toBe(false);
+	expect((await profile())?.plusHistory).toBe("trial");
 	expect(await startTrial()).toEqual({ status: "used" });
 	expect((await profile())?.hasPlus).toBe(false);
 });
 
-test("the welcome stays seen once it is closed", async () => {
-	const { user, profile } = await newUser();
-	await user.as.mutation(api.profiles.markWelcomeSeen, {});
-	expect((await profile())?.welcomeSeen).toBe(true);
-	await user.as.mutation(api.profiles.markWelcomeSeen, {});
-	expect((await profile())?.welcomeSeen).toBe(true);
+test("a subscription after the trial makes the history paid", async () => {
+	const { t, user, profile, startTrial } = await newUser();
+	await startTrial();
+	vi.setSystemTime(TRIAL_END);
+	await subscribe(t, user.userId, {
+		status: "canceled",
+		currentPeriodEnd: new Date(TRIAL_END - DAY).toISOString(),
+	});
+	expect(await profile()).toMatchObject({ hasPlus: false, plusHistory: "paid" });
 });
 
-test("without a session there is no trial and no welcome to mark", async () => {
+// Reads when it was closed: a second close on another device must keep the first one.
+async function seenAt(t: Harness, userId: string) {
+	return await t.run(async (ctx) => {
+		const row = await ctx.db
+			.query("profiles")
+			.withIndex("by_userId", (q) => q.eq("userId", userId))
+			.unique();
+		return { welcome: row?.welcomeSeenAt, trialEnded: row?.trialEndedSeenAt };
+	});
+}
+
+test("the welcome is marked once and stays seen", async () => {
+	const { t, user, profile } = await newUser();
+	await user.as.mutation(api.profiles.markWelcomeSeen, {});
+	expect(await profile()).toMatchObject({ welcomeSeen: true, trialEndedSeen: false });
+	vi.setSystemTime(NOW + DAY);
+	await user.as.mutation(api.profiles.markWelcomeSeen, {});
+	expect(await seenAt(t, user.userId)).toEqual({ welcome: NOW, trialEnded: undefined });
+});
+
+test("the trial-ended notice is marked once and stays seen", async () => {
+	const { t, user, profile } = await newUser();
+	await user.as.mutation(api.profiles.markTrialEndedSeen, {});
+	expect(await profile()).toMatchObject({ trialEndedSeen: true, welcomeSeen: false });
+	vi.setSystemTime(NOW + DAY);
+	await user.as.mutation(api.profiles.markTrialEndedSeen, {});
+	expect(await seenAt(t, user.userId)).toEqual({ welcome: undefined, trialEnded: NOW });
+});
+
+test("without a session there is no trial and no notice to mark", async () => {
 	const t = harness();
 	await expect(t.mutation(api.profiles.startTrial, {})).rejects.toThrow("Unauthenticated");
 	await expect(t.mutation(api.profiles.markWelcomeSeen, {})).rejects.toThrow("Unauthenticated");
+	await expect(t.mutation(api.profiles.markTrialEndedSeen, {})).rejects.toThrow("Unauthenticated");
 });

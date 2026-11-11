@@ -8,7 +8,7 @@ import { components } from "./_generated/api";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { createFirstCycle } from "./model/cycles";
 import { BAD_INPUT, parseInput } from "./model/input";
-import { hadPlus, hasPlus, TRIAL_MS } from "./model/plus";
+import { hasPlus, plusHistory, TRIAL_MS } from "./model/plus";
 import { checkAccess, getHousehold, getPersonalSpace, requireUser } from "./model/spaces";
 import { plan, split } from "./schema";
 
@@ -29,8 +29,9 @@ export const myProfile = query({
 			nextPlan: v.union(plan, v.null()),
 			hasHousehold: v.boolean(),
 			hasPlus: v.boolean(),
-			trialAvailable: v.boolean(),
+			plusHistory: v.union(v.literal("none"), v.literal("trial"), v.literal("paid")),
 			welcomeSeen: v.boolean(),
+			trialEndedSeen: v.boolean(),
 		}),
 	),
 	handler: async (ctx) => {
@@ -44,8 +45,9 @@ export const myProfile = query({
 			nextPlan: profile.nextPlan ?? null,
 			hasHousehold: (await getHousehold(ctx, user._id)) !== null,
 			hasPlus: await hasPlus(ctx, user._id),
-			trialAvailable: !(await hadPlus(ctx, user._id)),
+			plusHistory: await plusHistory(ctx, user._id),
 			welcomeSeen: profile.welcomeSeenAt !== undefined,
+			trialEndedSeen: profile.trialEndedSeenAt !== undefined,
 		};
 	},
 });
@@ -124,21 +126,27 @@ export const startTrial = mutation({
 		if (profile.trialEndsAt !== undefined && profile.trialEndsAt > now) {
 			return { status: "active", trialEndsAt: profile.trialEndsAt };
 		}
-		if (await hadPlus(ctx, user._id)) return { status: "used" };
+		if ((await plusHistory(ctx, user._id)) !== "none") return { status: "used" };
 		const trialEndsAt = now + TRIAL_MS;
 		await ctx.db.patch("profiles", profile._id, { trialEndsAt });
 		return { status: "active", trialEndsAt };
 	},
 });
 
-export const markWelcomeSeen = mutation({
-	args: {},
-	returns: v.null(),
-	handler: async (ctx) => {
-		const { profile } = await requireProfile(ctx);
-		if (profile.welcomeSeenAt === undefined) {
-			await ctx.db.patch("profiles", profile._id, { welcomeSeenAt: Date.now() });
-		}
-		return null;
-	},
-});
+/** A notice closed on one device stays closed on all of them; the first close is the one kept. */
+function markSeen(field: "welcomeSeenAt" | "trialEndedSeenAt") {
+	return mutation({
+		args: {},
+		returns: v.null(),
+		handler: async (ctx) => {
+			const { profile } = await requireProfile(ctx);
+			if (profile[field] === undefined) {
+				await ctx.db.patch("profiles", profile._id, { [field]: Date.now() });
+			}
+			return null;
+		},
+	});
+}
+
+export const markWelcomeSeen = markSeen("welcomeSeenAt");
+export const markTrialEndedSeen = markSeen("trialEndedSeenAt");

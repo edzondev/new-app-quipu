@@ -97,8 +97,9 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 		nextPlan: null,
 		hasHousehold: false,
 		hasPlus: false,
-		trialAvailable: true,
+		plusHistory: "none",
 		welcomeSeen: false,
+		trialEndedSeen: false,
 	});
 
 	const today = getLimaDate();
@@ -111,8 +112,9 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 		nextPlan: null,
 		hasHousehold: false,
 		hasPlus: false,
-		trialAvailable: true,
+		plusHistory: "none",
 		welcomeSeen: false,
+		trialEndedSeen: false,
 	});
 
 	const first = await t.run(async (ctx) => {
@@ -179,8 +181,9 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 		nextPlan: null,
 		hasHousehold: false,
 		hasPlus: false,
-		trialAvailable: true,
+		plusHistory: "none",
 		welcomeSeen: false,
+		trialEndedSeen: false,
 	});
 });
 

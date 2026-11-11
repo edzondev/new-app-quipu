@@ -113,6 +113,8 @@ export default defineSchema({
 		trialEndsAt: v.optional(v.number()),
 		// The B1 welcome was closed. On the server so another device does not show it again.
 		welcomeSeenAt: v.optional(v.number()),
+		// The notice that the trial ended (V1) was closed. The same, one time across devices.
+		trialEndedSeenAt: v.optional(v.number()),
 	}).index("by_userId", ["userId"]),
 
 	spaces: defineTable({

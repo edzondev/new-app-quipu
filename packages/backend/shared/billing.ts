@@ -6,6 +6,9 @@ export const FREE_PERSONAL_GOAL_CAP = 2;
 
 export type Interval = "month" | "year";
 
+/** Where the Plus a person ever had came from. */
+export type PlusHistory = "none" | "trial" | "paid";
+
 type Offer = {
 	productId: string;
 	interval: Interval;
