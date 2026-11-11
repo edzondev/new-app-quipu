@@ -45,10 +45,10 @@ export function PlusProvider({ children }: { children: ReactNode }) {
 		<PlusContext value={open}>
 			{children}
 			<Dialog open={view === "pitch"} onOpenChange={onOpenChange}>
-				{request.feature ? (
+				{request.feature && profile.data ? (
 					<PlusPitch
 						feature={request.feature}
-						trialAvailable={profile.data?.trialAvailable === true}
+						plusHistory={profile.data.plusHistory}
 						onPlans={() => setView("offer")}
 						onDismiss={close}
 						onTrialStarted={close}

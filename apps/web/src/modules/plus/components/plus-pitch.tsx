@@ -1,5 +1,6 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
+import type { PlusHistory } from "@quipu/backend/shared/billing";
 import { formatDay, getLimaDate } from "@quipu/backend/shared/dates";
 import { useMutation } from "@tanstack/react-query";
 import { ShieldCheck, Target, Users } from "lucide-react";
@@ -45,27 +46,39 @@ const PITCH: Record<PlusFeature, { title: string; description: string; rows: Plu
 	},
 };
 
+// After the trial or a lapsed Plus, the same card says it ended instead of offering the trial.
+const ENDED: Record<Exclude<PlusHistory, "none">, string> = {
+	trial: "Tu prueba de Plus terminó. Suscríbete para seguir usando esta función.",
+	paid: "Tu Quipu Plus terminó. Suscríbete para seguir usando esta función.",
+};
+
 /** T1: a Plus feature was asked for. Offers the trial once; after that, only the plans. */
 export function PlusPitch({
 	feature,
-	trialAvailable,
+	plusHistory,
 	onPlans,
 	onDismiss,
 	onTrialStarted,
 	finalFocus,
 }: {
 	feature: PlusFeature;
-	trialAvailable: boolean;
+	plusHistory: PlusHistory;
 	onPlans: () => void;
 	onDismiss: () => void;
 	onTrialStarted: () => void;
 	finalFocus: ComponentProps<typeof PlusCard>["finalFocus"];
 }) {
 	const { title, description, rows } = PITCH[feature];
+	const trialAvailable = plusHistory === "none";
 	const titleRef = useRef<HTMLHeadingElement>(null);
 	return (
 		<PlusCard initialFocus={titleRef} finalFocus={finalFocus}>
-			<PlusCardHeading pill="Plus" title={title} description={description} titleRef={titleRef} />
+			<PlusCardHeading
+				pill="Plus"
+				title={title}
+				description={plusHistory === "none" ? description : ENDED[plusHistory]}
+				titleRef={titleRef}
+			/>
 			<PlusRows rows={rows} />
 			<div className="mt-6 grid gap-2.5">
 				{trialAvailable ? (

@@ -18,7 +18,7 @@ import { EmptyHousehold } from "#/modules/household/components/empty-household";
 import { HouseholdNotices } from "#/modules/household/components/household-notices";
 import { InviteStrip } from "#/modules/household/components/invite-strip";
 import { JoinedNotice } from "#/modules/household/components/joined-notice";
-import { WelcomeDialog } from "#/modules/plus/components/welcome-dialog";
+import { PlanNotice } from "#/modules/plus/components/plan-notice";
 import { useRegister } from "#/modules/register/register-dialog";
 import { CloseNotice } from "./close-notice";
 import { EnvelopeCards } from "./envelope-cards";
@@ -35,7 +35,7 @@ export function HomePage() {
 	return (
 		<>
 			<JoinedNotice />
-			<WelcomeDialog />
+			<PlanNotice />
 			<Home key={today} today={today} />
 		</>
 	);
