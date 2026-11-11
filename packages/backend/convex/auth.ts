@@ -12,6 +12,7 @@ import { env } from "./_generated/server";
 import { DELETION_CODE_TYPE } from "../shared/deletion";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
+import { otpEmail } from "./emails/otp";
 
 export const resend = new Resend(components.resend, { testMode: false });
 
@@ -84,15 +85,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 					if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
 					if (!env.RESEND_FROM) throw new Error("Falta RESEND_FROM");
 
-					const deletion = type === DELETION_CODE_TYPE;
-					await resend.sendEmail(ctx, {
-						from: env.RESEND_FROM,
-						to: email,
-						subject: deletion ? "Código para eliminar tu cuenta de Quipu" : "Tu código de Quipu",
-						text: deletion
-							? `Tu código es ${otp}. Vence en 5 minutos. Si no fuiste tú, no lo compartas con nadie.`
-							: `Tu código es ${otp}. Vence en 5 minutos.`,
+					const { subject, html, text } = otpEmail({
+						otp,
+						email,
+						deletion: type === DELETION_CODE_TYPE,
 					});
+					await resend.sendEmail(ctx, { from: env.RESEND_FROM, to: email, subject, html, text });
 				},
 			}),
 		],
