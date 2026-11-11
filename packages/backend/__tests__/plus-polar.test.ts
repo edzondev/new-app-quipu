@@ -134,16 +134,24 @@ test("billing.startCheckout says the price is pending when there is none in that
 	]);
 	const pending = "Precio por confirmar";
 	await expect(
-		user.as.action(api.billing.startCheckout, { interval: "month", currency: "usd" }),
+		user.as.action(api.billing.startCheckout, {
+			interval: "month",
+			currency: "usd",
+			returnTo: "/settings",
+		}),
 	).rejects.toThrow(pending);
 	await expect(
-		user.as.action(api.billing.startCheckout, { interval: "year", currency: "pen" }),
+		user.as.action(api.billing.startCheckout, {
+			interval: "year",
+			currency: "pen",
+			returnTo: "/settings",
+		}),
 	).rejects.toThrow(pending);
 });
 
 test("billing.openPortal needs a Polar customer", async () => {
 	const { user } = await singleUser();
-	await expect(user.as.action(api.billing.openPortal, {})).rejects.toThrow(
+	await expect(user.as.action(api.billing.openPortal, { returnTo: "/settings" })).rejects.toThrow(
 		"Aún no tienes una suscripción",
 	);
 });
@@ -170,7 +178,11 @@ test("billing.startCheckout refuses someone who already pays", async () => {
 	const { t, user } = await singleUser();
 	await subscribe(t, user.userId);
 	await expect(
-		user.as.action(api.billing.startCheckout, { interval: "month", currency: "pen" }),
+		user.as.action(api.billing.startCheckout, {
+			interval: "month",
+			currency: "pen",
+			returnTo: "/settings",
+		}),
 	).rejects.toThrow("Ya tienes Plus");
 });
 

@@ -76,7 +76,11 @@ export function FormSheet({
 	);
 }
 
-export function FormSheetPopup(props: { className?: string; children: ReactNode }) {
+export function FormSheetPopup(props: {
+	className?: string;
+	children: ReactNode;
+	finalFocus?: ComponentProps<typeof DialogPopup>["finalFocus"];
+}) {
 	return useContext(MobileContext) ? (
 		<DrawerPopup showBar showCloseButton {...props} />
 	) : (

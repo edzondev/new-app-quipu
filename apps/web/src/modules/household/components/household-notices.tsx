@@ -3,16 +3,15 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
 import { useMutation } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
-import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { NoticeBar } from "#/modules/home/components/notice-bar";
-import { PlusSheet } from "./plus-sheet";
+import { useOpenPlus } from "#/modules/plus/plus-provider";
 
 type Household = NonNullable<FunctionReturnType<typeof api.household.get>>;
 
 /** W-Plus4 / W-P17: the Plus lapsed, so the household can be read but not written. */
 function ReadOnlyStrip({ payerName, payerIsMe }: { payerName: string | null; payerIsMe: boolean }) {
-	const [sheetOpen, setSheetOpen] = useState(false);
+	const openPlus = useOpenPlus();
 	return (
 		<div
 			role="status"
@@ -26,11 +25,10 @@ function ReadOnlyStrip({ payerName, payerIsMe }: { payerName: string | null; pay
 			<Button
 				variant="outline"
 				className="rounded-full pointer-coarse:min-h-11"
-				onClick={() => setSheetOpen(true)}
+				onClick={(event) => openPlus({ highlight: "household", opener: event.currentTarget })}
 			>
 				{payerIsMe ? "Renovar" : "Pagar yo"}
 			</Button>
-			<PlusSheet open={sheetOpen} onOpenChange={setSheetOpen} />
 		</div>
 	);
 }

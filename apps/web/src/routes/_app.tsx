@@ -11,12 +11,18 @@ import {
 import { AppBar } from "#/components/app-bar";
 import { ensureOpenCycle } from "#/lib/ensure-open-cycle";
 import { EmptyPersonal } from "#/modules/household/components/empty-personal";
+import { CheckoutReturn } from "#/modules/plus/components/checkout-return";
+import { PlusProvider } from "#/modules/plus/plus-provider";
 import { RegisterProvider } from "#/modules/register/register-dialog";
 
 export const Route = createFileRoute("/_app")({
 	// Only `household` lives in the URL; personal is the default (no param).
-	validateSearch: (search: Record<string, unknown>): { space?: "household" } =>
-		search.space === "household" ? { space: "household" } : {},
+	validateSearch: (
+		search: Record<string, unknown>,
+	): { space?: "household"; checkout?: "return" } => ({
+		...(search.space === "household" ? { space: "household" } : {}),
+		...(search.checkout === "return" ? { checkout: "return" } : {}),
+	}),
 	search: {
 		middlewares: [retainSearchParams(["space"])],
 	},
@@ -52,13 +58,16 @@ function AppLayout() {
 	const pathname = useRouterState({ select: (state) => state.location.pathname });
 	const needsPlan = space === "personal" && !hasPlan && PERSONAL_SCREENS.includes(pathname);
 	return (
-		<RegisterProvider>
-			<div className="min-h-svh bg-background text-foreground">
-				<AppBar />
-				<main className="mx-auto w-full max-w-280 px-6 py-9">
-					{needsPlan ? <EmptyPersonal /> : <Outlet />}
-				</main>
-			</div>
-		</RegisterProvider>
+		<PlusProvider>
+			<RegisterProvider>
+				<div className="min-h-svh bg-background text-foreground">
+					<AppBar />
+					<main className="mx-auto w-full max-w-280 px-6 py-9">
+						<CheckoutReturn />
+						{needsPlan ? <EmptyPersonal /> : <Outlet />}
+					</main>
+				</div>
+			</RegisterProvider>
+		</PlusProvider>
 	);
 }

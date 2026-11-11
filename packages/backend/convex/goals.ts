@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import * as z from "zod/mini";
 import { moneyLabel } from "../shared/activity";
+import { FREE_PERSONAL_GOAL_CAP } from "../shared/billing";
 import { centsSchema, nameSchema } from "../shared/budget";
 import { isoDateSchema, monthSchema } from "../shared/dates";
 import { suggestFundGoalCents } from "../shared/plan";
@@ -14,7 +15,6 @@ import { requirePlan, requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind } from "./schema";
 
 const NOT_FOUND = "No encontramos este dato.";
-const FREE_GOAL_CAP = 2;
 
 const goalFieldsSchema = z.object({
 	name: nameSchema,
@@ -131,9 +131,9 @@ export const add = mutation({
 		const existing = await ctx.db
 			.query("goals")
 			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
-			.take(FREE_GOAL_CAP + 1);
+			.take(FREE_PERSONAL_GOAL_CAP + 1);
 		// The limit is a Personal one; a household is already Plus (writing needs it).
-		if (space.kind === "personal" && existing.length >= FREE_GOAL_CAP) {
+		if (space.kind === "personal" && existing.length >= FREE_PERSONAL_GOAL_CAP) {
 			await requirePlus(ctx, userId);
 		}
 

@@ -1,12 +1,11 @@
 import { ConvexError } from "convex/values";
+import { NEED_PLUS } from "../../shared/billing";
 import { components } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
 import { getMemberIds, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
-
-const NEED_PLUS = "Esto requiere Quipu Plus.";
 
 function getProfile(ctx: Ctx, userId: string) {
 	return ctx.db

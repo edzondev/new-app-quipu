@@ -1,28 +1,23 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useMutation } from "@tanstack/react-query";
-import { ConvexError } from "convex/values";
-import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { readError } from "#/lib/read-error";
+import { needsPlus } from "#/modules/plus/needs-plus";
+import { useOpenPlus } from "#/modules/plus/plus-provider";
 import { shareInvite } from "../invite-link";
-import { PlusSheet } from "./plus-sheet";
-
-const NEEDS_PLUS = "Esto requiere Quipu Plus.";
-const needsPlus = (error: unknown) => error instanceof ConvexError && error.data === NEEDS_PLUS;
 
 /** W-U0: Nuestro espacio before it exists. The page switches to W-U1 on its own once the household does. */
 export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasPlus: boolean }) {
-	const [sheetOpen, setSheetOpen] = useState(false);
+	const openPlus = useOpenPlus();
 	const createHousehold = useConvexMutation(api.household.createHousehold);
 	const invite = useMutation({
 		mutationFn: async () => {
 			const { code } = await createHousehold({});
 			await shareInvite(code, firstName);
 		},
-		// The trial can end while `hasPlus` is still old: the server decides, and the answer is the sheet.
 		onError: (error) => {
-			if (needsPlus(error)) setSheetOpen(true);
+			if (needsPlus(error)) openPlus({ highlight: "household" });
 		},
 	});
 
@@ -39,7 +34,11 @@ export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasP
 					size="lg"
 					className="rounded-full px-7"
 					loading={invite.isPending}
-					onClick={() => (hasPlus ? invite.mutate() : setSheetOpen(true))}
+					onClick={(event) =>
+						hasPlus
+							? invite.mutate()
+							: openPlus({ highlight: "household", opener: event.currentTarget })
+					}
 				>
 					Invitar a tu pareja
 				</Button>
@@ -50,7 +49,6 @@ export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasP
 					</p>
 				) : null}
 			</div>
-			<PlusSheet open={sheetOpen} onOpenChange={setSheetOpen} />
 		</section>
 	);
 }
