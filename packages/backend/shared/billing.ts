@@ -36,12 +36,12 @@ export function monthlyEquivalent(yearCents: number) {
 	return Math.round(yearCents / 12);
 }
 
+const MAX_RETURN_PATH = 512;
+
 /**
  * An absolute URL on the site for a path the client sent. Only internal paths: whatever the
  * browser would read as another host (like "/\t/evil.com", which becomes "//evil.com") goes to Inicio.
  */
-const MAX_RETURN_PATH = 512;
-
 export function returnUrl(siteUrl: string, path: string, params: Record<string, string> = {}) {
 	const { origin } = new URL(siteUrl);
 	const parsed = new URL(path.length > MAX_RETURN_PATH ? "/home" : safeRedirect(path), origin);
