@@ -177,7 +177,8 @@ function Movements({ today }: { today: string }) {
 			)}
 
 			<p className="mt-12 border-t pt-5 text-sm text-muted-foreground">
-				{countLabel} · Disponible hoy S/ {formatCents(home.data.dailyCents)}
+				{countLabel} · {space === "household" ? "Les queda hoy" : "Te queda hoy"} S/{" "}
+				{formatCents(home.data.leftCents)}
 			</p>
 		</>
 	);

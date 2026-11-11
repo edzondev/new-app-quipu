@@ -126,11 +126,12 @@ async function saveSplit(person: Person, today: string, split: typeof SPLIT_40) 
 		envelopes: envelopesOf(before),
 		reserved: before.reserved,
 		split,
+		spentTodayCents: before.spentTodayCents,
 		daysLeft: before.daysLeft,
 	});
 	await person.mutation(api.settings.updateSplit, { space: "personal", split });
 	const after = await getHome(person, today);
-	expect(preview).toEqual({ envelopes: envelopesOf(after), dailyCents: after.dailyCents });
+	expect(preview).toEqual({ envelopes: envelopesOf(after), leftCents: after.leftCents });
 	return { before, after };
 }
 
@@ -207,13 +208,14 @@ test("an earlier expense in Gustos is not discounted again", async () => {
 
 	const { before, after } = await saveSplit(ana, "2026-10-20", SPLIT_40);
 
-	expect(before.dailyCents).toBe(2_500);
+	// Free 300.00 now, 100.00 spent today: 400.00 over 12 days.
+	expect(before.dailyCents).toBe(3_333);
 	expect(envelopesOf(after)).toEqual({
 		needsCents: 16_000,
 		wantsCents: 16_000,
 		savingsCents: 8_000,
 	});
-	expect(after.dailyCents).toBe(2_666);
+	expect(after.dailyCents).toBe(3_500); // (320.00 + 100.00) / 12
 });
 
 test("a negative Necesidades does not make the daily number zero by itself", async () => {
@@ -228,29 +230,29 @@ test("a negative Necesidades does not make the daily number zero by itself", asy
 		wantsCents: 15_000,
 		savingsCents: 10_000,
 	});
-	expect(before.dailyCents).toBe(833);
+	expect(before.dailyCents).toBe(3_333); // (100.00 + 300.00) / 12
 	expect(envelopesOf(after)).toEqual({
 		needsCents: 5_000,
 		wantsCents: 10_000,
 		savingsCents: 5_000,
 	});
-	expect(after.dailyCents).toBe(1_250);
+	expect(after.dailyCents).toBe(3_750); // (150.00 + 300.00) / 12
 });
 
-test("the daily number is zero when Necesidades plus Gustos is not positive", async () => {
+test("spending today that leaves Necesidades plus Gustos below zero keeps this morning's base", async () => {
 	const t = harness();
 	const ana = await startAna(t);
 	await spend(ana, 45_000, "needs");
 
 	const { before, after } = await saveSplit(ana, "2026-10-20", SPLIT_40);
 
-	expect(before.dailyCents).toBe(0);
+	expect(before.dailyCents).toBe(3_333); // free was 400.00 this morning
 	expect(envelopesOf(after)).toEqual({
 		needsCents: -10_000,
 		wantsCents: 10_000,
 		savingsCents: 5_000,
 	});
-	expect(after.dailyCents).toBe(0);
+	expect(after.dailyCents).toBe(3_750); // (0 + 450.00) / 12
 });
 
 test("an overdue unpaid commitment stays reserved when the split changes", async () => {

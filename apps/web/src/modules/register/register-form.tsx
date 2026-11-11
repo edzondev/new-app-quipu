@@ -4,7 +4,7 @@ import {
 	AMOUNT_KEYS,
 	ENVELOPE_LABELS,
 	formatCents,
-	getDailyCents,
+	getDailyBudget,
 	NOTE_MAX_LENGTH,
 	toCents,
 } from "@quipu/backend/shared/budget";
@@ -191,12 +191,16 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 	const room = home
 		? home[AMOUNT_KEYS[envelope]] + (envelope === draft.envelope ? originalCents : 0)
 		: 0;
+	// A new expense is dated today. An older one changes the free money, not what you spent today.
+	const changeCents = amountCents - originalCents;
 	const dailyAfter = home
-		? getDailyCents(
-				home.needsCents + home.wantsCents - home.pendingCents - (amountCents - originalCents),
-				home.daysLeft,
-			)
-		: 0;
+		? getDailyBudget({
+				freeCents: home.needsCents + home.wantsCents - home.pendingCents - changeCents,
+				spentTodayCents: home.spentTodayCents + (editId && draft.date !== today ? 0 : changeCents),
+				daysLeft: home.daysLeft,
+			})
+		: null;
+	const together = space === "household";
 
 	return (
 		<FormSheetPopup>
@@ -283,10 +287,24 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 									</p>
 								) : null}
 							</div>
-							{home && amountCents > 0 ? (
-								<p className="text-sm text-muted-foreground">
-									Disponible hoy: S/ {formatCents(home.dailyCents)} → S/ {formatCents(dailyAfter)}
-								</p>
+							{home && dailyAfter && amountCents > 0 ? (
+								dailyAfter.overCents > 0 ? (
+									<p role="status" className="text-sm text-warning-foreground">
+										{together ? "Hoy se pasarán" : "Hoy te pasarás"} S/{" "}
+										{formatCents(dailyAfter.overCents)}
+									</p>
+								) : (
+									<p className="text-sm text-muted-foreground">
+										<span aria-hidden>
+											{together ? "Les queda hoy" : "Te queda hoy"}: S/{" "}
+											{formatCents(home.leftCents)} → S/ {formatCents(dailyAfter.leftCents)}
+										</span>
+										<span className="sr-only">
+											{together ? "Les quedará hoy" : "Te quedará hoy"} S/{" "}
+											{formatCents(dailyAfter.leftCents)}
+										</span>
+									</p>
+								)
 							) : null}
 						</>
 					) : null}

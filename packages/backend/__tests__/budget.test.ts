@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
 	applyIncome,
 	freeAmounts,
-	getDailyCents,
+	getDailyBudget,
 	reallocateFree,
 	splitIncome,
 	subtractAmounts,
@@ -125,13 +125,83 @@ describe("reallocateFree", () => {
 	});
 });
 
-describe("getDailyCents", () => {
+describe("getDailyBudget", () => {
 	test("floors to the cent", () => {
-		expect(getDailyCents(100, 3)).toBe(33);
+		expect(getDailyBudget({ freeCents: 100, spentTodayCents: 0, daysLeft: 3 })).toMatchObject({
+			baseCents: 33,
+			leftCents: 33,
+		});
 	});
 
-	test("never goes below zero and is zero with no days left", () => {
-		expect(getDailyCents(-500, 10)).toBe(0);
-		expect(getDailyCents(1000, 0)).toBe(0);
+	test("the base holds still while you spend and each expense comes off it", () => {
+		// 554.40 free at dawn with 3 days left: 184.80 a day.
+		const day = (spentTodayCents: number) =>
+			getDailyBudget({ freeCents: 55_440 - spentTodayCents, spentTodayCents, daysLeft: 3 });
+
+		expect(day(0)).toEqual({
+			baseCents: 18_480,
+			leftCents: 18_480,
+			overCents: 0,
+			tomorrowCents: 27_720,
+		});
+		// After S/ 184.00: S/ 0.80 left of S/ 184.80.
+		expect(day(18_400)).toMatchObject({ baseCents: 18_480, leftCents: 80, overCents: 0 });
+		// After S/ 197.20: S/ 12.40 over; the 357.20 left are shared by the 2 days still to come.
+		expect(day(19_720)).toEqual({
+			baseCents: 18_480,
+			leftCents: 0,
+			overCents: 1_240,
+			tomorrowCents: 17_860,
+		});
+	});
+
+	test("an income today raises the base at once", () => {
+		// Spent 184.00 and then S/ 30.00 came in: the base goes from 184.80 to 194.80.
+		const before = getDailyBudget({ freeCents: 37_040, spentTodayCents: 18_400, daysLeft: 3 });
+		const after = getDailyBudget({ freeCents: 40_040, spentTodayCents: 18_400, daysLeft: 3 });
+
+		expect(before.baseCents).toBe(18_480);
+		expect(after).toMatchObject({ baseCents: 19_480, leftCents: 1_080 });
+	});
+
+	test("the last day has no tomorrow", () => {
+		const result = getDailyBudget({ freeCents: -1_240, spentTodayCents: 6_200, daysLeft: 1 });
+
+		expect(result).toEqual({
+			baseCents: 4_960,
+			leftCents: 0,
+			overCents: 1_240,
+			tomorrowCents: null,
+		});
+	});
+
+	test("a negative free amount gives base 0 and tomorrow 0, never a negative number", () => {
+		expect(getDailyBudget({ freeCents: -500, spentTodayCents: 0, daysLeft: 10 })).toEqual({
+			baseCents: 0,
+			leftCents: 0,
+			overCents: 0,
+			tomorrowCents: 0,
+		});
+	});
+
+	test("the base comes from what was free when the day began, even if free went negative", () => {
+		// Free −5.00 after spending 20.00: it was 15.00 at dawn, over 3 days.
+		expect(getDailyBudget({ freeCents: -500, spentTodayCents: 2_000, daysLeft: 3 })).toEqual({
+			baseCents: 500,
+			leftCents: 0,
+			overCents: 1_500,
+			tomorrowCents: 0,
+		});
+		// Free −30.00 after spending 20.00: nothing was free at dawn.
+		expect(
+			getDailyBudget({ freeCents: -3_000, spentTodayCents: 2_000, daysLeft: 3 }),
+		).toMatchObject({ baseCents: 0, overCents: 2_000 });
+	});
+
+	test("is zero with no days left", () => {
+		expect(getDailyBudget({ freeCents: 1_000, spentTodayCents: 0, daysLeft: 0 })).toMatchObject({
+			baseCents: 0,
+			tomorrowCents: null,
+		});
 	});
 });

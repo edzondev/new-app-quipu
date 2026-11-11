@@ -9,6 +9,7 @@ export type Draft = {
 	kind: Kind;
 	amount: string;
 	id?: Movement["id"];
+	date?: string;
 	note?: string;
 	envelope?: "needs" | "wants";
 };
@@ -26,6 +27,7 @@ export function editDraft(row: Movement): Draft | SavingDraft {
 		kind: row.kind === "income" ? "income" : "expense",
 		amount: (row.amountCents / 100).toFixed(2),
 		id: row.id,
+		date: row.date,
 		note: row.note ?? "",
 		envelope: row.envelope === "wants" ? "wants" : "needs",
 	};

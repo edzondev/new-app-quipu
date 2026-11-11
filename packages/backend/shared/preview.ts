@@ -1,6 +1,6 @@
 import {
 	type EnvelopeAmounts,
-	getDailyCents,
+	getDailyBudget,
 	reallocateFree,
 	splitIncome,
 	sumAmounts,
@@ -32,7 +32,11 @@ export function getPreview({
 		needsCents,
 		wantsCents,
 		savingsCents,
-		dailyCents: getDailyCents(needsCents + wantsCents - pendingCents, daysLeft),
+		dailyCents: getDailyBudget({
+			freeCents: needsCents + wantsCents - pendingCents,
+			spentTodayCents: 0,
+			daysLeft,
+		}).baseCents,
 	};
 }
 
@@ -42,16 +46,22 @@ export function getSplitPreview({
 	envelopes,
 	reserved,
 	split,
+	spentTodayCents,
 	daysLeft,
 }: {
 	envelopes: EnvelopeAmounts;
 	reserved: EnvelopeAmounts;
 	split: Split;
+	spentTodayCents: number;
 	daysLeft: number;
 }) {
 	const next = reallocateFree(envelopes, ZERO_AMOUNTS, reserved, split);
 	return {
 		envelopes: next,
-		dailyCents: getDailyCents(next.needsCents + next.wantsCents - sumAmounts(reserved), daysLeft),
+		leftCents: getDailyBudget({
+			freeCents: next.needsCents + next.wantsCents - sumAmounts(reserved),
+			spentTodayCents,
+			daysLeft,
+		}).leftCents,
 	};
 }

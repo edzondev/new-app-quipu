@@ -38,6 +38,7 @@ function SplitEditor({ home, space, onDone }: { home: Home; space: Space; onDone
 				envelopes: home,
 				reserved: home.reserved,
 				split,
+				spentTodayCents: home.spentTodayCents,
 				daysLeft: home.daysLeft,
 			})
 		: null;
@@ -65,8 +66,7 @@ function SplitEditor({ home, space, onDone }: { home: Home; space: Space; onDone
 				{preview ? (
 					<p className="mt-5 text-sm">
 						Con este reparto, hoy puedes gastar{" "}
-						<span className="font-semibold tabular-nums">S/ {formatCents(preview.dailyCents)}</span>
-						.
+						<span className="font-semibold tabular-nums">S/ {formatCents(preview.leftCents)}</span>.
 					</p>
 				) : null}
 				{save.isError ? (
