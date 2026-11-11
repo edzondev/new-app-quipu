@@ -102,7 +102,7 @@ export function PlusOffer({
 
 				<section
 					aria-labelledby={compareId}
-					className="flex flex-col bg-muted px-6 pt-6 pb-7 md:col-start-1 md:row-start-1 md:px-7.5 md:pt-10 md:pb-8"
+					className="flex flex-col bg-muted px-6 pt-6 pb-7 md:col-start-1 md:row-start-1 md:rounded-s-[calc(var(--radius-2xl)-1px)] md:px-7.5 md:pt-10 md:pb-8"
 				>
 					<h2 id={compareId} className="text-lg font-semibold tracking-tight md:text-xl">
 						Lo que suma Plus
