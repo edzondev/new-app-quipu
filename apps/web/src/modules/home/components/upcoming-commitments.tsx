@@ -1,4 +1,5 @@
-import { groupCommitments, type CommitmentItem } from "#/modules/commitments/commitment-view";
+import { groupCommitments } from "@quipu/backend/shared/commitments";
+import type { CommitmentItem } from "#/modules/commitments/commitment-view";
 import { CommitmentRow } from "#/modules/commitments/components/commitment-row";
 import { SectionHeading } from "./section-heading";
 

@@ -1,6 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
+import { groupCommitments } from "@quipu/backend/shared/commitments";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { type ComponentProps, useState } from "react";
@@ -9,7 +10,6 @@ import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
 import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
-import { groupCommitments } from "../commitment-view";
 import { CommitmentDialog } from "./commitment-dialog";
 import { CommitmentRow, PaymentRow } from "./commitment-row";
 

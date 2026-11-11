@@ -1458,3 +1458,93 @@ test("saving a saving or a withdrawal with nothing changed leaves no event in Nu
 	});
 	expect(await eventCount()).toBe(start + 2);
 });
+
+test("list with a limit returns only the newest movements, as Inicio asks for 5", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	for (const amountCents of [1_000, 2_000, 3_000, 4_000, 5_000, 6_000]) {
+		await ana.as.mutation(api.transactions.addExpense, {
+			space: "personal",
+			amountCents,
+			envelope: "needs",
+		});
+	}
+	const args = { space: "personal" as const, today: TODAY };
+	const recent = await ana.as.query(api.transactions.list, { ...args, limit: 5 });
+	expect(recent.rows.map((row) => row.amountCents)).toEqual([6_000, 5_000, 4_000, 3_000, 2_000]);
+	expect((await ana.as.query(api.transactions.list, args)).rows).toHaveLength(7);
+	for (const limit of [0, -1, 1.5, 501, Number.NaN]) {
+		await expect(ana.as.query(api.transactions.list, { ...args, limit })).rejects.toThrow(
+			"Revisa los datos",
+		);
+	}
+});
+
+test("changing only the note of a saving or a withdrawal keeps every balance", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await ana.as.mutation(api.transactions.addSaving, { space: "personal", amountCents: 10_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: "personal",
+		amountCents: 4_000,
+		reason: "other",
+	});
+	const start = await figures(ana, t);
+	const saving = await rowOf(ana, "saving");
+	const withdrawal = await rowOf(ana, "withdrawal");
+
+	await ana.as.mutation(api.transactions.updateSaving, {
+		space: "personal",
+		id: saving.id,
+		amountCents: 10_000,
+		note: "Para el viaje",
+	});
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
+		space: "personal",
+		id: withdrawal.id,
+		amountCents: 4_000,
+		reason: "other",
+		note: "Dentista",
+	});
+	expect(await figures(ana, t)).toEqual(start);
+	expect((await rowOf(ana, "saving")).note).toBe("Para el viaje");
+	expect((await rowOf(ana, "withdrawal")).note).toBe("Dentista");
+});
+
+test("a new note on a saving or a withdrawal is one event, the same note again is none", async () => {
+	const { ana } = await joinedCouple();
+	const household = "household" as const;
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
+		space: household,
+		amountCents: 1_000,
+		reason: "other",
+	});
+	const { rows } = await ana.as.query(api.transactions.list, { space: household, today: TODAY });
+	const saving = rows.find((row) => row.kind === "saving");
+	const withdrawal = rows.find((row) => row.kind === "withdrawal");
+	if (!saving || !withdrawal) throw new Error("missing rows");
+	const eventCount = async () => (await ana.as.query(api.activity.list, {})).events.length;
+	const start = await eventCount();
+	const edit = async () => {
+		await ana.as.mutation(api.transactions.updateSaving, {
+			space: household,
+			id: saving.id,
+			amountCents: 5_000,
+			note: "Viaje",
+		});
+		await ana.as.mutation(api.transactions.updateWithdrawal, {
+			space: household,
+			id: withdrawal.id,
+			amountCents: 1_000,
+			reason: "other",
+			note: "Dentista",
+		});
+	};
+
+	await edit();
+	expect(await eventCount()).toBe(start + 2);
+	await edit();
+	expect(await eventCount()).toBe(start + 2);
+});

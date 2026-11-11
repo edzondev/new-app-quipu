@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import * as z from "zod/mini";
 import { moneyLabel, rowLabel } from "../shared/activity";
 import {
 	AMOUNT_KEYS,
@@ -456,12 +457,16 @@ function listedEnvelope(row: Doc<"transactions">) {
 	return null;
 }
 
+const MAX_LISTED = 500;
+const limitSchema = z.optional(z.int().check(z.positive(), z.maximum(MAX_LISTED)));
+
 /**
- * Open cycle movements, newest first. `startsOn` is the next cycle's first day for an early income, else null.
+ * Open cycle movements, newest first. `limit` asks for fewer (Inicio shows the last 5).
+ * `startsOn` is the next cycle's first day for an early income, else null.
  * `who` is the author name in household, else null.
  */
 export const list = query({
-	args: { space: spaceKind, today: v.string() },
+	args: { space: spaceKind, today: v.string(), limit: v.optional(v.number()) },
 	returns: v.object({
 		startDate: v.string(),
 		endDate: v.string(),
@@ -482,14 +487,15 @@ export const list = query({
 			}),
 		),
 	}),
-	handler: async (ctx, { space: kind, today }) => {
+	handler: async (ctx, { space: kind, today, limit }) => {
 		parseInput(isoDateSchema, today);
+		parseInput(limitSchema, limit);
 		const { userId, space, cycle } = await requireOpenCycle(ctx, kind, today);
 		const rows = await ctx.db
 			.query("transactions")
 			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
 			.order("desc")
-			.take(500);
+			.take(limit ?? MAX_LISTED);
 
 		const whoByUser = new Map<string, string | null>();
 		if (space.kind === "household") {

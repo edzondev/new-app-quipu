@@ -8,20 +8,6 @@ type CommitmentList = FunctionReturnType<typeof api.commitments.list>;
 export type CommitmentItem = CommitmentList["items"][number];
 export type Payment = CommitmentList["payments"][number];
 
-export function groupCommitments(items: CommitmentItem[]) {
-	const groups: Record<"pending" | "later" | "paidBefore", CommitmentItem[]> = {
-		pending: [],
-		later: [],
-		paidBefore: [],
-	};
-	for (const item of items) {
-		if (item.status === "paid") groups.paidBefore.push(item);
-		else if (item.status === "later") groups.later.push(item);
-		else groups.pending.push(item);
-	}
-	return groups;
-}
-
 /** A monthly that is not due this cycle cannot be paid ahead; a one-off can. */
 export function canPay({ status, frequency }: CommitmentItem) {
 	return status !== "paid" && (status !== "later" || frequency === "once");

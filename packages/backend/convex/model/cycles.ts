@@ -140,6 +140,24 @@ export async function closeCycle(
 		: 0;
 	const savingsCents = cycle.envelopes.savingsCents;
 
+	await ctx.db.patch("cycles", next._id, {
+		carryIn,
+		envelopes: addAmounts(
+			{ ...carryIn, savingsCents: sweptCents },
+			await moveEarlyIncomes(ctx, cycle._id, next._id),
+		),
+	});
+	// Read after the early incomes moved out, so they are not counted in the cycle that closes, and
+	// before the automatic saving below, so it does not take a place among the person's movements.
+	const rows = await ctx.db
+		.query("transactions")
+		.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
+		.take(MAX_SUMMARY_ROWS + 1);
+	const summary: CloseSummary =
+		rows.length > MAX_SUMMARY_ROWS
+			? { status: "tooManyMovements" }
+			: summarizeClose(cycle, rows, Math.max(0, savingsCents));
+
 	if (savingsCents > 0) {
 		await ctx.db.insert("transactions", {
 			kind: "saving",
@@ -157,26 +175,6 @@ export async function closeCycle(
 		});
 	}
 
-	await ctx.db.patch("cycles", next._id, {
-		carryIn,
-		envelopes: addAmounts(
-			{ ...carryIn, savingsCents: sweptCents },
-			await moveEarlyIncomes(ctx, cycle._id, next._id),
-		),
-	});
-	// Read after the early incomes moved out, so they are not counted in the cycle that closes.
-	const rows = await ctx.db
-		.query("transactions")
-		.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id))
-		.take(MAX_SUMMARY_ROWS + 1);
-	const summary: CloseSummary =
-		rows.length > MAX_SUMMARY_ROWS
-			? { status: "tooManyMovements" }
-			: summarizeClose(cycle, rows, Math.max(0, savingsCents));
-	if (summary.status === "inconsistent") {
-		// Never block the close: record it so it is not mistaken for a cycle closed before summaries.
-		console.error("Cycle close summary does not add up", cycle._id);
-	}
 	await ctx.db.patch("cycles", cycle._id, {
 		closedAt: Date.now(),
 		closeSummary: summary,

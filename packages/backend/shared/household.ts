@@ -5,12 +5,23 @@ export function extractCode(input: string): string {
 	return last.replace(/\s/g, "").toUpperCase();
 }
 
-/** Only internal paths: "/x" passes, "//host" and "/\host" (read as "//host" by browsers) do not. */
+const PROBE_ORIGIN = "https://quipu.invalid";
+
+/**
+ * Only internal paths, as they are. "//host" and "/\host" are another host before any parsing.
+ * Browsers drop tabs and newlines and read a backslash as "/", so any control character or
+ * backslash is refused too. What is left must parse and resolve to our own origin.
+ */
 export function safeRedirect(value: unknown): string {
-	if (typeof value !== "string") return "/home";
-	return value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/\\")
-		? value
-		: "/home";
+	if (typeof value !== "string" || !value.startsWith("/")) return "/home";
+	if (value.startsWith("//") || value.startsWith("/\\")) return "/home";
+	// oxlint-disable-next-line no-control-regex -- control characters are exactly what is refused
+	if (/[\u0000-\u001f\u007f\\]/.test(value)) return "/home";
+	try {
+		return new URL(value, PROBE_ORIGIN).origin === PROBE_ORIGIN ? value : "/home";
+	} catch {
+		return "/home";
+	}
 }
 
 /** "Luis Paz" → "Luis". The names shown and shared are first names only. */
@@ -21,4 +32,15 @@ export function firstName(name: string): string {
 /** The first name of another person, or "Alguien" while they have not given one (an account that has not done onboarding yet). */
 export function displayName(name: string): string {
 	return firstName(name) || "Alguien";
+}
+
+export type ShareResult = "shared" | "cancelled" | "unavailable";
+
+/**
+ * Why navigator.share did not share. AbortError: the person closed the menu, nothing to say.
+ * Anything else (blocked, not allowed): as if there were no menu, so the link is copied instead.
+ */
+export function shareFailure(error: unknown): Exclude<ShareResult, "shared"> {
+	const name = typeof error === "object" && error !== null && "name" in error ? error.name : null;
+	return name === "AbortError" ? "cancelled" : "unavailable";
 }

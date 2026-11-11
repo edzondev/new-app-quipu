@@ -2,7 +2,7 @@ import { httpRouter } from "convex/server";
 import { components, internal } from "./_generated/api";
 import { env, httpAction } from "./_generated/server";
 import { authComponent, createAuth } from "./auth";
-import { parseEvent } from "./model/polarEvents";
+import { isOlderThanStored, parseEvent } from "./model/polarEvents";
 import { verifyWebhook } from "./model/polarWebhook";
 
 const http = httpRouter();
@@ -11,6 +11,8 @@ authComponent.registerRoutes(http, createAuth);
 // Polar webhook. The component's own registerRoutes checks the old signature scheme, so
 // we verify (Standard Webhooks) and hand the verified event to the component ourselves.
 // Retries and out-of-order events are safe: the component upserts by id and skips stale ones.
+// We skip them first too: the component compares the text of modifiedAt, and a row stored
+// before sortableTime existed may be in another format.
 // Anything we cannot use is logged and still answered 202: a 4xx makes Polar retry and,
 // after enough failures, disable the endpoint.
 http.route({
@@ -25,7 +27,20 @@ http.route({
 		const event = parseEvent(body);
 		if (event.kind === "subscription") {
 			const { subscription, userId } = event;
+			const stored = await ctx.runQuery(components.polar.lib.getSubscription, {
+				id: subscription.id,
+			});
+			if (stored && isOlderThanStored(subscription.modifiedAt, stored.modifiedAt)) {
+				return new Response("Accepted", { status: 202 });
+			}
 			if (userId) {
+				// The component keeps the first customer linked to a person: say so if Polar now names another.
+				const linked = await ctx.runQuery(components.polar.lib.getCustomerByUserId, { userId });
+				if (linked && linked.id !== subscription.customerId) {
+					console.error(
+						`Polar ${webhookId}: user ${userId} is linked to customer ${linked.id}, the event names ${subscription.customerId}`,
+					);
+				}
 				await ctx.runMutation(components.polar.lib.insertCustomer, {
 					id: subscription.customerId,
 					userId,

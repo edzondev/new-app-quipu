@@ -1,9 +1,9 @@
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { showTrialReminder } from "@quipu/backend/shared/billing";
+import { showTrialReminder, trialReminderMoments } from "@quipu/backend/shared/billing";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { Button } from "#/components/ui/button";
+import { useNow } from "#/hooks/use-now";
 import { formatShortDate } from "#/lib/format-short-date";
 import { NoticeBar } from "#/modules/home/components/notice-bar";
 import { useOpenPlus } from "../plus-provider";
@@ -16,8 +16,9 @@ export function TrialReminder() {
 		mutationFn: useConvexMutation(api.profiles.markTrialReminderSeen),
 	});
 
-	// Read once per mount: Inicio keys this by the Lima day, so it is read again on a new day or a new visit.
-	const [now] = useState(() => Date.now());
+	// The reminder shows from 48 h before the end and goes when the trial ends, with the page open.
+	const trialEndsAt = profile.data?.trialEndsAt ?? null;
+	const now = useNow(trialEndsAt === null ? [] : trialReminderMoments(trialEndsAt));
 
 	if (!profile.data || !showTrialReminder(profile.data, now)) return null;
 	return (

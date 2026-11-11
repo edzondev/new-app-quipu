@@ -1,6 +1,7 @@
 import { passkeyClient } from "@better-auth/passkey/client";
 import { convexClient } from "@convex-dev/better-auth/client/plugins";
 import { emailOTPClient } from "better-auth/client/plugins";
+import { safeRedirect } from "@quipu/backend/shared/household";
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
@@ -11,8 +12,9 @@ export const authClient = createAuthClient({
 // starts with its token (or paused, waiting for one). Changing session in memory leaves Convex queries
 // running without the new token, and /_app sends a signed-in person to /onboarding.
 // The promise never settles, so a caller awaiting it keeps its button loading until the page leaves.
+// `to` comes from ?redirect=: anything that would leave the site goes to Inicio.
 export function reloadTo(to: string) {
-	window.location.assign(to);
+	window.location.assign(safeRedirect(to));
 	return new Promise<never>(() => {});
 }
 

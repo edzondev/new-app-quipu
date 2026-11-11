@@ -174,6 +174,30 @@ test("with a monthly set to cancel and an annual running, the annual is the subs
 	expect((await user.as.query(api.billing.subscription, {}))?.interval).toBe("year");
 });
 
+test("a subscription with no period end outranks one that ends, when both give Plus", async () => {
+	const { t, user } = await singleUser();
+	await setTrialEnd(t, user.userId, NOW - 1);
+	await subscribe(t, user.userId, { id: "sub_dated", currentPeriodEnd: future });
+	await subscribe(t, user.userId, {
+		id: "sub_open",
+		recurringInterval: "year",
+		currentPeriodEnd: null,
+	});
+	await subscribe(t, user.userId, {
+		id: "sub_later",
+		currentPeriodEnd: new Date(NOW + 300 * DAY).toISOString(),
+	});
+	expect((await user.as.query(api.billing.subscription, {}))?.currentPeriodEnd).toBeNull();
+});
+
+test("a canceled subscription with no period end gives no Plus", async () => {
+	const { t, user } = await singleUser();
+	await setTrialEnd(t, user.userId, NOW - 1);
+	await subscribe(t, user.userId, { status: "canceled", currentPeriodEnd: null });
+	expect(await hasPlus(user)).toBe(false);
+	expect(await user.as.query(api.billing.subscription, {})).toBeNull();
+});
+
 test("billing.startCheckout refuses someone who already pays", async () => {
 	const { t, user } = await singleUser();
 	await subscribe(t, user.userId);

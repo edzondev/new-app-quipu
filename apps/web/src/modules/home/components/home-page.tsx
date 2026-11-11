@@ -22,7 +22,7 @@ import { TrialReminder } from "#/modules/plus/components/trial-reminder";
 import { useRegister } from "#/modules/register/register-dialog";
 import { CloseNotice } from "./close-notice";
 import { EnvelopeCards } from "./envelope-cards";
-import { RecentMovements } from "./recent-movements";
+import { RECENT_COUNT, RecentMovements } from "./recent-movements";
 import { UpcomingCommitments } from "./upcoming-commitments";
 
 type HomeData = FunctionReturnType<typeof api.balances.getHome>;
@@ -52,7 +52,9 @@ function SpaceHome({ space, today }: { space: Space; today: string }) {
 
 	const home = useQuery(convexQuery(api.balances.getHome, args));
 	const commitments = useQuery(convexQuery(api.commitments.list, args));
-	const movements = useQuery(convexQuery(api.transactions.list, args));
+	const movements = useQuery(
+		convexQuery(api.transactions.list, args === "skip" ? args : { ...args, limit: RECENT_COUNT }),
+	);
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const household = useQuery(convexQuery(api.household.get, space === "household" ? {} : "skip"));
 	const contributions = useQuery(

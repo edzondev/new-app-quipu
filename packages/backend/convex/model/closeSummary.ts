@@ -31,9 +31,15 @@ export function summarizeClose(
 			spent[AMOUNT_KEYS[row.envelope]] += row.amountCents;
 		}
 	}
-	const { needsCents, wantsCents } = cycle.envelopes;
-	const addsUp =
-		assigned.needsCents - spent.needsCents === needsCents &&
-		assigned.wantsCents - spent.wantsCents === wantsCents;
-	return addsUp ? { status: "ok", assigned, spent, fundedCents } : { status: "inconsistent" };
+	// What the cycle ended with minus what its records explain: zero in both when it adds up.
+	const gap = {
+		needsCents: cycle.envelopes.needsCents - (assigned.needsCents - spent.needsCents),
+		wantsCents: cycle.envelopes.wantsCents - (assigned.wantsCents - spent.wantsCents),
+	};
+	if (gap.needsCents === 0 && gap.wantsCents === 0) {
+		return { status: "ok", assigned, spent, fundedCents };
+	}
+	// Never block the close. Only the id and the two amounts, nothing the person wrote.
+	console.error("Cycle close summary does not add up", cycle._id, gap);
+	return { status: "inconsistent" };
 }

@@ -3,8 +3,14 @@ import { customerSessionsCreate } from "@polar-sh/sdk/funcs/customerSessionsCrea
 import { customersCreate } from "@polar-sh/sdk/funcs/customersCreate.js";
 import { customersGetExternal } from "@polar-sh/sdk/funcs/customersGetExternal.js";
 import { ResourceNotFound } from "@polar-sh/sdk/models/errors/resourcenotfound.js";
-import { ConvexError, type Infer, v } from "convex/values";
-import { findOffer, returnUrl } from "../shared/billing";
+import { ConvexError, v } from "convex/values";
+import {
+	findOffer,
+	intervalValidator,
+	type Offer,
+	offerValidator,
+	returnUrl,
+} from "../shared/billing";
 import { components } from "./_generated/api";
 import { type ActionCtx, action, query } from "./_generated/server";
 import { siteUrl } from "./auth";
@@ -12,14 +18,7 @@ import { getPlusSubscription } from "./model/plus";
 import { checkAccess, requireUser } from "./model/spaces";
 import { polar, polarCore } from "./polar";
 
-const interval = v.union(v.literal("month"), v.literal("year"));
 const currency = v.union(v.literal("pen"), v.literal("usd"), v.literal("eur"));
-const offerValidator = v.object({
-	productId: v.string(),
-	interval,
-	prices: v.array(v.object({ currency: v.string(), amountCents: v.number() })),
-});
-type Offer = Infer<typeof offerValidator>;
 const urlValidator = v.object({ url: v.string() });
 const returnTo = v.string();
 
@@ -112,7 +111,7 @@ async function getPolarCustomerId(ctx: ActionCtx, userId: string, email: string)
 
 /** Polar checkout URL for the chosen plan and currency. Changing plan goes through the portal. */
 export const startCheckout = action({
-	args: { interval, currency, returnTo },
+	args: { interval: intervalValidator, currency, returnTo },
 	returns: urlValidator,
 	handler: async (ctx, args) => {
 		const user = await requireUser(ctx);

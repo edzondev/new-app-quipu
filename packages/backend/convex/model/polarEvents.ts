@@ -29,8 +29,7 @@ function toComponentSubscription(sub: PolarSubscription, modifiedAt: string | nu
 		id: sub.id,
 		customerId: sub.customerId,
 		createdAt: sub.createdAt.toISOString(),
-		// Polar's own text, not a Date round-trip: the component orders events by comparing it,
-		// and the round-trip drops the microseconds that tell two close events apart.
+		// In sortableTime form: the component orders events by comparing this text.
 		modifiedAt,
 		productId: sub.productId,
 		checkoutId: sub.checkoutId,
@@ -57,10 +56,31 @@ function toComponentSubscription(sub: PolarSubscription, modifiedAt: string | nu
 	};
 }
 
-/** Our user, as startCheckout stamps it on the Polar customer: externalId, or metadata.userId. */
-function customerUserId(customer: PolarSubscription["customer"]) {
-	const fromMetadata = customer.metadata.userId;
-	return customer.externalId ?? (typeof fromMetadata === "string" ? fromMetadata : null);
+const POLAR_TIME =
+	/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|([+-])(\d{2}):?(\d{2}))$/i;
+
+/**
+ * One text form for an instant, so comparing two texts orders them in time: UTC with six
+ * fraction digits ("2026-10-30T00:00:00.123400Z"). It keeps the microseconds that tell two
+ * close events apart; only the whole seconds go through Date, to apply the offset.
+ * Null when the text is not an ISO date-time.
+ */
+export function sortableTime(text: string): string | null {
+	const match = POLAR_TIME.exec(text);
+	if (!match) return null;
+	const [, year, month, day, hour, minute, second, fraction = "", zone, sign, offH, offM] = match;
+	const offsetMinutes =
+		zone.toUpperCase() === "Z" ? 0 : (sign === "-" ? -1 : 1) * (Number(offH) * 60 + Number(offM));
+	const wholeMs = Date.UTC(+year, +month - 1, +day, +hour, +minute - offsetMinutes, +second);
+	if (Number.isNaN(wholeMs)) return null;
+	const whole = new Date(wholeMs).toISOString().slice(0, 19);
+	return `${whole}.${fraction.padEnd(6, "0").slice(0, 6)}Z`;
+}
+
+/** True when `stored` is later than `incoming`: that event is stale and must not be written. */
+export function isOlderThanStored(incoming: string | null, stored: string | null) {
+	const sortable = (text: string | null) => (text === null ? "" : (sortableTime(text) ?? ""));
+	return sortable(stored) > sortable(incoming);
 }
 
 const envelope = z.object({ type: z.string(), data: z.unknown() });
@@ -90,9 +110,25 @@ export function parseEvent(body: string): PolarEvent {
 	}
 	const times = rawTimes.safeParse(data);
 	if (!times.success) return { kind: "unreadable", reason: `${type}: ${issuePaths(times.error)}` };
+	const text = times.data.modified_at;
+	const modifiedAt = text === null ? null : sortableTime(text);
+	if (text !== null && modifiedAt === null) {
+		return { kind: "unreadable", reason: `${type}: modified_at` };
+	}
+
+	// Our user, as startCheckout stamps it on the Polar customer: externalId, or metadata.userId.
+	// Both there and different: linking either could hand one person's subscription to the other.
+	const { id: customerId, externalId, metadata } = subscription.data.customer;
+	const fromMetadata = typeof metadata.userId === "string" ? metadata.userId : null;
+	if (externalId && fromMetadata && externalId !== fromMetadata) {
+		return {
+			kind: "unreadable",
+			reason: `${type}: customer ${customerId} has an externalId and a metadata.userId that differ`,
+		};
+	}
 	return {
 		kind: "subscription",
-		subscription: toComponentSubscription(subscription.data, times.data.modified_at),
-		userId: customerUserId(subscription.data.customer),
+		subscription: toComponentSubscription(subscription.data, modifiedAt),
+		userId: externalId ?? fromMetadata,
 	};
 }

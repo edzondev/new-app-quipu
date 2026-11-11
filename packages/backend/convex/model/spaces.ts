@@ -55,24 +55,32 @@ export async function requireSpaceById(ctx: Ctx, spaceId: Id<"spaces">) {
 	return { userId: user._id, space };
 }
 
-export async function requireOwnerProfile(ctx: Ctx, space: Doc<"spaces">) {
-	const profile = await ctx.db
+function getOwnerProfile(ctx: Ctx, space: Doc<"spaces">) {
+	return ctx.db
 		.query("profiles")
 		.withIndex("by_userId", (q) => q.eq("userId", space.ownerId))
 		.unique();
+}
+
+export async function requireOwnerProfile(ctx: Ctx, space: Doc<"spaces">) {
+	const profile = await getOwnerProfile(ctx, space);
 	if (!profile?.plan) throw new ConvexError("Termina tus primeros pasos.");
 	return { profile, plan: profile.plan };
 }
 
-/** A household has its own cycle (set when created); a personal space follows its owner's plan. */
+/** A household has its own cycle (set when created); a personal space follows its owner's plan. Null while there is none. */
+export async function getPlan(ctx: Ctx, space: Doc<"spaces">): Promise<Plan | null> {
+	if (space.kind === "personal") return (await getOwnerProfile(ctx, space))?.plan ?? null;
+	if (space.cadence === undefined || space.cycleStartDay === undefined) return null;
+	return { cadence: space.cadence, cycleStartDay: space.cycleStartDay };
+}
+
 export async function requirePlan(ctx: Ctx, space: Doc<"spaces">): Promise<Plan> {
-	if (space.kind === "household") {
-		if (space.cadence === undefined || space.cycleStartDay === undefined) {
-			throw new ConvexError("No encontramos tu ciclo.");
-		}
-		return { cadence: space.cadence, cycleStartDay: space.cycleStartDay };
-	}
-	return (await requireOwnerProfile(ctx, space)).plan;
+	const plan = await getPlan(ctx, space);
+	if (plan) return plan;
+	throw new ConvexError(
+		space.kind === "household" ? "No encontramos tu ciclo." : "Termina tus primeros pasos.",
+	);
 }
 
 /** A household has at most 2 members; only `joinHousehold` inserts them. */

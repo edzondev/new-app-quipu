@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { isoDateSchema } from "../shared/dates";
 import { query } from "./_generated/server";
 import { parseInput } from "./model/input";
-import { closedCycle, hasCycleBefore, scanClosedCycles } from "./model/progress";
+import { closedCycle, scanClosedCycles } from "./model/progress";
 import { requireSpace } from "./model/spaces";
 
 const PAGE_ROWS = 12;
@@ -20,14 +20,22 @@ export const list = query({
 	handler: async (ctx, { before }) => {
 		const { space } = await requireSpace(ctx, "personal");
 		if (before !== undefined) parseInput(isoDateSchema, before);
-		const { rows, hidden, next } = await scanClosedCycles(ctx, space._id, {
+		const { rows, hidden, next, reads } = await scanClosedCycles(ctx, space._id, {
 			before,
 			budget: PAGE_BUDGET,
 			stopAfter: (_, found) => found.length >= PAGE_ROWS,
 		});
-		// A full page may have used the last cycle: look so "more" never leads to an empty page.
-		const hasMore =
-			next !== null && (rows.length < PAGE_ROWS || (await hasCycleBefore(ctx, space._id, next)));
+		// A full page may have used the last cycle to show: look for one more with what is left of
+		// the same budget, so "more" never leads to an empty page. Out of budget, assume there is.
+		let hasMore = next !== null;
+		if (hasMore && rows.length >= PAGE_ROWS) {
+			const ahead = await scanClosedCycles(ctx, space._id, {
+				before: next ?? undefined,
+				budget: PAGE_BUDGET - reads,
+				stopAfter: () => true,
+			});
+			hasMore = ahead.rows.length > 0 || ahead.next !== null;
+		}
 		return { cycles: rows, hidden, next: hasMore ? next : null };
 	},
 });

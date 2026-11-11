@@ -27,7 +27,7 @@ export function CadenceToggle({
 				<ToggleGroupItem
 					key={option.value}
 					value={option.value}
-					className="min-h-11 rounded-full px-3 text-xs before:rounded-full hover:bg-transparent data-pressed:bg-foreground data-pressed:text-background data-pressed:hover:bg-foreground sm:h-8 sm:px-4 sm:text-xs"
+					className="min-h-11 rounded-full px-3 text-xs before:rounded-full hover:bg-transparent data-pressed:bg-foreground data-pressed:text-background data-pressed:hover:bg-foreground sm:px-4 sm:text-xs"
 				>
 					{option.label}
 				</ToggleGroupItem>

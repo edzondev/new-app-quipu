@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cycleLabel, isSamePlan } from "../shared/plan";
+import { cycleLabel, isSamePlan, isValidSplit } from "../shared/plan";
 
 describe("cycleLabel", () => {
 	test("monthly and biweekly say the day of the month", () => {
@@ -41,5 +41,23 @@ describe("isSamePlan", () => {
 		expect(isSamePlan(PLAN, { ...PLAN, cadence: "weekly" })).toBe(false);
 		expect(isSamePlan(PLAN, { ...PLAN, cycleStartDay: "last" })).toBe(false);
 		expect(isSamePlan(PLAN, { ...PLAN, incomeCents: 160_000 })).toBe(false);
+	});
+});
+
+describe("isValidSplit", () => {
+	test.each([
+		[{ needs: 50, wants: 30, savings: 20 }, true],
+		[{ needs: 100, wants: 0, savings: 0 }, true],
+		[{ needs: 33.33, wants: 33.33, savings: 33.34 }, true],
+		[{ needs: 0.1, wants: 0.2, savings: 99.7 }, true],
+		[{ needs: 33.33, wants: 33.33, savings: 33.33 }, false],
+		[{ needs: 50, wants: 30, savings: 21 }, false],
+		[{ needs: 60, wants: 60, savings: -20 }, false],
+		[{ needs: 101, wants: -1, savings: 0 }, false],
+		[{ needs: Number.NaN, wants: 50, savings: 50 }, false],
+		[{ needs: Number.POSITIVE_INFINITY, wants: 0, savings: 0 }, false],
+		[{ needs: Number.NEGATIVE_INFINITY, wants: 100, savings: 0 }, false],
+	])("%o → %s", (split, valid) => {
+		expect(isValidSplit(split)).toBe(valid);
 	});
 });

@@ -303,3 +303,20 @@ test("Personal still asks for Plus on the third goal", async () => {
 		ana.as.mutation(api.goals.add, { space: "personal", name: "Tres", targetCents: 10_000 }),
 	).rejects.toThrow("Esto requiere Quipu Plus.");
 });
+
+test("an invalid third goal in Personal fails on its data before asking for Plus, and writes nothing", async () => {
+	const { t, ana } = await joinedCouple();
+	await setTrialEnd(t, ana.userId, Date.now() - DAY);
+	await ana.as.mutation(api.goals.add, { space: "personal", name: "Uno", targetCents: 10_000 });
+	await ana.as.mutation(api.goals.add, { space: "personal", name: "Dos", targetCents: 10_000 });
+	for (const bad of [
+		{ name: "   ", targetCents: 10_000 },
+		{ name: "Tres", targetCents: 0 },
+		{ name: "Tres", targetCents: 10_000, targetMonth: "2026-13" },
+	]) {
+		await expect(ana.as.mutation(api.goals.add, { space: "personal", ...bad })).rejects.toThrow(
+			"Revisa los datos e inténtalo otra vez.",
+		);
+	}
+	expect(await ana.as.query(api.goals.list, { space: "personal" })).toHaveLength(2);
+});

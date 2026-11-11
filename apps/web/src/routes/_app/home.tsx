@@ -3,6 +3,7 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { isEmptyHousehold } from "#/lib/empty-household";
 import { HomePage } from "#/modules/home/components/home-page";
+import { RECENT_COUNT } from "#/modules/home/components/recent-movements";
 
 export const Route = createFileRoute("/_app/home")({
 	// Set by joining a household: Inicio shows a confirmation for 3 seconds and takes it out.
@@ -18,7 +19,9 @@ export const Route = createFileRoute("/_app/home")({
 		await Promise.all([
 			context.queryClient.query(convexQuery(api.balances.getHome, args)),
 			context.queryClient.query(convexQuery(api.commitments.list, args)),
-			context.queryClient.query(convexQuery(api.transactions.list, args)),
+			context.queryClient.query(
+				convexQuery(api.transactions.list, { ...args, limit: RECENT_COUNT }),
+			),
 			context.space === "personal"
 				? context.queryClient.query(convexQuery(api.cycles.getUnseenClosed, { space: "personal" }))
 				: undefined,

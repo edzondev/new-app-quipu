@@ -205,3 +205,35 @@ export function formatRecentDay(date: string, today: string): string {
 export function formatDaysLeft(days: number): string {
 	return days === 1 ? "queda 1 día" : `quedan ${days} días`;
 }
+
+// setTimeout fires at once past this delay (about 24 days): longer waits go in steps this size.
+export const MAX_DELAY_MS = 2 ** 31 - 1;
+// A timer can fire a hair early; this margin lands it after the moment.
+const LATE_MS = 50;
+
+/** How long to wait, from `now`, to wake just after `at`: never negative, never over MAX_DELAY_MS. */
+export function delayUntil(at: number, now: number) {
+	return Math.min(Math.max(0, at - now) + LATE_MS, MAX_DELAY_MS);
+}
+
+/** The first of `times` still ahead of `now`, or null: when a screen that compares with the clock has to look again. */
+export function nextMoment(times: readonly number[], now: number): number | null {
+	const ahead = times.filter((time) => time > now);
+	return ahead.length > 0 ? Math.min(...ahead) : null;
+}
+
+/**
+ * How Registrar names the cycle that ends on `endDate` and the next one. By month only when the
+ * next one starts a month; a quincena that ends on the 15th is told by its real dates.
+ */
+export function cycleNames(endDate: string) {
+	const nextStart = addDays(endDate, 1);
+	const byMonth = nextStart.endsWith("-01");
+	return {
+		nextStart,
+		current: byMonth
+			? `lo que queda de ${monthName(endDate)}`
+			: `lo que queda, hasta el ${formatDay(endDate)}`,
+		next: byMonth ? monthName(nextStart) : "el próximo ciclo",
+	};
+}

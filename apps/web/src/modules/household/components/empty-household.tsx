@@ -11,6 +11,8 @@ import { shareInvite } from "../invite-link";
 /**
  * W-U0: Nuestro espacio before it exists. Once the household does, the layout shows the page on its
  * own (live profile) and the invalidate reruns beforeLoad and the loaders for the new household.
+ * The invalidate does not wait for the share menu, and nothing is awaited between creating the
+ * household and opening the menu, so the browser still counts it as the person's tap.
  */
 export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasPlus: boolean }) {
 	const openPlus = useOpenPlus();
@@ -19,9 +21,9 @@ export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasP
 	const invite = useMutation({
 		mutationFn: async () => {
 			const { code } = await createHousehold({});
+			void router.invalidate();
 			await shareInvite(code, firstName);
 		},
-		onSuccess: () => router.invalidate(),
 		onError: (error) => {
 			if (needsPlus(error)) openPlus({ feature: "household" });
 		},

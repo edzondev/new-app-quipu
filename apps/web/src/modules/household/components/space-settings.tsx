@@ -55,7 +55,7 @@ function RenameEditor({ name, onDone }: { name: string; onDone: () => void }) {
 					onChange={(event) => setValue(event.target.value)}
 				/>
 				{tooLong ? (
-					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
+					<p role="alert" className="mt-3 text-xs text-warning-foreground">
 						El nombre tiene máximo {NAME_MAX_LENGTH} caracteres.
 					</p>
 				) : null}

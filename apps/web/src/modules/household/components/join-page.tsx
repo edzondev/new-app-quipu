@@ -9,6 +9,7 @@ import { Button } from "#/components/ui/button";
 import { Field, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { Skeleton } from "#/components/ui/skeleton";
+import { useNow } from "#/hooks/use-now";
 import { readError } from "#/lib/read-error";
 import { inviteState } from "../invite-state";
 import { useInviteInfo } from "../use-invite-info";
@@ -52,11 +53,10 @@ export function JoinPage({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [code, setCode] = useState(extractCode(initialCode));
 	const [edited, setEdited] = useState(false);
-	// Read once: the clock only matters to tell an old invite from a new one.
-	const [now] = useState(Date.now);
-
 	const profile = useQuery(convexQuery(api.profiles.myProfile, isAuthenticated ? {} : "skip"));
 	const info = useInviteInfo(code);
+	// The invite stops working at expiresAt, with the page open or after coming back to the tab.
+	const now = useNow(info.data ? [info.data.expiresAt] : []);
 	const joinHousehold = useConvexMutation(api.household.joinHousehold);
 	function onJoined(result: { ok: boolean }) {
 		if (result.ok) void navigate({ to: "/home", search: { space: "household", joined: true } });

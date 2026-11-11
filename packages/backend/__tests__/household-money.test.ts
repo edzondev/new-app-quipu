@@ -142,6 +142,72 @@ test("contributions count every income of the cycle, also after 500 other rows",
 	});
 });
 
+test("contributions add incomes interleaved with many expenses, and leave out other cycles", async () => {
+	const { t, ana, luis } = await joinedCouple();
+	await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(10)).find((row) => row.kind === "household");
+		if (!space) throw new Error("missing household");
+		const cycle = await ctx.db
+			.query("cycles")
+			.withIndex("by_space_start", (q) => q.eq("spaceId", space._id))
+			.first();
+		if (!cycle) throw new Error("missing cycle");
+		const base = { spaceId: space._id, cycleId: cycle._id, date: cycle.startDate };
+		const allocation = { needsCents: 0, wantsCents: 0, savingsCents: 0 };
+		for (const [userId, amountCents] of [
+			[ana.userId, 10_000],
+			[luis.userId, 20_000],
+			[ana.userId, 30_000],
+		] as const) {
+			await ctx.db.insert("transactions", {
+				...base,
+				kind: "income",
+				userId,
+				amountCents,
+				allocation,
+			});
+			for (let i = 0; i < 300; i++) {
+				await ctx.db.insert("transactions", {
+					...base,
+					kind: "expense",
+					userId,
+					amountCents: 1,
+					envelope: "needs",
+				});
+			}
+		}
+		await ctx.db.insert("transactions", {
+			...base,
+			kind: "income",
+			userId: luis.userId,
+			amountCents: 99_000,
+			allocation,
+			forNextCycle: true,
+		});
+		const older = await ctx.db.insert("cycles", {
+			spaceId: space._id,
+			startDate: "2026-09-01",
+			endDate: "2026-09-30",
+			closedAt: Date.now(),
+			split: cycle.split,
+			envelopes: allocation,
+			carryIn: { needsCents: 0, wantsCents: 0 },
+		});
+		await ctx.db.insert("transactions", {
+			...base,
+			cycleId: older,
+			kind: "income",
+			userId: ana.userId,
+			amountCents: 77_000,
+			allocation,
+		});
+	});
+	expect(await ana.as.query(api.household.contributions, { today: TODAY })).toEqual({
+		mineCents: 40_000,
+		partnerCents: 20_000,
+	});
+});
+
 test("only who recorded an expense or an income changes or deletes it", async () => {
 	const { ana, luis } = await joinedCouple();
 	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 50_000 });
