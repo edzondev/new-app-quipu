@@ -19,6 +19,7 @@ import { HouseholdNotices } from "#/modules/household/components/household-notic
 import { InviteStrip } from "#/modules/household/components/invite-strip";
 import { JoinedNotice } from "#/modules/household/components/joined-notice";
 import { PlanNotice } from "#/modules/plus/components/plan-notice";
+import { TrialReminder } from "#/modules/plus/components/trial-reminder";
 import { useRegister } from "#/modules/register/register-dialog";
 import { CloseNotice } from "./close-notice";
 import { EnvelopeCards } from "./envelope-cards";
@@ -36,6 +37,7 @@ export function HomePage() {
 		<>
 			<JoinedNotice />
 			<PlanNotice />
+			<TrialReminder />
 			<Home key={today} today={today} />
 		</>
 	);

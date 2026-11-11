@@ -1,12 +1,13 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
-import type { PlusHistory } from "@quipu/backend/shared/billing";
-import { formatDay, getLimaDate } from "@quipu/backend/shared/dates";
+import { type PlusHistory, TRIAL_MS } from "@quipu/backend/shared/billing";
 import { useMutation } from "@tanstack/react-query";
-import { ShieldCheck, Target, Users } from "lucide-react";
-import { type ComponentProps, useRef } from "react";
+import { CalendarCheck, ShieldCheck, Target, Users } from "lucide-react";
+import { type ComponentProps, useRef, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Button } from "#/components/ui/button";
 import { toastManager } from "#/components/ui/toast";
+import { formatShortDate } from "#/lib/format-short-date";
 import {
 	PLUS_CARD_BUTTON as BIG,
 	PlusCard,
@@ -94,11 +95,6 @@ export function PlusPitch({
 					</>
 				)}
 			</div>
-			{trialAvailable ? (
-				<p className="mt-3.5 text-center text-xs text-muted-foreground">
-					Sin tarjeta. Al terminar vuelves a Gratis.
-				</p>
-			) : null}
 		</PlusCard>
 	);
 }
@@ -112,10 +108,9 @@ function TrialActions({ onPlans, onStarted }: { onPlans: () => void; onStarted: 
 		// "used" needs nothing here: myProfile follows and this card turns into T1-usada.
 		onSuccess: (result) => {
 			if (result.status !== "active") return;
-			const end = formatDay(getLimaDate(new Date(result.trialEndsAt)));
 			toastManager.add({
 				title: "Prueba de Plus activa.",
-				description: `Termina el ${end}.`,
+				description: `Termina el ${formatShortDate(result.trialEndsAt)}.`,
 				type: "success",
 			});
 			onStarted();
@@ -125,9 +120,21 @@ function TrialActions({ onPlans, onStarted }: { onPlans: () => void; onStarted: 
 		},
 	});
 	const activating = trial.isPending || trial.isSuccess;
+	// T1 mounts each time it opens, so this is when the person is looking at it.
+	const [openedAt] = useState(() => Date.now());
 
 	return (
 		<>
+			{/* The end the server would set if the trial started now; the toast then shows the real one. */}
+			<Alert role="note" className="mb-1.5 border-border/72 bg-muted [&>svg]:text-envelope-savings">
+				<CalendarCheck aria-hidden />
+				<AlertTitle className="font-semibold">
+					Gratis hasta el {formatShortDate(openedAt + TRIAL_MS)}.
+				</AlertTitle>
+				<AlertDescription>
+					No pedimos tarjeta y no se te cobra nada. Ese día vuelves a Gratis.
+				</AlertDescription>
+			</Alert>
 			<Button
 				size="xl"
 				className={BIG}
@@ -138,7 +145,7 @@ function TrialActions({ onPlans, onStarted }: { onPlans: () => void; onStarted: 
 					trial.mutate();
 				}}
 			>
-				{activating ? "Activando…" : "Probar 14 días gratis"}
+				{activating ? "Activando…" : "Empezar prueba gratis"}
 			</Button>
 			{trial.isError ? (
 				<p role="alert" className="text-center text-xs text-warning-foreground">
