@@ -39,7 +39,7 @@ export function InviteStrip({ invite, firstName }: Props) {
 			if (await copyText(invite.code)) inviteToast("Código copiado");
 		},
 	});
-	const busy = share.isPending || copyCode.isPending;
+	const busy = share.isPending || copyCode.isPending || resend.isPending;
 
 	return (
 		<div className="mt-6 flex flex-col gap-2 text-sm">

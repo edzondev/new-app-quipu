@@ -83,8 +83,10 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 	const homeQuery = useQuery(convexQuery(api.balances.getHome, homeArgs));
 	const home = homeQuery.data;
 	// Saving waits for the cycle: it decides where an income goes and what the envelopes show.
+	// A cached home is not enough while ensureOpen runs or after the home query failed.
+	const ready = ensureOpen.isSuccess && homeQuery.isSuccess;
 	const loadFailed = ensureOpen.isError || homeQuery.isError;
-	const loading = !home && !loadFailed;
+	const loading = !ready && !loadFailed;
 	const queryClient = useQueryClient();
 	const [confirmation, setConfirmation] = useState<string | null>(null);
 	const pendingConfirmation = useRef<string | null>(null);
@@ -114,6 +116,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		validationLogic: revalidateLogic(),
 		validators: { onDynamic: registerSchema },
 		onSubmit: ({ value }) => {
+			if (!ready) return;
 			const amountCents = toCents(value.amount);
 			const note = value.note.trim() || undefined;
 			const asksCycle =
@@ -400,7 +403,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 							onDelete={() => remove(draft.kind, editId)}
 						/>
 					) : null}
-					<Button type="submit" loading={pending || loading} disabled={pending || !home}>
+					<Button type="submit" loading={pending || loading} disabled={pending || !ready}>
 						{editId
 							? "Guardar"
 							: isExpense

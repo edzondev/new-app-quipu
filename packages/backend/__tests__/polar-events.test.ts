@@ -257,3 +257,25 @@ test("a modified_at that is not a date-time is logged and stores nothing", async
 	expect(error).toHaveBeenCalledWith(expect.stringContaining("modified_at"));
 	expect(await stored(t)).toBeNull();
 });
+
+test("an event for a customer other than the one linked to the person is logged and stored as before", async () => {
+	const { t, user } = await lapsedUser();
+	await t.mutation(components.polar.lib.insertCustomer, { id: "cus_0", userId: user.userId });
+	const error = vi.spyOn(console, "error").mockImplementation(() => {});
+	expect((await deliver(t, "subscription.created", customer(user.userId))).status).toBe(202);
+	const logged = String(error.mock.calls[0]?.[0]);
+	expect(logged).toContain("cus_0");
+	expect(logged).toContain("cus_1");
+	expect(logged).not.toContain("camila@correo.com");
+	expect(await stored(t)).not.toBeNull();
+	expect(
+		(await t.query(components.polar.lib.getCustomerByUserId, { userId: user.userId }))?.id,
+	).toBe("cus_0");
+});
+
+test("an event for the customer already linked logs nothing", async () => {
+	const { t } = await payer();
+	const error = vi.spyOn(console, "error").mockImplementation(() => {});
+	await deliver(t, "subscription.created");
+	expect(error).not.toHaveBeenCalled();
+});

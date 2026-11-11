@@ -8,15 +8,20 @@ export function extractCode(input: string): string {
 const PROBE_ORIGIN = "https://quipu.invalid";
 
 /**
- * Only internal paths, as they are. Browsers drop tabs and newlines and read a backslash as "/",
- * so "/<tab>/evil.com" would land on another host: any control character or backslash is
- * refused, and what is left must resolve to our own origin.
+ * Only internal paths, as they are. "//host" and "/\host" are another host before any parsing.
+ * Browsers drop tabs and newlines and read a backslash as "/", so any control character or
+ * backslash is refused too. What is left must parse and resolve to our own origin.
  */
 export function safeRedirect(value: unknown): string {
 	if (typeof value !== "string" || !value.startsWith("/")) return "/home";
+	if (value.startsWith("//") || value.startsWith("/\\")) return "/home";
 	// oxlint-disable-next-line no-control-regex -- control characters are exactly what is refused
 	if (/[\u0000-\u001f\u007f\\]/.test(value)) return "/home";
-	return new URL(value, PROBE_ORIGIN).origin === PROBE_ORIGIN ? value : "/home";
+	try {
+		return new URL(value, PROBE_ORIGIN).origin === PROBE_ORIGIN ? value : "/home";
+	} catch {
+		return "/home";
+	}
 }
 
 /** "Luis Paz" → "Luis". The names shown and shared are first names only. */

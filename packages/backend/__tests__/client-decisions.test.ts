@@ -7,7 +7,7 @@
 import { describe, expect, test } from "vitest";
 import { showTrialReminder, trialReminderMoments } from "../shared/billing";
 import { type CommitmentStatus, groupCommitments } from "../shared/commitments";
-import { cycleNames, nextMoment } from "../shared/dates";
+import { cycleNames, delayUntil, MAX_DELAY_MS, nextMoment } from "../shared/dates";
 import { safeRedirect, shareFailure } from "../shared/household";
 
 describe("safeRedirect, as reloadTo and the auth routes use it", () => {
@@ -31,6 +31,8 @@ describe("safeRedirect, as reloadTo and the auth routes use it", () => {
 			"/\\evil.com",
 			"/home\\..\\\\evil.com",
 			"//evil.com/home",
+			"//quipu.invalid/home",
+			"//[",
 			"///evil.com",
 			"/\u0000/evil.com",
 			"https://evil.com/home",
@@ -60,6 +62,14 @@ describe("trial reminder clock", () => {
 		expect(showTrialReminder(profile, starts)).toBe(true);
 		expect(showTrialReminder(profile, ends - 1)).toBe(true);
 		expect(showTrialReminder(profile, ends)).toBe(false);
+	});
+
+	test("the wait is measured from when it is scheduled, lands just after, and never passes the cap", () => {
+		expect(delayUntil(END, END - HOUR)).toBe(HOUR + 50);
+		// Scheduled late: a moment already gone fires right away, not with a negative delay.
+		expect(delayUntil(END, END + HOUR)).toBe(50);
+		expect(delayUntil(END, END - 30 * 24 * HOUR)).toBe(MAX_DELAY_MS);
+		expect(delayUntil(END, END - MAX_DELAY_MS)).toBe(MAX_DELAY_MS);
 	});
 
 	test("nothing ahead means no timer at all", () => {

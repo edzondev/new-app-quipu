@@ -16,15 +16,19 @@ const sent = vi.hoisted(() => {
 	}[] = [];
 	const portals: { returnUrl: string }[] = [];
 	const created: { email: string; externalId: string; metadata: Record<string, string> }[] = [];
+	const lookups: string[] = [];
 	const answers: { lookup: () => Result; create: () => Result } = {
 		lookup: () => ({ ok: true, value: { id: "cus_polar" } }),
 		create: () => ({ ok: true, value: { id: "cus_new" } }),
 	};
-	return { checkouts, portals, created, answers };
+	return { checkouts, portals, created, lookups, answers };
 });
 
 vi.mock("@polar-sh/sdk/funcs/customersGetExternal.js", () => ({
-	customersGetExternal: async () => sent.answers.lookup(),
+	customersGetExternal: async (_core: unknown, input: { externalId: string }) => {
+		sent.lookups.push(input.externalId);
+		return sent.answers.lookup();
+	},
 }));
 vi.mock("@polar-sh/sdk/funcs/customersCreate.js", () => ({
 	customersCreate: async (_core: unknown, input: (typeof sent.created)[number]) => {
@@ -49,6 +53,7 @@ beforeEach(() => {
 	sent.checkouts.length = 0;
 	sent.portals.length = 0;
 	sent.created.length = 0;
+	sent.lookups.length = 0;
 	sent.answers.lookup = () => ({ ok: true, value: { id: "cus_polar" } });
 	sent.answers.create = () => ({ ok: true, value: { id: "cus_new" } });
 });
@@ -159,6 +164,7 @@ test("someone else's subscription is not one's own: nothing to confirm after a c
 test("a customer Polar already has under our userId is linked and checks out, none is created", async () => {
 	const { t, user } = await withPlans();
 	await buyMonthly(user);
+	expect(sent.lookups).toEqual([user.userId]);
 	expect(sent.created).toEqual([]);
 	expect(sent.checkouts).toMatchObject([{ customerId: "cus_polar" }]);
 	expect((await linkedCustomer(t, user.userId))?.id).toBe("cus_polar");
@@ -168,6 +174,7 @@ test("with no customer in Polar, one is created with our userId, linked, then ch
 	const { t, user } = await withPlans();
 	sent.answers.lookup = () => ({ ok: false, error: notFound() });
 	await buyMonthly(user);
+	expect(sent.lookups).toEqual([user.userId]);
 	expect(sent.created).toEqual([
 		{ email: "camila@correo.com", externalId: user.userId, metadata: { userId: user.userId } },
 	]);
@@ -186,6 +193,7 @@ test("a Polar error finding or creating the customer opens no checkout and links
 	await expect(buyMonthly(user)).rejects.toThrow();
 	expect(sent.created).toHaveLength(1);
 
+	expect(sent.lookups).toEqual([user.userId, user.userId]);
 	expect(sent.checkouts).toEqual([]);
 	expect(await linkedCustomer(t, user.userId)).toBeNull();
 });

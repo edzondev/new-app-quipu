@@ -17,8 +17,22 @@ export function RowsSkeleton() {
 	);
 }
 
-/** One page of closed cycles. "Ver ciclos anteriores" mounts the next page from the `next` cursor. */
-export function CyclesPage({ before }: { before?: string }) {
+// An empty page with more behind it is skipped on its own, at most this many in a row.
+const MAX_EMPTY_SKIPS = 3;
+
+/**
+ * One page of closed cycles. "Ver ciclos anteriores" mounts the next page from the `next` cursor.
+ * `first`: nothing is shown above this page, so it carries the heading and the empty messages.
+ */
+export function CyclesPage({
+	before,
+	first = before === undefined,
+	skips = 0,
+}: {
+	before?: string;
+	first?: boolean;
+	skips?: number;
+}) {
 	const [showNext, setShowNext] = useState(false);
 	const page = useQuery(convexQuery(api.progress.list, { before }));
 
@@ -32,14 +46,16 @@ export function CyclesPage({ before }: { before?: string }) {
 	if (!page.data) return <RowsSkeleton />;
 
 	const { cycles, hidden, next } = page.data;
-	const isFirstPage = before === undefined;
-	const firstWithDetail = isFirstPage ? cycles.findIndex((c) => c.detail.kind === "ok") : -1;
+	if (cycles.length === 0 && next !== null && skips < MAX_EMPTY_SKIPS) {
+		return <CyclesPage before={next} first={first} skips={skips + 1} />;
+	}
+	const firstWithDetail = first ? cycles.findIndex((c) => c.detail.kind === "ok") : -1;
 
 	return (
 		<>
 			{cycles.length > 0 ? (
 				<>
-					{isFirstPage ? (
+					{first ? (
 						<h2 className="mt-10 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
 							Ciclos cerrados
 						</h2>
@@ -51,7 +67,7 @@ export function CyclesPage({ before }: { before?: string }) {
 					</ul>
 				</>
 			) : next === null ? (
-				<p className="pt-4 text-sm text-muted-foreground">{emptyMessage(isFirstPage, hidden)}</p>
+				<p className="pt-4 text-sm text-muted-foreground">{emptyMessage(first, hidden)}</p>
 			) : null}
 			{next === null ? null : showNext ? (
 				<CyclesPage before={next} />

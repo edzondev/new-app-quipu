@@ -1,8 +1,5 @@
-import { nextMoment } from "@quipu/backend/shared/dates";
+import { delayUntil, nextMoment } from "@quipu/backend/shared/dates";
 import { useEffect, useState } from "react";
-
-// setTimeout fires at once past this delay (about 24 days): wait in steps that size instead.
-const MAX_DELAY_MS = 2 ** 31 - 1;
 
 /**
  * The clock for a screen that compares with it: it moves at each of `moments` and when the tab
@@ -18,9 +15,9 @@ export function useNow(moments: readonly number[]) {
 			if (document.visibilityState === "visible") tick();
 		};
 		document.addEventListener("visibilitychange", onVisible);
-		// A timer that fires a little early leaves `next` ahead: `now` changed, so this runs again.
-		const timer =
-			next === null ? undefined : setTimeout(tick, Math.min(next - now, MAX_DELAY_MS) + 50);
+		// Measured when scheduling, not from `now`, which may be old. A wait cut at the cap, or a timer
+		// that fires early, leaves `next` ahead: `now` changed, so this runs again.
+		const timer = next === null ? undefined : setTimeout(tick, delayUntil(next, Date.now()));
 		return () => {
 			document.removeEventListener("visibilitychange", onVisible);
 			clearTimeout(timer);

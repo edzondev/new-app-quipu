@@ -34,6 +34,13 @@ http.route({
 				return new Response("Accepted", { status: 202 });
 			}
 			if (userId) {
+				// The component keeps the first customer linked to a person: say so if Polar now names another.
+				const linked = await ctx.runQuery(components.polar.lib.getCustomerByUserId, { userId });
+				if (linked && linked.id !== subscription.customerId) {
+					console.error(
+						`Polar ${webhookId}: user ${userId} is linked to customer ${linked.id}, the event names ${subscription.customerId}`,
+					);
+				}
 				await ctx.runMutation(components.polar.lib.insertCustomer, {
 					id: subscription.customerId,
 					userId,
