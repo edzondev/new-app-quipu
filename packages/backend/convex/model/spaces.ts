@@ -1,7 +1,7 @@
 import { ConvexError } from "convex/values";
 import type { Plan } from "../../shared/plan";
 import type { Doc, Id } from "../_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "../_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
 import { authComponent } from "../auth";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -12,7 +12,7 @@ export function checkAccess(ctx: QueryCtx) {
 	return authComponent.safeGetAuthUser(ctx);
 }
 
-export function requireUser(ctx: MutationCtx) {
+export function requireUser(ctx: MutationCtx | ActionCtx) {
 	return authComponent.getAuthUser(ctx);
 }
 

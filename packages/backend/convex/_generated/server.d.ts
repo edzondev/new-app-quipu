@@ -33,6 +33,9 @@ type Env = {
   readonly OTP_DELIVERY: string | undefined;
   readonly PASSKEY_RP_ID: string | undefined;
   readonly PASSKEY_RP_NAME: string | undefined;
+  readonly POLAR_ORGANIZATION_TOKEN: string;
+  readonly POLAR_SERVER: "sandbox" | "production";
+  readonly POLAR_WEBHOOK_SECRET: string;
   readonly RESEND_API_KEY: string | undefined;
   readonly RESEND_FROM: string | undefined;
   readonly SITE_URL: string | undefined;
