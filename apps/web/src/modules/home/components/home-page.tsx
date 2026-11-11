@@ -37,7 +37,7 @@ export function HomePage() {
 		<>
 			<JoinedNotice />
 			<PlanNotice />
-			<TrialReminder />
+			<TrialReminder key={today} />
 			<SpaceHome key={today} space={space} today={today} />
 		</>
 	);

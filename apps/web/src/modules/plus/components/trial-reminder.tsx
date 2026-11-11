@@ -16,7 +16,7 @@ export function TrialReminder() {
 		mutationFn: useConvexMutation(api.profiles.markTrialReminderSeen),
 	});
 
-	// Read once per mount: Inicio remounts when the Lima day changes, which is as fresh as this needs.
+	// Read once per mount: Inicio keys this by the Lima day, so it is read again on a new day or a new visit.
 	const [now] = useState(() => Date.now());
 
 	if (!profile.data || !showTrialReminder(profile.data, now)) return null;

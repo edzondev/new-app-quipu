@@ -76,13 +76,16 @@ test("someone who already paid gets no trial, even after the subscription ended"
 	expect((await profile())?.hasPlus).toBe(false);
 });
 
-test("a subscription that was never charged does not use up the trial", async () => {
-	const { t, user, profile, startTrial } = await newUser();
-	await subscribe(t, user.userId, { status: "incomplete_expired" });
-	expect(await profile()).toMatchObject({ hasPlus: false, plusHistory: "none" });
-	expect(await startTrial()).toEqual({ status: "active", trialEndsAt: TRIAL_END });
-	expect(await profile()).toMatchObject({ hasPlus: true, plusHistory: "trial" });
-});
+test.each(["incomplete", "incomplete_expired"] as const)(
+	"a %s subscription was never charged and does not use up the trial",
+	async (status) => {
+		const { t, user, profile, startTrial } = await newUser();
+		await subscribe(t, user.userId, { status });
+		expect(await profile()).toMatchObject({ hasPlus: false, plusHistory: "none" });
+		expect(await startTrial()).toEqual({ status: "active", trialEndsAt: TRIAL_END });
+		expect(await profile()).toMatchObject({ hasPlus: true, plusHistory: "trial" });
+	},
+);
 
 test("an account that had the old automatic trial counts it as used", async () => {
 	const { t, user, profile, startTrial } = await newUser();

@@ -1,21 +1,27 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 import { readError } from "#/lib/read-error";
 import { needsPlus } from "#/modules/plus/needs-plus";
 import { useOpenPlus } from "#/modules/plus/plus-provider";
 import { shareInvite } from "../invite-link";
 
-/** W-U0: Nuestro espacio before it exists. The page switches to W-U1 on its own once the household does. */
+/**
+ * W-U0: Nuestro espacio before it exists. Once the household does, the layout shows the page on its
+ * own (live profile) and the invalidate reruns beforeLoad and the loaders for the new household.
+ */
 export function EmptyHousehold({ firstName, hasPlus }: { firstName: string; hasPlus: boolean }) {
 	const openPlus = useOpenPlus();
+	const router = useRouter();
 	const createHousehold = useConvexMutation(api.household.createHousehold);
 	const invite = useMutation({
 		mutationFn: async () => {
 			const { code } = await createHousehold({});
 			await shareInvite(code, firstName);
 		},
+		onSuccess: () => router.invalidate(),
 		onError: (error) => {
 			if (needsPlus(error)) openPlus({ feature: "household" });
 		},

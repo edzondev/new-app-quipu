@@ -123,8 +123,9 @@ export function AppBar() {
 	const openRegister = useRegister();
 	const gate = useReadOnlyGate();
 	const { space } = useSearch({ from: "/_app" });
-	// Personal without a plan has no sobres to register in.
-	const canRegister = space === "household" || profile.data?.plan !== null;
+	// Nuestro espacio without a household, or Personal without a plan, has no sobres to register in.
+	const canRegister =
+		space === "household" ? profile.data?.hasHousehold === true : !!profile.data?.plan;
 	// The menu is open only for the address it was opened on, so back and forward close it
 	// without an effect. Choosing the page you are already on has to close it by hand.
 	const href = useRouterState({ select: (state) => state.location.href });

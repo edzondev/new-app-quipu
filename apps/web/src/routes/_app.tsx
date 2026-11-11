@@ -60,7 +60,13 @@ function AppLayout() {
 	const pathname = useRouterState({ select: (state) => state.location.pathname });
 	const needsPlan =
 		context.space === "personal" && !context.hasPlan && PERSONAL_SCREENS.includes(pathname);
-	const needsHousehold = isEmptyHousehold(context) && SPACE_SCREENS.includes(pathname);
+	// The live profile, not the beforeLoad snapshot: creating, leaving or losing the household on this
+	// page swaps the screen at once. The snapshot only covers the first load.
+	const needsHousehold =
+		isEmptyHousehold({
+			space: context.space,
+			hasHousehold: profile.data?.hasHousehold ?? context.hasHousehold,
+		}) && SPACE_SCREENS.includes(pathname);
 	return (
 		<PlusProvider>
 			<RegisterProvider>
