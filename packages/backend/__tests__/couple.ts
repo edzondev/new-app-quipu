@@ -80,11 +80,18 @@ export const monthly15 = {
 	split: { needs: 60, wants: 20, savings: 20 },
 };
 
-/** A person with a Personal plan (and so a 14-day Plus trial), under the fake clock. */
-export async function startUser(t: Harness, email: string, name: string) {
+/** A person who finished Primeros pasos, on Gratis, under the fake clock. */
+export async function onboardUser(t: Harness, email: string, name: string) {
 	vi.useFakeTimers({ now: new Date(START) });
 	const user = await signUp(t, email, name);
 	await user.as.mutation(api.profiles.completeOnboarding, { ...monthly15, name });
+	return user;
+}
+
+/** The same person after asking for the 14-day Plus trial. */
+export async function startUser(t: Harness, email: string, name: string) {
+	const user = await onboardUser(t, email, name);
+	await user.as.mutation(api.profiles.startTrial, {});
 	return user;
 }
 

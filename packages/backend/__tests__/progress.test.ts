@@ -1,3 +1,4 @@
+import polarTest from "@convex-dev/polar/test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import resendTest from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";
@@ -19,6 +20,7 @@ const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
 function harness() {
 	const t = convexTest(schema, modules);
 	t.registerComponent("betterAuth", authSchema, componentModules);
+	polarTest.register(t);
 	resendTest.register(t);
 	rateLimiterTest.register(t);
 	return t;
@@ -796,6 +798,7 @@ test("without a session nobody can read the progress", async () => {
 test("each person sees only their own cycles, and a closed household cycle is not in the personal history", async () => {
 	const t = harness();
 	const ana = await startAna(t);
+	await ana.mutation(api.profiles.startTrial, {});
 	await ana.mutation(api.household.createHousehold, { name: "Casa" });
 	await closeOn(ana, "2026-11-01");
 	await ana.mutation(api.cycles.ensureOpen, { space: "household" });

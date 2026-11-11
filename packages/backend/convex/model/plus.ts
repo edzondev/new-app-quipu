@@ -41,6 +41,8 @@ export async function getPlusSubscription(ctx: Ctx | ActionCtx, userId: string) 
 		.at(0);
 }
 
+export const TRIAL_MS = 14 * 24 * 60 * 60 * 1000;
+
 async function hasTrial(ctx: Ctx, userId: string) {
 	const profile = await getProfile(ctx, userId);
 	return profile?.trialEndsAt !== undefined && profile.trialEndsAt > Date.now();
@@ -66,7 +68,7 @@ export async function householdHasPlus(ctx: Ctx, spaceId: Id<"spaces">) {
 }
 
 /** Had a trial or any subscription at some point, even a lapsed one. */
-async function hadPlus(ctx: Ctx, userId: string) {
+export async function hadPlus(ctx: Ctx, userId: string) {
 	if ((await getProfile(ctx, userId))?.trialEndsAt !== undefined) return true;
 	const all = await ctx.runQuery(components.polar.lib.listAllUserSubscriptions, { userId });
 	return all.length > 0;

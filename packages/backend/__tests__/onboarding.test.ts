@@ -97,6 +97,8 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 		nextPlan: null,
 		hasHousehold: false,
 		hasPlus: false,
+		trialAvailable: true,
+		welcomeSeen: false,
 	});
 
 	const today = getLimaDate();
@@ -108,7 +110,9 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 		plan: planOnly,
 		nextPlan: null,
 		hasHousehold: false,
-		hasPlus: true,
+		hasPlus: false,
+		trialAvailable: true,
+		welcomeSeen: false,
 	});
 
 	const first = await t.run(async (ctx) => {
@@ -127,8 +131,7 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 	});
 	expect(first.spaces).toHaveLength(1);
 	expect(first.spaces[0]).toMatchObject({ kind: "personal" });
-	expect(first.trialEndsAt).toBeGreaterThan(Date.now());
-	expect(first.trialEndsAt).toBeLessThanOrEqual(Date.now() + 14 * 24 * 60 * 60 * 1000);
+	expect(first.trialEndsAt).toBeUndefined();
 	expect(first.cycles).toHaveLength(1);
 	expect(first.cycles[0]).toMatchObject({
 		spaceId: first.spaces[0]._id,
@@ -176,6 +179,8 @@ test("anonymous gets null; new profile has no plan; complete sets plan, space an
 		nextPlan: null,
 		hasHousehold: false,
 		hasPlus: false,
+		trialAvailable: true,
+		welcomeSeen: false,
 	});
 });
 
