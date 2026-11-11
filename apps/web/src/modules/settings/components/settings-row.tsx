@@ -20,7 +20,7 @@ export function SettingsRow({
 	children?: ReactNode;
 }) {
 	return (
-		<li className="flex min-h-[72px] items-center justify-between gap-4 border-b border-border/80 py-4">
+		<li className="relative flex min-h-[72px] items-center justify-between gap-4 border-b border-border/80 py-4">
 			<div className="min-w-0">
 				<p className="wrap-break-word text-[15px] font-semibold">{title}</p>
 				{children ? (

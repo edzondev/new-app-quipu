@@ -2,6 +2,8 @@ import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { planRowLine } from "@quipu/backend/shared/billing";
+import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
@@ -102,6 +104,23 @@ function SpaceRow() {
 	);
 }
 
+/** The whole row opens Tu plan: the tap area of the link stretches over it. */
+function PlusRow({ today }: { today: string }) {
+	const status = useQuery(convexQuery(api.billing.status, {}));
+	return (
+		<SettingsRow
+			title="Quipu Plus"
+			action={
+				<Link to="/settings/subscription" className={cn(ACTION, "static after:inset-0")}>
+					Abrir
+				</Link>
+			}
+		>
+			{status.data ? <p>{planRowLine(status.data, today)}</p> : null}
+		</SettingsRow>
+	);
+}
+
 function Settings({ today }: { today: string }) {
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const passkeys = useQuery(passkeysQuery);
@@ -120,6 +139,10 @@ function Settings({ today }: { today: string }) {
 			</header>
 
 			{plan ? <PlanGroup today={today} plan={plan} nextPlan={nextPlan} /> : <NoPlanGroup />}
+
+			<SettingsGroup title="Suscripción">
+				<PlusRow today={today} />
+			</SettingsGroup>
 
 			<SettingsGroup title="Cuenta">
 				{hasHousehold ? <SpaceRow /> : null}

@@ -87,20 +87,6 @@ test("someone else's subscription gives no Plus", async () => {
 	expect(await hasPlus(user)).toBe(false);
 });
 
-test("billing.subscription shows the paid subscription, and nothing for a trial", async () => {
-	const { t, user } = await singleUser();
-	expect(await user.as.query(api.billing.subscription, {})).toBeNull();
-	await subscribe(t, user.userId, { cancelAtPeriodEnd: true });
-	expect(await user.as.query(api.billing.subscription, {})).toEqual({
-		status: "active",
-		interval: "month",
-		cancelAtPeriodEnd: true,
-		currentPeriodEnd: new Date(NOW + 30 * DAY).toISOString(),
-		amountCents: 1490,
-		currency: "pen",
-	});
-});
-
 test("billing.offer is empty until products are synced", async () => {
 	const { user } = await singleUser();
 	expect(await user.as.query(api.billing.offer, {})).toEqual([]);
@@ -171,7 +157,10 @@ test("with a monthly set to cancel and an annual running, the annual is the subs
 		currentPeriodEnd: new Date(NOW + 300 * DAY).toISOString(),
 	});
 	expect(await hasPlus(user)).toBe(true);
-	expect((await user.as.query(api.billing.subscription, {}))?.interval).toBe("year");
+	expect(await user.as.query(api.billing.status, {})).toMatchObject({
+		kind: "paid",
+		interval: "year",
+	});
 });
 
 test("a subscription with no period end outranks one that ends, when both give Plus", async () => {
@@ -187,7 +176,10 @@ test("a subscription with no period end outranks one that ends, when both give P
 		id: "sub_later",
 		currentPeriodEnd: new Date(NOW + 300 * DAY).toISOString(),
 	});
-	expect((await user.as.query(api.billing.subscription, {}))?.currentPeriodEnd).toBeNull();
+	expect(await user.as.query(api.billing.status, {})).toMatchObject({
+		kind: "paid",
+		renewsAt: null,
+	});
 });
 
 test("a canceled subscription with no period end gives no Plus", async () => {
@@ -195,7 +187,7 @@ test("a canceled subscription with no period end gives no Plus", async () => {
 	await setTrialEnd(t, user.userId, NOW - 1);
 	await subscribe(t, user.userId, { status: "canceled", currentPeriodEnd: null });
 	expect(await hasPlus(user)).toBe(false);
-	expect(await user.as.query(api.billing.subscription, {})).toBeNull();
+	expect(await user.as.query(api.billing.status, {})).toEqual({ kind: "lapsed", payerIsMe: true });
 });
 
 test("billing.startCheckout refuses someone who already pays", async () => {

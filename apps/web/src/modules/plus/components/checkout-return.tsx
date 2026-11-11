@@ -1,5 +1,6 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
+import { isOwnPurchase } from "@quipu/backend/shared/billing";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
@@ -15,11 +16,11 @@ const DROP_FLAG = {
 export function CheckoutReturn() {
 	const { checkout } = useSearch({ from: "/_app" });
 	const navigate = useNavigate();
-	const subscription = useQuery(convexQuery(api.billing.subscription, checkout ? {} : "skip"));
-	const confirmed = subscription.data != null;
+	const status = useQuery(convexQuery(api.billing.status, checkout ? {} : "skip"));
+	const confirmed = !!status.data && isOwnPurchase(status.data);
 	const toasted = useRef(false);
 
-	// The webhook lands on its own time: when the subscription shows up, say so once and drop the flag.
+	// The webhook lands on its own time: when a subscription of their own shows up, say so once and drop the flag.
 	useEffect(() => {
 		if (!checkout || !confirmed || toasted.current) return;
 		toasted.current = true;

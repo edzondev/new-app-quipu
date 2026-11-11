@@ -13,14 +13,20 @@ export type PlusFeature = "household" | "goals";
 const HEAD = "pb-3 text-xs font-medium text-muted-foreground";
 const MARK = "border-t border-border text-center";
 
-export function PlusFeatures({ highlight }: { highlight?: PlusFeature }) {
+export function PlusFeatures({
+	highlight,
+	heading = "Incluye",
+}: {
+	highlight?: PlusFeature;
+	heading?: "Incluye" | "Funciones";
+}) {
 	return (
 		<table className="w-full table-fixed border-separate border-spacing-0 text-left">
 			<caption className="sr-only">Funciones de Gratis y Quipu Plus</caption>
 			<thead>
 				<tr>
 					<th scope="col" className={HEAD}>
-						Incluye
+						{heading}
 					</th>
 					<th scope="col" className={cn(HEAD, "w-12 text-center md:w-13")}>
 						Gratis
