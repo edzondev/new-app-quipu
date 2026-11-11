@@ -11,7 +11,7 @@ import { getHousehold, getMembers, getPersonalSpace } from "./model/spaces";
 import { getProfile, requireProfile } from "./profiles";
 
 const PENDING = "Tu cuenta ya se está eliminando.";
-const NOTHING_TO_CANCEL = "No hay una eliminación que cancelar.";
+const NOTHING_TO_CANCEL = "Tu cuenta no se está eliminando.";
 const WAIT = "Espera un momento antes de intentarlo otra vez.";
 const WRONG_CODE = "Código incorrecto.";
 const CODE_ERRORS: Record<string, string> = {

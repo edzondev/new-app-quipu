@@ -90,7 +90,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 						to: email,
 						subject: deletion ? "Código para eliminar tu cuenta de Quipu" : "Tu código de Quipu",
 						text: deletion
-							? `Tu código es ${otp}. Vence en 5 minutos. Si no pediste eliminar tu cuenta, ignora este correo.`
+							? `Tu código es ${otp}. Vence en 5 minutos. Si no fuiste tú, no lo compartas con nadie.`
 							: `Tu código es ${otp}. Vence en 5 minutos.`,
 					});
 				},

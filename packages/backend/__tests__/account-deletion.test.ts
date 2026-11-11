@@ -199,7 +199,7 @@ test("after three wrong codes the right one is refused too", async () => {
 test("cancel clears the request before the date, and is refused at the date or with nothing pending", async () => {
 	const { t, ana } = await alone();
 	await expect(ana.as.mutation(api.accountDeletion.cancel, {})).rejects.toThrow(
-		"No hay una eliminación que cancelar.",
+		"Tu cuenta no se está eliminando.",
 	);
 	await confirmDeletion(ana);
 	const back = await signBackIn(t, ana);
@@ -210,7 +210,7 @@ test("cancel clears the request before the date, and is refused at the date or w
 	const again = await signBackIn(t, ana);
 	vi.setSystemTime((await again.query(api.profiles.myProfile, {}))?.deletionRunsAt ?? 0);
 	await expect(again.mutation(api.accountDeletion.cancel, {})).rejects.toThrow(
-		"No hay una eliminación que cancelar.",
+		"Tu cuenta no se está eliminando.",
 	);
 });
 
