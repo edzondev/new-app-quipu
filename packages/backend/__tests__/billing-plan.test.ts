@@ -70,9 +70,15 @@ const cases: [PlusStatus, string, string, unknown][] = [
 		{ label: "Actualizar pago", to: "portal" },
 	],
 	[
-		{ kind: "household", payerName: "Renzo" },
+		{ kind: "household", payerName: "Renzo", payerOnTrial: false },
 		"Plus del hogar",
 		"Renzo paga Quipu Plus. Tú entras gratis.",
+		null,
+	],
+	[
+		{ kind: "household", payerName: "Camila", payerOnTrial: true },
+		"Plus del hogar",
+		"Camila tiene Quipu Plus. Tú entras gratis.",
 		null,
 	],
 	[{ kind: "lapsed", payerIsMe: true }, "Gratis", GONE, { label: "Renovar Plus", to: PLANS }],
@@ -116,7 +122,7 @@ test("only a subscription of one's own confirms a purchase", () => {
 	const other: PlusStatus[] = [
 		{ kind: "trial", endsAt: LIMA_19_NOV },
 		{ kind: "trialEnded" },
-		{ kind: "household", payerName: "Renzo" },
+		{ kind: "household", payerName: "Renzo", payerOnTrial: false },
 		{ kind: "lapsed", payerIsMe: true },
 		{ kind: "free" },
 	];

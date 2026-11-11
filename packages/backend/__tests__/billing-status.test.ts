@@ -96,7 +96,25 @@ test("in a household the payer is paid and the partner sees the household's Plus
 	const { t, ana, luis } = await joinedCouple();
 	await subscribe(t, luis.userId);
 	expect(await status(luis)).toMatchObject({ kind: "paid" });
-	expect(await status(ana)).toEqual({ kind: "household", payerName: "Renzo" });
+	expect(await status(ana)).toEqual({
+		kind: "household",
+		payerName: "Renzo",
+		payerOnTrial: false,
+	});
+});
+
+test("a guest without a trial, in a household whose owner is on a trial, sees the owner has Plus", async () => {
+	const t = harness();
+	const ana = await startUser(t, "camila@correo.com", "Camila Rojas");
+	const luis = await onboardUser(t, "renzo@correo.com", "Renzo Paz");
+	const { code } = await ana.as.mutation(api.household.createHousehold, {});
+	await luis.as.mutation(api.household.joinHousehold, { code });
+	expect(await status(luis)).toEqual({
+		kind: "household",
+		payerName: "Camila",
+		payerOnTrial: true,
+	});
+	expect(await status(ana)).toMatchObject({ kind: "trial" });
 });
 
 test("when nobody has Plus, whoever paid first is told to renew and the other to pay", async () => {

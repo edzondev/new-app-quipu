@@ -37,11 +37,11 @@ export function SettingsPage() {
 type Profile = NonNullable<FunctionReturnType<typeof api.profiles.myProfile>>;
 type Plan = NonNullable<Profile["plan"]>;
 
-function ReloadError() {
+export function ReloadError({ message }: { message: string }) {
 	const queryClient = useQueryClient();
 	return (
 		<div role="alert" className="pt-6">
-			<p className="text-sm text-warning-foreground">No pudimos cargar tus ajustes.</p>
+			<p className="text-sm text-warning-foreground">{message}</p>
 			<Button
 				variant="outline"
 				size="xl"
@@ -125,7 +125,7 @@ function Settings({ today }: { today: string }) {
 	const profile = useQuery(convexQuery(api.profiles.myProfile, {}));
 	const passkeys = useQuery(passkeysQuery);
 
-	if (profile.isError) return <ReloadError />;
+	if (profile.isError) return <ReloadError message="No pudimos cargar tus ajustes." />;
 	if (!profile.data) return <Loading />;
 	const { plan, nextPlan, hasHousehold } = profile.data;
 
@@ -182,7 +182,8 @@ function PlanGroup({
 	const home = useQuery(
 		convexQuery(api.balances.getHome, ensureOpen.isSuccess ? { space: "personal", today } : "skip"),
 	);
-	if (ensureOpen.isError || home.isError) return <ReloadError />;
+	if (ensureOpen.isError || home.isError)
+		return <ReloadError message="No pudimos cargar tus ajustes." />;
 	if (!home.data) return <Skeleton className="mt-10 h-40" />;
 	const { split } = home.data;
 	return (

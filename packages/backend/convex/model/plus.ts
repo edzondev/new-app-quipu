@@ -132,7 +132,11 @@ export async function getPlusStatus(ctx: Ctx, userId: string): Promise<PlusStatu
 	const payerId = space ? await getPayerId(ctx, space) : null;
 	if (space && payerId && payerId !== userId && (await householdHasPlus(ctx, space._id))) {
 		const payer = await authComponent.getAnyUserById(ctx, payerId);
-		return { kind: "household", payerName: displayName(payer?.name ?? "") };
+		return {
+			kind: "household",
+			payerName: displayName(payer?.name ?? ""),
+			payerOnTrial: !(await getPlusSubscription(ctx, payerId)),
+		};
 	}
 
 	const trialEndsAt = await getTrialEnd(ctx, userId);

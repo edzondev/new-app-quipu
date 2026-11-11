@@ -37,7 +37,7 @@ export const plusStatusValidator = v.union(
 		endsAt: orNull,
 	}),
 	v.object({ kind: v.literal("pastDue"), interval: interval }),
-	v.object({ kind: v.literal("household"), payerName: v.string() }),
+	v.object({ kind: v.literal("household"), payerName: v.string(), payerOnTrial: v.boolean() }),
 	v.object({ kind: v.literal("lapsed"), payerIsMe: v.boolean() }),
 );
 export type PlusStatus = Infer<typeof plusStatusValidator>;
@@ -179,7 +179,7 @@ export function planCard(status: PlusStatus, today: string): PlanCard {
 		case "household":
 			return {
 				title: "Plus del hogar",
-				line: `${status.payerName} paga Quipu Plus. Tú entras gratis.`,
+				line: `${status.payerName} ${status.payerOnTrial ? "tiene" : "paga"} Quipu Plus. Tú entras gratis.`,
 				action: null,
 			};
 		case "lapsed":

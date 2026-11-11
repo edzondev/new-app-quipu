@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { QuipuMark } from "#/components/quipu-mark";
 import { Button } from "#/components/ui/button";
 import { useLimaDate } from "#/hooks/use-lima-date";
+import { ReloadError } from "#/modules/settings/components/settings-page";
 import { useOpenPlus } from "../plus-provider";
 import { usePortal } from "../use-portal";
 import { PlusFeatures } from "./plus-features";
@@ -20,6 +21,7 @@ function Subscription({ today }: { today: string }) {
 	const status = useQuery(convexQuery(api.billing.status, {}));
 	const openPlus = useOpenPlus();
 	const portal = usePortal();
+	if (status.isError) return <ReloadError message="No pudimos cargar tu plan." />;
 	if (!status.data) return null;
 	const { title, line, action } = planCard(status.data, today);
 
@@ -57,7 +59,7 @@ function Subscription({ today }: { today: string }) {
 							className="w-full sm:w-auto"
 							disabled={action.to === "portal" && portal.opening}
 							onClick={(event) =>
-								action.to === "portal" ? portal.open() : openPlus({ opener: event.currentTarget })
+								action.to === "portal" ? portal.start() : openPlus({ opener: event.currentTarget })
 							}
 						>
 							{action.to === "portal" && portal.opening ? "Abriendo…" : action.label}
@@ -78,6 +80,8 @@ function Subscription({ today }: { today: string }) {
 				<PlusFeatures heading="Funciones" />
 				<p className="pt-4 text-sm text-muted-foreground">El resto de Quipu sigue gratis.</p>
 			</section>
+
+			<QuipuMark className="mx-auto mt-11 block h-[22px] w-6 opacity-65" />
 		</div>
 	);
 }
