@@ -2,7 +2,7 @@ import {
 	AMOUNT_KEYS,
 	addAmounts,
 	type EnvelopeAmounts,
-	getDailyCents,
+	getDailyBudget,
 	sumAmounts,
 	ZERO_AMOUNTS,
 } from "../../shared/budget";
@@ -70,13 +70,28 @@ export async function getDayBudget(
 		carried,
 	);
 	const pendingCents = sumAmounts(reserved);
+	// A commitment payment was already held back as pending, so it is not today's spending.
+	const spentTodayCents = cycleTx.reduce(
+		(sum, tx) =>
+			tx.kind === "expense" && !("commitmentId" in tx) && tx.date === today
+				? sum + tx.amountCents
+				: sum,
+		0,
+	);
+	const { baseCents, ...daily } = getDailyBudget({
+		freeCents: needsCents + wantsCents - pendingCents,
+		spentTodayCents,
+		daysLeft,
+	});
 
 	return {
 		needsCents,
 		wantsCents,
 		savingsCents,
 		assigned,
-		dailyCents: getDailyCents(needsCents + wantsCents - pendingCents, daysLeft),
+		dailyCents: baseCents,
+		spentTodayCents,
+		...daily,
 		daysLeft,
 		pendingCents,
 		reserved,

@@ -342,3 +342,29 @@ test("changing the split of the household moves only the household envelopes", a
 	const own = await ana.as.query(api.balances.getHome, { space: "personal", today: TODAY });
 	expect(own.split).toEqual({ needs: 60, wants: 20, savings: 20 });
 });
+test("in Nuestro espacio both people's expenses count as spent today, and personal ones do not", async () => {
+	const { ana, luis } = await joinedCouple();
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: household,
+		amountCents: 1_000,
+		envelope: "needs",
+	});
+	await luis.as.mutation(api.transactions.addExpense, {
+		space: household,
+		amountCents: 500,
+		envelope: "wants",
+	});
+	await ana.as.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 700,
+		envelope: "needs",
+	});
+
+	const args = { space: household, today: TODAY };
+	const seenByAna = await ana.as.query(api.balances.getHome, args);
+	const seenByLuis = await luis.as.query(api.balances.getHome, args);
+	expect(seenByAna.spentTodayCents).toBe(1_500);
+	expect(seenByLuis.spentTodayCents).toBe(1_500);
+	expect(seenByLuis.leftCents).toBe(seenByLuis.dailyCents - 1_500);
+});

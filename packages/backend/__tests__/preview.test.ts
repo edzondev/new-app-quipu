@@ -107,12 +107,13 @@ describe("getSplitPreview", () => {
 			envelopes: { needsCents: 25_000, wantsCents: 15_000, savingsCents: 10_000 },
 			reserved: { ...NONE, needsCents: 5_000 },
 			split: SPLIT_40,
+			spentTodayCents: 0,
 			daysLeft: 12,
 		});
 
 		expect(result).toEqual({
 			envelopes: { needsCents: 23_000, wantsCents: 18_000, savingsCents: 9_000 },
-			dailyCents: 3_000,
+			leftCents: 3_000,
 		});
 	});
 
@@ -121,12 +122,13 @@ describe("getSplitPreview", () => {
 			envelopes: { needsCents: -5_000, wantsCents: 15_000, savingsCents: 10_000 },
 			reserved: NONE,
 			split: SPLIT_40,
+			spentTodayCents: 0,
 			daysLeft: 12,
 		});
 
 		expect(result).toEqual({
 			envelopes: { needsCents: 5_000, wantsCents: 10_000, savingsCents: 5_000 },
-			dailyCents: 1_250,
+			leftCents: 1_250,
 		});
 	});
 
@@ -135,9 +137,23 @@ describe("getSplitPreview", () => {
 			envelopes: { needsCents: -20_000, wantsCents: 15_000, savingsCents: 10_000 },
 			reserved: NONE,
 			split: SPLIT_40,
+			spentTodayCents: 0,
 			daysLeft: 12,
 		});
 
-		expect(result.dailyCents).toBe(0);
+		expect(result.leftCents).toBe(0);
+	});
+
+	test("what you spent today comes off what the new split leaves for today", () => {
+		const result = getSplitPreview({
+			envelopes: { needsCents: 25_000, wantsCents: 15_000, savingsCents: 10_000 },
+			reserved: NONE,
+			split: SPLIT_40,
+			spentTodayCents: 1_200,
+			daysLeft: 12,
+		});
+
+		// Free 400.00 + 12.00 spent, over 12 days is 34.33 a day; 12.00 of it is gone.
+		expect(result.leftCents).toBe(2_233);
 	});
 });

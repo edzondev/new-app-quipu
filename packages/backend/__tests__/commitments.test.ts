@@ -6,7 +6,6 @@ import { api, components } from "../convex/_generated/api";
 import authSchema from "../convex/betterAuth/schema";
 import { ensureOpenCycle } from "../convex/model/cycles";
 import schema from "../convex/schema";
-import { getDailyCents } from "../shared/budget";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -97,8 +96,11 @@ test("Luz S/ 50 day 25 lowers daily; markPaid cuts Needs and stops the discount"
 
 	const after = await ana.query(api.balances.getBalances, { space: "personal" });
 	expect(after.needsCents).toBe(20_000);
-	expect(after.dailyCents).toBe(getDailyCents(20_000 + 15_000, 12));
+	// The payment is not today's spending: the daily number stays (200 + 150) / 12.
 	expect(after.dailyCents).toBe(2916);
+	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
+	expect(home.spentTodayCents).toBe(0);
+	expect(home.leftCents).toBe(2916);
 });
 
 test("once commitment paid in October cannot be marked paid again after ensureOpen in November", async () => {

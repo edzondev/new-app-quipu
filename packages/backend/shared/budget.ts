@@ -122,8 +122,26 @@ export function reallocateFree(
 	return addAmounts(subtractAmounts(envelopes, positive), splitIncome(sumAmounts(positive), split));
 }
 
-// Daily number = free Needs + Wants minus pending commitments, over days left, floored.
-export function getDailyCents(freeCents: number, daysLeft: number): number {
-	if (daysLeft < 1) return 0;
-	return Math.floor(Math.max(0, freeCents) / daysLeft);
+/**
+ * Today's number. `freeCents` is Needs + Wants minus pending commitments, after today's spending.
+ * The base is what was free when the day began over the days left, so it holds still while you spend.
+ * `tomorrowCents` is null on the last day, when there is no tomorrow.
+ */
+export function getDailyBudget({
+	freeCents,
+	spentTodayCents,
+	daysLeft,
+}: {
+	freeCents: number;
+	spentTodayCents: number;
+	daysLeft: number;
+}) {
+	const baseCents =
+		daysLeft < 1 ? 0 : Math.floor(Math.max(0, freeCents + spentTodayCents) / daysLeft);
+	return {
+		baseCents,
+		leftCents: Math.max(0, baseCents - spentTodayCents),
+		overCents: Math.max(0, spentTodayCents - baseCents),
+		tomorrowCents: daysLeft > 1 ? Math.floor(Math.max(0, freeCents) / (daysLeft - 1)) : null,
+	};
 }

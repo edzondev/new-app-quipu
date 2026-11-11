@@ -5,7 +5,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { api, components } from "../convex/_generated/api";
 import authSchema from "../convex/betterAuth/schema";
 import schema from "../convex/schema";
-import { getDailyCents, splitIncome } from "../shared/budget";
+import { splitIncome } from "../shared/budget";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -84,7 +84,7 @@ test("S/ 500 at 50/30/20 with 12 days left → sobres and daily number", async (
 		needsCents: share.needsCents, // S/ 250.00
 		wantsCents: share.wantsCents, // S/ 150.00
 		savingsCents: share.savingsCents, // S/ 100.00
-		dailyCents: getDailyCents(share.needsCents + share.wantsCents, 12), // S/ 33.33
+		dailyCents: 3333, // S/ 33.33
 	});
 	expect(balances.dailyCents).toBe(3333);
 });
@@ -129,7 +129,7 @@ test("after close, balances come from carryIn envelopes even with no new income"
 		needsCents: 25_000,
 		wantsCents: 15_000,
 		savingsCents: 0,
-		dailyCents: getDailyCents(25_000 + 15_000, 30),
+		dailyCents: 1333,
 	});
 	expect(balances.dailyCents).toBe(1333);
 });
@@ -147,14 +147,12 @@ test("getHome with a later today shrinks daysLeft and raises dailyCents", async 
 
 	const day20 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
 	const day26 = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-26" });
-	const share = splitIncome(50_000, SPLIT);
-	const free = share.needsCents + share.wantsCents;
 
+	// Free Needs + Wants is 400.00.
 	expect(day20.daysLeft).toBe(12);
-	expect(day20.dailyCents).toBe(getDailyCents(free, 12));
+	expect(day20.dailyCents).toBe(3_333);
 	expect(day26.daysLeft).toBe(6);
-	expect(day26.dailyCents).toBe(getDailyCents(free, 6));
-	expect(day26.dailyCents).toBeGreaterThan(day20.dailyCents);
+	expect(day26.dailyCents).toBe(6_666);
 	expect(day20.empty).toBe(false);
 	expect(day20.planIncomeCents).toBe(150_000);
 });
@@ -303,4 +301,192 @@ test("getHome is empty with no income and nothing carried", async () => {
 
 	const home = await ana.query(api.balances.getHome, { space: "personal", today: "2026-10-20" });
 	expect(home.empty).toBe(true);
+});
+
+async function startAnaOct20(t: ReturnType<typeof harness>) {
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
+	return ana;
+}
+
+const homeArgs = { space: "personal" as const, today: "2026-10-20" };
+
+test("today's base holds still while you spend and each expense comes off it", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+
+	// Free 400.00 with 12 days left: 33.33 a day.
+	const first = await ana.query(api.balances.getHome, homeArgs);
+	expect(first).toMatchObject({ dailyCents: 3_333, spentTodayCents: 0, leftCents: 3_333 });
+
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 3_300,
+		envelope: "needs",
+	});
+	const second = await ana.query(api.balances.getHome, homeArgs);
+	expect(second).toMatchObject({
+		dailyCents: 3_333,
+		spentTodayCents: 3_300,
+		leftCents: 33,
+		overCents: 0,
+		tomorrowCents: 3_336, // 367.00 over the 11 days that follow
+	});
+
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 1_000,
+		envelope: "wants",
+	});
+	const third = await ana.query(api.balances.getHome, homeArgs);
+	expect(third).toMatchObject({
+		dailyCents: 3_333,
+		spentTodayCents: 4_300,
+		leftCents: 0,
+		overCents: 967,
+		tomorrowCents: 3_245, // 357.00 over 11 days
+	});
+});
+
+test("an income today raises the base at once", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 1_000,
+		envelope: "needs",
+	});
+
+	// S/ 120.00 at 50/30/20 puts 96.00 into Necesidades + Gustos: free goes from 390 to 486.
+	await ana.mutation(api.transactions.addIncome, { space: "personal", amountCents: 12_000 });
+
+	const home = await ana.query(api.balances.getHome, homeArgs);
+	expect(home).toMatchObject({ dailyCents: 4_133, spentTodayCents: 1_000, leftCents: 3_133 });
+});
+
+test("editing or deleting an expense from a day before changes today's base at once", async () => {
+	const t = harness();
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	vi.useFakeTimers({ now: new Date("2026-10-19T17:00:00.000Z") });
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 2_000,
+		envelope: "needs",
+	});
+
+	vi.setSystemTime(new Date("2026-10-20T17:00:00.000Z"));
+	// Free 380.00 over the 12 days left.
+	expect(await ana.query(api.balances.getHome, homeArgs)).toMatchObject({
+		dailyCents: 3_166,
+		spentTodayCents: 0,
+	});
+
+	const { rows } = await ana.query(api.transactions.list, homeArgs);
+	const yesterday = rows.filter((row) => row.kind === "expense")[0];
+	await ana.mutation(api.transactions.updateExpense, {
+		space: "personal",
+		id: yesterday.id,
+		amountCents: 5_000,
+		envelope: "needs",
+	});
+	expect(await ana.query(api.balances.getHome, homeArgs)).toMatchObject({
+		dailyCents: 2_916,
+		spentTodayCents: 0,
+	});
+
+	await ana.mutation(api.transactions.deleteExpense, { space: "personal", id: yesterday.id });
+	expect(await ana.query(api.balances.getHome, homeArgs)).toMatchObject({
+		dailyCents: 3_333,
+		spentTodayCents: 0,
+	});
+});
+
+test("on the last day overspending shows no tomorrow", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+
+	vi.setSystemTime(new Date("2026-10-31T17:00:00.000Z"));
+	const args = { space: "personal" as const, today: "2026-10-31" };
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 25_000,
+		envelope: "needs",
+	});
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 17_000,
+		envelope: "wants",
+	});
+
+	// All 400.00 was free this morning; 420.00 went out.
+	const home = await ana.query(api.balances.getHome, args);
+	expect(home).toMatchObject({
+		daysLeft: 1,
+		dailyCents: 40_000,
+		leftCents: 0,
+		overCents: 2_000,
+		tomorrowCents: null,
+	});
+});
+
+test("a negative free amount gives base 0 and spending that day only adds to what you went over", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	// Needs and Gustos both end October at −S/ 50.
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 30_000,
+		envelope: "needs",
+	});
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 20_000,
+		envelope: "wants",
+	});
+	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
+	await ana.mutation(api.cycles.ensureOpen, { space: "personal" });
+	const args = { space: "personal" as const, today: "2026-11-01" };
+
+	expect(await ana.query(api.balances.getHome, args)).toMatchObject({
+		dailyCents: 0,
+		spentTodayCents: 0,
+		leftCents: 0,
+		overCents: 0,
+		tomorrowCents: 0,
+	});
+
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 2_000,
+		envelope: "wants",
+	});
+	expect(await ana.query(api.balances.getHome, args)).toMatchObject({
+		dailyCents: 0,
+		spentTodayCents: 2_000,
+		leftCents: 0,
+		overCents: 2_000,
+		tomorrowCents: 0,
+	});
+});
+
+test("a saving to a goal does not change the base", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	const goalId = await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		return ctx.db.insert("goals", { spaceId: space._id, name: "Viaje", targetCents: 100_000 });
+	});
+
+	await ana.mutation(api.transactions.addSaving, {
+		space: "personal",
+		amountCents: 5_000,
+		goalId,
+	});
+
+	expect(await ana.query(api.balances.getHome, homeArgs)).toMatchObject({
+		dailyCents: 3_333,
+		spentTodayCents: 0,
+	});
 });

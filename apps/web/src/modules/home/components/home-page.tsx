@@ -5,6 +5,7 @@ import { formatCents } from "@quipu/backend/shared/budget";
 import { formatDay, formatDaysLeft, formatRange } from "@quipu/backend/shared/dates";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
+import { cn } from "cn";
 import type { FunctionReturnType } from "convex/server";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
@@ -156,7 +157,34 @@ function Overview({
 	today: string;
 }) {
 	const first = firstName(name);
-	const [whole, decimals] = formatCents(home.dailyCents).split(".");
+	const together = space === "household";
+	const over = home.overCents > 0;
+	const spent = home.spentTodayCents > 0;
+	const cents = over ? home.overCents : spent ? home.leftCents : home.dailyCents;
+	const [whole, decimals] = formatCents(cents).split(".");
+	const label = over
+		? together
+			? "Hoy se pasaron"
+			: "Hoy te pasaste"
+		: spent
+			? together
+				? "Les queda hoy"
+				: "Te queda hoy"
+			: together
+				? "Pueden gastar hoy"
+				: "Puedes gastar hoy";
+	const committed = "Lo que queda del ciclo ya está comprometido.";
+	const note = over
+		? home.tomorrowCents === null
+			? null
+			: home.tomorrowCents > 0
+				? `${together ? "Mañana tendrán" : "Mañana tendrás"} S/ ${formatCents(home.tomorrowCents)} por día.`
+				: committed
+		: spent
+			? `de S/ ${formatCents(home.dailyCents)}`
+			: home.dailyCents === 0
+				? committed
+				: null;
 
 	return (
 		<>
@@ -182,15 +210,27 @@ function Overview({
 			<div className="mt-9 grid gap-14 lg:grid-cols-[1.1fr_1fr]">
 				<section className="min-w-0">
 					<div className="flex items-center gap-2">
-						<p className={EYEBROW}>
-							{space === "household" ? "Pueden gastar hoy juntos" : "Puedes gastar hoy"}
-						</p>
-						<Formula home={home} />
+						<p className={EYEBROW}>{label}</p>
+						<Formula home={home} together={together} />
 					</div>
-					<p className="mt-2.5 flex items-start gap-1 font-mono text-[clamp(64px,13vw,112px)] leading-none tracking-[-0.03em]">
+					<p
+						className={cn(
+							"mt-2.5 flex items-start gap-1 font-mono text-[clamp(64px,13vw,112px)] leading-none tracking-[-0.03em]",
+							over && "text-warning-foreground",
+						)}
+					>
 						<span className="mt-2.5 text-2xl tracking-normal text-muted-foreground">S/</span>
 						<span>{whole}</span>
 						<span className="mt-2 text-[0.41em] text-muted-foreground">.{decimals}</span>
+					</p>
+					{note ? <p className="mt-2.5 text-sm text-muted-foreground">{note}</p> : null}
+					<p className="mt-1.5 text-xs text-muted-foreground">
+						{home.pendingCents > 0
+							? `Descontamos S/ ${formatCents(home.pendingCents)} de compromisos por pagar. `
+							: ""}
+						{home.daysLeft === 1
+							? "Último día del ciclo."
+							: `Repartido en ${home.daysLeft} días, contando hoy.`}
 					</p>
 					{space === "household" ? (
 						<p className="mt-2.5 text-sm text-muted-foreground">
@@ -202,14 +242,6 @@ function Overview({
 						<p className="wrap-break-word mt-2.5 text-[13px] text-muted-foreground">
 							Aportes del ciclo · Tú S/ {formatCents(contributions.mineCents)} ·{" "}
 							{household.partnerName} S/ {formatCents(contributions.partnerCents)}
-						</p>
-					) : null}
-					{home.dailyCents === 0 ? (
-						<p
-							role="status"
-							className="mt-4 rounded-2xl bg-warning/16 px-4 py-3 text-sm text-warning-foreground"
-						>
-							Hoy no queda para gastar. Tu Ahorro está protegido.
 						</p>
 					) : null}
 				</section>
@@ -225,8 +257,11 @@ function Overview({
 	);
 }
 
-function Formula({ home }: { home: HomeData }) {
-	const freeCents = Math.max(0, home.needsCents + home.wantsCents - home.pendingCents);
+function Formula({ home, together }: { home: HomeData; together: boolean }) {
+	const freeCents = Math.max(
+		0,
+		home.needsCents + home.wantsCents - home.pendingCents + home.spentTodayCents,
+	);
 
 	return (
 		<Popover.Root>
@@ -238,24 +273,34 @@ function Formula({ home }: { home: HomeData }) {
 			</Popover.Trigger>
 			<Popover.Portal>
 				<Popover.Positioner side="bottom" sideOffset={12} className="z-50">
-					<Popover.Popup className="w-[340px] max-w-[calc(100vw-48px)] rounded-2xl bg-background px-[18px] py-4 text-foreground shadow-lg ring-1 ring-border outline-none">
+					<Popover.Popup className="w-[400px] max-w-[calc(100vw-48px)] rounded-2xl bg-background px-[18px] py-4 text-foreground shadow-lg ring-1 ring-border outline-none">
 						<Popover.Arrow className="size-3 rotate-45 border-t border-l border-border bg-background data-[side=bottom]:-top-1.5" />
 						<Popover.Title className="text-[15px] font-semibold">Cómo se calcula</Popover.Title>
 						<p className="mt-1.5 text-[13px] leading-[1.45]">
 							Lo libre de Necesidades y Gustos, menos lo que falta pagar, entre los días que quedan.
 						</p>
+						<p className="mt-1.5 text-[13px] leading-[1.45]">
+							Este monto se fija al empezar el día. Cada gasto {together ? "de los dos" : "de hoy"}{" "}
+							lo baja y un ingreso lo sube. Mañana se reparte de nuevo lo que quede.
+						</p>
 						<dl className="mt-2.5 text-[13px] leading-[1.9] text-muted-foreground">
 							<div className="flex justify-between gap-3">
 								<dt>Libre en Necesidades + Gustos</dt>
-								<dd className="font-mono text-foreground">S/ {formatCents(freeCents)}</dd>
+								<dd className="shrink-0 font-mono whitespace-nowrap text-foreground">
+									S/ {formatCents(freeCents)}
+								</dd>
 							</div>
 							<div className="flex justify-between gap-3">
 								<dt>÷ días hasta el cierre ({formatDay(home.endDate)})</dt>
-								<dd className="font-mono text-foreground">{home.daysLeft}</dd>
+								<dd className="shrink-0 font-mono whitespace-nowrap text-foreground">
+									{home.daysLeft}
+								</dd>
 							</div>
 							<div className="mt-1 flex justify-between gap-3 border-t border-border pt-1 font-semibold text-foreground">
 								<dt>= puedes gastar hoy</dt>
-								<dd className="font-mono">S/ {formatCents(home.dailyCents)}</dd>
+								<dd className="shrink-0 font-mono whitespace-nowrap">
+									S/ {formatCents(home.dailyCents)}
+								</dd>
 							</div>
 						</dl>
 						<p className="mt-2 text-xs text-muted-foreground">
