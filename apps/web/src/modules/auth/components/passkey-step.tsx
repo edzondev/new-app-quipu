@@ -34,7 +34,7 @@ export function PasskeyStep({ onDone }: Props) {
 			</p>
 			{failed ? (
 				<>
-					<p role="alert" className="wrap-break-word text-xs text-warning-foreground">
+					<p role="alert" className="text-xs text-warning-foreground">
 						No se pudo activar. Puedes hacerlo luego en Ajustes.
 					</p>
 					<Button

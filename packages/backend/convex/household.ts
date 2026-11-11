@@ -420,11 +420,11 @@ export const contributions = query({
 		const cycle = await getCycleAt(ctx, space._id, today);
 		const totals = { mineCents: 0, partnerCents: 0 };
 		if (!cycle) return totals;
-		// Every row of the cycle: a cap would leave out incomes recorded after it.
-		const rows = ctx.db
+		// Every income of the cycle, and only incomes: a cap would leave out those recorded after it.
+		const incomes = ctx.db
 			.query("transactions")
-			.withIndex("by_cycleId", (q) => q.eq("cycleId", cycle._id));
-		for await (const row of rows) {
+			.withIndex("by_kind_cycleId", (q) => q.eq("kind", "income").eq("cycleId", cycle._id));
+		for await (const row of incomes) {
 			if (row.kind !== "income" || row.forNextCycle) continue;
 			if (row.userId === userId) totals.mineCents += row.amountCents;
 			else totals.partnerCents += row.amountCents;

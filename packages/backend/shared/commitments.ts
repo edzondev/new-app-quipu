@@ -146,6 +146,21 @@ function getDueDates(schedule: Schedule, createdOn: string, cycleEnd: string): s
 }
 
 /** A payment of a commitment. `forMonth` ("2026-10") is the month of the due date it covers. */
+/** The three lists of Compromisos, each in the order the items came: owed now, later, paid. */
+export function groupCommitments<T extends { status: CommitmentStatus }>(items: T[]) {
+	const groups: Record<"pending" | "later" | "paidBefore", T[]> = {
+		pending: [],
+		later: [],
+		paidBefore: [],
+	};
+	for (const item of items) {
+		if (item.status === "paid") groups.paidBefore.push(item);
+		else if (item.status === "later") groups.later.push(item);
+		else groups.pending.push(item);
+	}
+	return groups;
+}
+
 export type CommitmentPayment = { forMonth: string };
 
 /**

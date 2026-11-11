@@ -35,7 +35,7 @@ import { useRegister } from "#/modules/register/register-dialog";
 
 // The menu items are 44 px tall on touch screens.
 const tapTarget = "pointer-coarse:min-h-11";
-const spaceItem = "h-11 rounded-[22px] px-4 text-sm font-semibold sm:h-11 sm:text-sm";
+const spaceItem = "h-11 rounded-[22px] px-4 text-sm font-semibold sm:h-11";
 const navLink = "flex h-11 items-center rounded-[22px] px-[18px] text-[15px] font-semibold";
 
 const NAV_LINKS = [

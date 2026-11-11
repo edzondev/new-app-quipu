@@ -68,7 +68,7 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 					type="button"
 					variant="ghost"
 					className={cn(authLink, "shrink-0 text-xs")}
-					disabled={isSubmitting}
+					disabled={isSubmitting || isResending}
 					onClick={onChangeEmail}
 				>
 					Cambiar

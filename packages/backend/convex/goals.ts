@@ -11,7 +11,7 @@ import { getCycleAt } from "./model/cycles";
 import { logEvent } from "./model/events";
 import { parseInput } from "./model/input";
 import { requirePlus, requireWritableSpace } from "./model/plus";
-import { requirePlan, requireSpace, type SpaceKind } from "./model/spaces";
+import { getPlan, requireSpace, type SpaceKind } from "./model/spaces";
 import { spaceKind } from "./schema";
 
 const NOT_FOUND = "No encontramos este dato.";
@@ -75,7 +75,7 @@ export const list = query({
 	},
 });
 
-/** `suggestedFundGoalCents` is null when there is no open cycle for `today`. */
+/** `suggestedFundGoalCents` is null when there is no open cycle for `today` or no plan to base it on. */
 export const fund = query({
 	args: { space: spaceKind, today: v.string() },
 	returns: v.object({
@@ -87,10 +87,8 @@ export const fund = query({
 		parseInput(isoDateSchema, today);
 		const { space } = await requireSpace(ctx, kind);
 		const cycle = await getCycleAt(ctx, space._id, today);
-		const suggested =
-			cycle && cycle.endDate >= today
-				? suggestFundGoalCents(await requirePlan(ctx, space), cycle.split)
-				: null;
+		const plan = cycle && cycle.endDate >= today ? await getPlan(ctx, space) : null;
+		const suggested = cycle && plan ? suggestFundGoalCents(plan, cycle.split) : null;
 		return {
 			fundCents: space.fundCents,
 			fundGoalCents: space.fundGoalCents ?? null,

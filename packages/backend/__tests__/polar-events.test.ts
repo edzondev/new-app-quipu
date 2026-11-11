@@ -182,3 +182,78 @@ test("an event we cannot read is logged and still accepted, so Polar keeps the e
 	expect(error).toHaveBeenCalledTimes(2);
 	expect(await stored(t)).toBeNull();
 });
+
+test("a customer whose externalId and metadata.userId name different people is ignored and logged", async () => {
+	const { t, user } = await lapsedUser();
+	const other = await startUser(t, "renzo@correo.com", "Renzo Paz");
+	await setTrialEnd(t, other.userId, NOW - 1);
+	const error = vi.spyOn(console, "error").mockImplementation(() => {});
+	const event = customer(user.userId, { userId: other.userId });
+	expect((await deliver(t, "subscription.created", event)).status).toBe(202);
+	expect(await stored(t)).toBeNull();
+	expect(await hasPlus(user)).toBe(false);
+	expect(await hasPlus(other)).toBe(false);
+	const logged = String(error.mock.calls[0]?.[0]);
+	expect(logged).toContain("cus_1");
+	expect(logged).not.toContain(user.userId);
+	expect(logged).not.toContain("camila@correo.com");
+});
+
+test("the same userId in externalId and metadata.userId is linked as usual", async () => {
+	const { t, user } = await lapsedUser();
+	await deliver(t, "subscription.created", customer(user.userId, { userId: user.userId }));
+	expect(await hasPlus(user)).toBe(true);
+});
+
+test("a newer event with fraction digits replaces an older one in the same second without them", async () => {
+	const { t } = await payer();
+	await deliver(t, "subscription.active", { modified_at: "2026-10-30T00:00:00Z" });
+	await deliver(t, "subscription.revoked", {
+		status: "canceled",
+		ended_at: "2026-10-19T00:00:00Z",
+		modified_at: "2026-10-30T00:00:00.5Z",
+	});
+	expect((await stored(t))?.status).toBe("canceled");
+});
+
+test("events are ordered by instant across offsets", async () => {
+	const { t } = await payer();
+	// 01:00 UTC, written in Lima time.
+	await deliver(t, "subscription.revoked", {
+		status: "canceled",
+		ended_at: "2026-10-19T00:00:00Z",
+		modified_at: "2026-10-29T20:00:00.000001-05:00",
+	});
+	await deliver(t, "subscription.active", { modified_at: "2026-10-30T00:30:00Z" });
+	expect((await stored(t))?.status).toBe("canceled");
+});
+
+test("an older event does not undo a newer one stored in an earlier text format", async () => {
+	const { t } = await payer();
+	await deliver(t, "subscription.revoked", {
+		status: "canceled",
+		ended_at: "2026-10-19T00:00:00Z",
+	});
+	const row = await stored(t);
+	if (!row) throw new Error("missing subscription");
+	// 05:00 UTC, as text that sorts before the incoming 01:00 UTC.
+	await t.mutation(components.polar.lib.updateSubscription, {
+		subscription: { ...row, modifiedAt: "2026-10-30T00:00:00-05:00" },
+	});
+	await deliver(t, "subscription.active", { modified_at: "2026-10-30T01:00:00.000000Z" });
+	expect((await stored(t))?.status).toBe("canceled");
+});
+
+test("modified_at is stored in one sortable form, keeping the microseconds", async () => {
+	const { t } = await payer();
+	await deliver(t, "subscription.active", { modified_at: "2026-10-29T20:00:00.1234+05:00" });
+	expect((await stored(t))?.modifiedAt).toBe("2026-10-29T15:00:00.123400Z");
+});
+
+test("a modified_at that is not a date-time is logged and stores nothing", async () => {
+	const { t } = await payer();
+	const error = vi.spyOn(console, "error").mockImplementation(() => {});
+	expect((await deliver(t, "subscription.active", { modified_at: "yesterday" })).status).toBe(202);
+	expect(error).toHaveBeenCalledWith(expect.stringContaining("modified_at"));
+	expect(await stored(t)).toBeNull();
+});

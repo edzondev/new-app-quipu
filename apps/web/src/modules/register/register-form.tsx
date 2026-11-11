@@ -8,9 +8,9 @@ import {
 	NOTE_MAX_LENGTH,
 	toCents,
 } from "@quipu/backend/shared/budget";
-import { addDays, formatDay, monthName } from "@quipu/backend/shared/dates";
+import { cycleNames, formatDay } from "@quipu/backend/shared/dates";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import * as z from "zod/mini";
@@ -80,7 +80,12 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 	const homeArgs: { space: "personal" | "household"; today: string } | "skip" = ensureOpen.isSuccess
 		? { space, today }
 		: "skip";
-	const home = useQuery(convexQuery(api.balances.getHome, homeArgs)).data;
+	const homeQuery = useQuery(convexQuery(api.balances.getHome, homeArgs));
+	const home = homeQuery.data;
+	// Saving waits for the cycle: it decides where an income goes and what the envelopes show.
+	const loadFailed = ensureOpen.isError || homeQuery.isError;
+	const loading = !home && !loadFailed;
+	const queryClient = useQueryClient();
 	const [confirmation, setConfirmation] = useState<string | null>(null);
 	const pendingConfirmation = useRef<string | null>(null);
 	const { save, remove, pending, error } = useMovementActions(space, (title) => {
@@ -103,7 +108,7 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 		destination: "envelopes",
 		cycleChoice: "next",
 	};
-	const nextStart = home ? addDays(home.endDate, 1) : "";
+	const names = home ? cycleNames(home.endDate) : null;
 	const form = useForm({
 		defaultValues,
 		validationLogic: revalidateLogic(),
@@ -114,9 +119,10 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 			const asksCycle =
 				!editId && value.kind === "income" && value.incomeType === "cycle" && home?.earlyWindow;
 			const toNext = asksCycle && value.cycleChoice === "next";
-			pendingConfirmation.current = toNext
-				? `Listo. Sueldo de S/ ${formatCents(amountCents)} para ${monthName(nextStart)}. Empieza el ${formatDay(nextStart)}.`
-				: null;
+			pendingConfirmation.current =
+				toNext && names
+					? `Listo. Sueldo de S/ ${formatCents(amountCents)} para ${names.next}. Empieza el ${formatDay(names.nextStart)}.`
+					: null;
 			save(
 				value.kind === "expense"
 					? { kind: value.kind, id: editId, amountCents, envelope: value.envelope, note }
@@ -169,12 +175,12 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 			? `${ENVELOPE_LABELS[value]} · S/ ${formatCents(home[AMOUNT_KEYS[value]])}`
 			: ENVELOPE_LABELS[value],
 	}));
-	const cycleOptions = home
+	const cycleOptions = names
 		? [
-				{ value: "current" as const, label: `Para lo que queda de ${monthName(home.endDate)}` },
+				{ value: "current" as const, label: `Para ${names.current}` },
 				{
 					value: "next" as const,
-					label: `Para ${monthName(nextStart)}, desde el ${formatDay(nextStart)}`,
+					label: `Para ${names.next}, desde el ${formatDay(names.nextStart)}`,
 				},
 			]
 		: [];
@@ -367,6 +373,20 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 							{error}
 						</p>
 					) : null}
+					{loadFailed ? (
+						<div role="alert" className="flex flex-col items-start gap-2">
+							<p className="text-xs text-warning-foreground">No pudimos cargar tus sobres.</p>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => {
+									void queryClient.invalidateQueries();
+								}}
+							>
+								Reintentar
+							</Button>
+						</div>
+					) : null}
 				</FormSheetPanel>
 				<FormSheetFooter>
 					{editId ? (
@@ -380,13 +400,13 @@ export function RegisterForm({ draft, onDone }: { draft: Draft; onDone: () => vo
 							onDelete={() => remove(draft.kind, editId)}
 						/>
 					) : null}
-					<Button type="submit" loading={pending} disabled={pending}>
+					<Button type="submit" loading={pending || loading} disabled={pending || !home}>
 						{editId
 							? "Guardar"
 							: isExpense
 								? "Guardar gasto"
-								: toNext
-									? `Guardar para ${monthName(nextStart)}`
+								: toNext && names
+									? `Guardar para ${names.next}`
 									: "Guardar ingreso"}
 					</Button>
 				</FormSheetFooter>

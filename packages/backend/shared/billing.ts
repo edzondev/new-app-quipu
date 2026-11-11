@@ -1,10 +1,12 @@
+import { type Infer, v } from "convex/values";
 import { safeRedirect } from "./household";
 
 export const NEED_PLUS = "Esto requiere Quipu Plus.";
 
 export const FREE_PERSONAL_GOAL_CAP = 2;
 
-export type Interval = "month" | "year";
+export const intervalValidator = v.union(v.literal("month"), v.literal("year"));
+export type Interval = Infer<typeof intervalValidator>;
 
 /** Where the Plus a person ever had came from. */
 export type PlusHistory = "none" | "trial" | "paid";
@@ -15,6 +17,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const TRIAL_MS = 14 * DAY_MS;
 
 const TRIAL_REMINDER_MS = 2 * DAY_MS;
+
+/** When showTrialReminder can change on its own: the reminder starts, and the trial ends. */
+export function trialReminderMoments(trialEndsAt: number) {
+	return [trialEndsAt - TRIAL_REMINDER_MS, trialEndsAt];
+}
 
 type ReminderProfile = {
 	trialEndsAt: number | null;
@@ -36,11 +43,13 @@ export function showTrialReminder<T extends ReminderProfile>(
 	);
 }
 
-type Offer = {
-	productId: string;
-	interval: Interval;
-	prices: { currency: string; amountCents: number }[];
-};
+/** A Plus plan as billing.offer returns it: the one definition, for the validator and the type. */
+export const offerValidator = v.object({
+	productId: v.string(),
+	interval: intervalValidator,
+	prices: v.array(v.object({ currency: v.string(), amountCents: v.number() })),
+});
+export type Offer = Infer<typeof offerValidator>;
 
 export function findOffer<T extends Offer>(offers: T[], interval: Interval, currency: string) {
 	return offers.find(

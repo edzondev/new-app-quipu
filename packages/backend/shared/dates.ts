@@ -205,3 +205,25 @@ export function formatRecentDay(date: string, today: string): string {
 export function formatDaysLeft(days: number): string {
 	return days === 1 ? "queda 1 día" : `quedan ${days} días`;
 }
+
+/** The first of `times` still ahead of `now`, or null: when a screen that compares with the clock has to look again. */
+export function nextMoment(times: readonly number[], now: number): number | null {
+	const ahead = times.filter((time) => time > now);
+	return ahead.length > 0 ? Math.min(...ahead) : null;
+}
+
+/**
+ * How Registrar names the cycle that ends on `endDate` and the next one. By month only when the
+ * next one starts a month; a quincena that ends on the 15th is told by its real dates.
+ */
+export function cycleNames(endDate: string) {
+	const nextStart = addDays(endDate, 1);
+	const byMonth = nextStart.endsWith("-01");
+	return {
+		nextStart,
+		current: byMonth
+			? `lo que queda de ${monthName(endDate)}`
+			: `lo que queda, hasta el ${formatDay(endDate)}`,
+		next: byMonth ? monthName(nextStart) : "el próximo ciclo",
+	};
+}

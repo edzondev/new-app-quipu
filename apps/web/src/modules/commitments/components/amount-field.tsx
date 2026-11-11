@@ -20,11 +20,7 @@ export function AmountField({
 				className={cn(
 					"flex items-baseline gap-3 pb-2",
 					large ? "border-b-[1.5px]" : "border-b",
-					error
-						? "border-warning"
-						: large
-							? "border-foreground"
-							: "border-input has-focus-visible:border-foreground",
+					error ? "border-warning" : "border-input has-focus-visible:border-foreground",
 				)}
 			>
 				<span className={cn("text-muted-foreground", large ? "text-[22px]" : "text-lg")}>S/</span>

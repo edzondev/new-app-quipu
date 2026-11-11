@@ -8,7 +8,6 @@ import * as z from "zod/mini";
 import { ChoiceChips } from "#/components/choice-chips";
 import { Button } from "#/components/ui/button";
 import {
-	FormSheet,
 	FormSheetDescription,
 	FormSheetFooter,
 	FormSheetHeader,
@@ -36,8 +35,6 @@ const REASONS: { value: Reason; label: string }[] = [
 	{ value: "other", label: "Otro" },
 ];
 
-const withdrawSchema = z.object({ amount: positiveMoney("Escribe un monto.") });
-
 type WithdrawProps = {
 	space: FunctionArgs<typeof api.transactions.withdrawSaving>["space"];
 	fundCents: number;
@@ -63,8 +60,17 @@ export function WithdrawForm({ space, fundCents, editing, onClose }: WithdrawPro
 		reason: editing?.reason ?? "emergency",
 		note: editing?.note ?? "",
 	};
+	const available = fundCents + (editing?.amountCents ?? 0);
+	const fits = (value: string) => toCents(value) <= available;
+	// The same check gates the button and the submit (Enter included).
+	const schema = z.object({
+		amount: positiveMoney("Escribe un monto.").check(z.refine(fits)),
+		reason: z.enum(["emergency", "unexpected", "mistake", "other"]),
+		note: z.string().check(z.trim(), z.maxLength(NOTE_MAX_LENGTH)),
+	});
 	const form = useForm({
 		defaultValues,
+		validators: { onSubmit: schema },
 		onSubmit: ({ value }) =>
 			save({
 				amountCents: toCents(value.amount),
@@ -72,10 +78,10 @@ export function WithdrawForm({ space, fundCents, editing, onClose }: WithdrawPro
 				note: value.reason === "other" ? value.note.trim() || undefined : undefined,
 			}),
 	});
-	const { amount, reason } = useSelector(form.store, (state) => state.values);
-	const available = fundCents + (editing?.amountCents ?? 0);
-	const over = toCents(amount) > available;
-	const canSave = withdrawSchema.safeParse({ amount }).success && !over && !pending;
+	const values = useSelector(form.store, (state) => state.values);
+	const { amount, reason } = values;
+	const over = !fits(amount);
+	const canSave = schema.safeParse(values).success && !pending;
 
 	return (
 		<FormSheetPopup>
@@ -160,18 +166,5 @@ export function WithdrawForm({ space, fundCents, editing, onClose }: WithdrawPro
 				)}
 			</form>
 		</FormSheetPopup>
-	);
-}
-
-export function WithdrawDialog({ open, ...props }: WithdrawProps & { open: boolean }) {
-	return (
-		<FormSheet
-			open={open}
-			onOpenChange={(next) => {
-				if (!next) props.onClose();
-			}}
-		>
-			{open ? <WithdrawForm {...props} /> : null}
-		</FormSheet>
 	);
 }

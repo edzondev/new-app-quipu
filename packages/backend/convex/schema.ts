@@ -25,14 +25,16 @@ export const spendableAmounts = v.object({
 	wantsCents: v.number(),
 });
 
+// What entered and left Necesidades and Gustos in a closed cycle. progress.list shows the same fields.
+export const closeTotals = {
+	assigned: spendableAmounts,
+	spent: spendableAmounts,
+	fundedCents: v.number(),
+};
+
 // How a cycle's money added up when it closed. Absent means it closed before this existed.
 export const closeSummary = v.union(
-	v.object({
-		status: v.literal("ok"),
-		assigned: spendableAmounts,
-		spent: spendableAmounts,
-		fundedCents: v.number(),
-	}),
+	v.object({ status: v.literal("ok"), ...closeTotals }),
 	v.object({ status: v.literal("tooManyMovements") }),
 	v.object({ status: v.literal("inconsistent") }),
 );
@@ -205,6 +207,7 @@ export default defineSchema({
 		.index("by_forNextCycle_cycleId", ["forNextCycle", "cycleId"])
 		.index("by_toCycleId", ["toCycleId"])
 		.index("by_spaceId_kind", ["spaceId", "kind"])
+		.index("by_kind_cycleId", ["kind", "cycleId"])
 		.index("by_commitmentId", ["commitmentId"]),
 
 	commitments: defineTable(

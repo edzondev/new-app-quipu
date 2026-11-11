@@ -498,6 +498,38 @@ test("more than 500 movements: the close still works, margin and streak are righ
 	expect(await ana.query(api.progress.streak, {})).toMatchObject({ streak: 1 });
 });
 
+test("exactly 500 movements keep their detail: the automatic saving of the close is not one of them", async () => {
+	const t = harness();
+	const ana = await startAna(t);
+	const { space, cycle } = await firstCycle(t);
+	// Onboarding left one income; 499 expenses of 1 cent make 500.
+	await t.run(async (ctx) => {
+		for (let i = 0; i < 499; i++) {
+			await ctx.db.insert("transactions", {
+				kind: "expense",
+				spaceId: space._id,
+				cycleId: cycle._id,
+				userId: "someone",
+				amountCents: 1,
+				date: "2026-10-21",
+				envelope: "needs",
+			});
+		}
+		await ctx.db.patch("cycles", cycle._id, {
+			envelopes: { ...cycle.envelopes, needsCents: cycle.envelopes.needsCents - 499 },
+		});
+	});
+	await closeOn(ana, "2026-11-01");
+
+	const { cycles } = await ana.query(api.progress.list, {});
+	expect(cycles[0]?.detail).toEqual({
+		kind: "ok",
+		assigned: { needsCents: 25_000, wantsCents: 15_000 },
+		spent: { needsCents: 499, wantsCents: 0 },
+		fundedCents: 10_000,
+	});
+});
+
 test("money that moved outside the records does not block the close and is never passed off as a legacy cycle", async () => {
 	const t = harness();
 	const ana = await startAna(t);
@@ -511,7 +543,11 @@ test("money that moved outside the records does not block the close and is never
 
 	await closeOn(ana, "2026-11-01");
 
-	expect(logged).toHaveBeenCalled();
+	// The gap per envelope and the cycle, and nothing the person wrote.
+	expect(logged).toHaveBeenCalledWith(expect.any(String), cycle._id, {
+		needsCents: 100,
+		wantsCents: 0,
+	});
 	const { cycles } = await ana.query(api.progress.list, {});
 	expect(cycles).toEqual([
 		october({
@@ -550,6 +586,44 @@ test("exactly 12 cycles fill one page and there is no next page", async () => {
 	const page = await ana.query(api.progress.list, {});
 	expect(page.cycles).toHaveLength(12);
 	expect(page.next).toBeNull();
+});
+
+test("13 cycles give a full page and a last page with the one left, never an empty one", async () => {
+	const t = harness();
+	const ana = await startAna(t);
+	await insertClosed(t, 13, positive);
+
+	const first = await ana.query(api.progress.list, {});
+	expect(first.cycles).toHaveLength(12);
+	expect(first.next).not.toBeNull();
+	const last = await ana.query(api.progress.list, { before: first.next ?? undefined });
+	expect(last.cycles.map((cycle) => cycle.startDate)).toEqual([weekStart(0)]);
+	expect(last.next).toBeNull();
+});
+
+test("a full page followed only by idle cycles is the last page: no empty page after it", async () => {
+	const t = harness();
+	const ana = await startAna(t);
+	// Weeks 0-2 are idle and oldest; weeks 3-14 are the 12 active ones.
+	await insertClosed(t, 15, (i) => (i < 3 ? idle() : positive()));
+
+	const page = await ana.query(api.progress.list, {});
+	expect(page.cycles).toHaveLength(12);
+	expect(page.next).toBeNull();
+});
+
+test("a full page whose look-ahead runs out of budget still offers more, and more reaches the cycle", async () => {
+	const t = harness();
+	const ana = await startAna(t);
+	// Week 0 is active and oldest; 100 idle weeks; then the 12 newest active ones.
+	await insertClosed(t, 113, (i) => (i === 0 || i > 100 ? positive() : idle()));
+
+	const history = await readHistory(ana);
+	expect(history.cycles.map((cycle) => cycle.startDate)).toEqual([
+		...newestFirst(113).slice(0, 12),
+		weekStart(0),
+	]);
+	expect(history.hidden).toBe(100);
 });
 
 test("a long idle stretch never hides the cycles behind it: later pages reach them", async () => {

@@ -338,6 +338,22 @@ test("without an open cycle for today there is no suggestion", async () => {
 	expect(fund.suggestedFundGoalCents).toBeNull();
 });
 
+test("without a plan there is no suggestion, and the fund still reads", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+	await t.run(async (ctx) => {
+		const profile = await ctx.db.query("profiles").first();
+		if (!profile) throw new Error("missing profile");
+		await ctx.db.patch("profiles", profile._id, { plan: undefined });
+	});
+
+	expect(await ana.query(api.goals.fund, { space: "personal", today: TODAY })).toEqual({
+		fundCents: 0,
+		fundGoalCents: null,
+		suggestedFundGoalCents: null,
+	});
+});
+
 // A household has no usual income of its own, and copying the creator's would leak a personal figure.
 test("in a household there is no fund goal suggestion", async () => {
 	const t = harness();

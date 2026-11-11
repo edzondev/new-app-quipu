@@ -76,6 +76,28 @@ export function FormSheet({
 	);
 }
 
+/** A FormSheet for one form: it mounts while open, so each opening starts from its defaults. */
+export function FormSheetFor({
+	open,
+	onClose,
+	children,
+}: {
+	open: boolean;
+	onClose: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<FormSheet
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) onClose();
+			}}
+		>
+			{open ? children : null}
+		</FormSheet>
+	);
+}
+
 export function FormSheetPopup(props: {
 	className?: string;
 	children: ReactNode;

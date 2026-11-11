@@ -1,7 +1,7 @@
 import { type Infer, v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
-import { spendableAmounts } from "../schema";
+import { closeTotals, spendableAmounts } from "../schema";
 
 const PAGE_SIZE = 25;
 
@@ -12,12 +12,7 @@ export const closedCycle = v.object({
 	marginCents: v.number(),
 	left: spendableAmounts,
 	detail: v.union(
-		v.object({
-			kind: v.literal("ok"),
-			assigned: spendableAmounts,
-			spent: spendableAmounts,
-			fundedCents: v.number(),
-		}),
+		v.object({ kind: v.literal("ok"), ...closeTotals }),
 		v.object({
 			kind: v.literal("unavailable"),
 			reason: v.union(
@@ -52,19 +47,10 @@ function toClosedCycle(cycle: Doc<"cycles">): ClosedCycle {
 	};
 }
 
-/** Whether the space has any closed-or-not cycle that started before `startDate`. */
-export async function hasCycleBefore(ctx: QueryCtx, spaceId: Id<"spaces">, startDate: string) {
-	const older = await ctx.db
-		.query("cycles")
-		.withIndex("by_space_start", (q) => q.eq("spaceId", spaceId).lt("startDate", startDate))
-		.first();
-	return older !== null;
-}
-
 /**
  * Walks closed cycles from the newest (or from just before `before`) and keeps the ones with
  * activity. Spends at most `budget` reads, counting cycle documents and every activity check.
- * `next` is where to resume, or null when the whole history was reached.
+ * `next` is where to resume, or null when the whole history was reached. `reads` is what it spent.
  *
  * A cycle with no carry and no movements is idle: hidden, neither adds to a streak nor cuts it.
  * Only a zero margin with zero carry can be idle, so only then is the movement check paid.
@@ -86,6 +72,7 @@ export async function scanClosedCycles(
 	let hidden = 0;
 	let remaining = budget;
 	let cursor = before;
+	const done = (next: string | null) => ({ rows, hidden, next, reads: budget - remaining });
 	while (remaining > 0) {
 		const size = Math.min(PAGE_SIZE, remaining);
 		const page = await ctx.db
@@ -108,7 +95,7 @@ export async function scanClosedCycles(
 				row.marginCents === 0 && cycle.carryIn.needsCents === 0 && cycle.carryIn.wantsCents === 0;
 			if (mayBeIdle) {
 				// Not enough budget to tell: stop before this cycle so the next page re-examines it.
-				if (remaining <= 0) return { rows, hidden, next: cursor ?? null };
+				if (remaining <= 0) return done(cursor ?? null);
 				remaining -= 1;
 				const movement = await ctx.db
 					.query("transactions")
@@ -122,9 +109,9 @@ export async function scanClosedCycles(
 			}
 			rows.push(row);
 			cursor = cycle.startDate;
-			if (stopAfter(row, rows)) return { rows, hidden, next: cursor };
+			if (stopAfter(row, rows)) return done(cursor);
 		}
-		if (page.length < size) return { rows, hidden, next: null };
+		if (page.length < size) return done(null);
 	}
-	return { rows, hidden, next: cursor ?? null };
+	return done(cursor ?? null);
 }

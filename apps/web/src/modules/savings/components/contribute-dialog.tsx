@@ -8,7 +8,6 @@ import * as z from "zod/mini";
 import { Button } from "#/components/ui/button";
 import { toastManager } from "#/components/ui/toast";
 import {
-	FormSheet,
 	FormSheetFooter,
 	FormSheetHeader,
 	FormSheetPanel,
@@ -25,8 +24,6 @@ import { useFundActions } from "../use-fund-actions";
 import type { Goal } from "./goal-card";
 
 const QUICK_CENTS = 10_000;
-
-const contributeSchema = z.object({ amount: positiveMoney("Escribe un monto.") });
 
 /** Without `goal` the money goes to the emergency fund. */
 type ContributeProps = {
@@ -58,12 +55,9 @@ export function ContributeForm({
 		pending,
 		error: saveError,
 	} = useFundActions({
-		add: async (
-			value: Pick<FunctionArgs<typeof api.transactions.addSaving>, "amountCents" | "goalId">,
-		) => {
-			await addSaving({ space, ...value });
-			toastManager.add({ title: "Guardado", type: "success" });
-		},
+		add: (value: Pick<FunctionArgs<typeof api.transactions.addSaving>, "amountCents" | "goalId">) =>
+			addSaving({ space, ...value }),
+		onAdded: () => toastManager.add({ title: "Guardado", type: "success" }),
 		// An edit keeps the destination and the note of the row.
 		update: (id, value) =>
 			updateSaving({ space, id, amountCents: value.amountCents, note: editing?.note ?? undefined }),
@@ -71,19 +65,25 @@ export function ContributeForm({
 		onDone: onClose,
 		editing,
 	});
+	const available = Math.max(0, savingsCents + (editing?.amountCents ?? 0));
+	const fits = (value: string) => toCents(value) <= available;
+	// The same check gates the button and the submit (Enter included).
+	const schema = z.object({
+		amount: positiveMoney("Escribe un monto.").check(z.refine(fits)),
+	});
 	const form = useForm({
 		defaultValues: { amount: editing ? (editing.amountCents / 100).toFixed(2) : "" },
+		validators: { onSubmit: schema },
 		onSubmit: ({ value }) =>
 			save({ amountCents: toCents(value.amount), ...(goal ? { goalId: goal.id } : {}) }),
 	});
 	const amount = useSelector(form.store, (state) => state.values.amount);
-	const available = Math.max(0, savingsCents + (editing?.amountCents ?? 0));
-	const over = toCents(amount) > available;
+	const over = !fits(amount);
 	const shortcut = goal
 		? { label: "Lo que falta", cents: Math.max(0, (targetCents ?? 0) - savedCents) }
 		: { label: "Todo el Ahorro", cents: available };
 
-	const canSave = contributeSchema.safeParse({ amount }).success && !over && !pending;
+	const canSave = schema.safeParse({ amount }).success && !pending;
 	const error =
 		over || available === 0 ? `Solo tienes S/ ${formatCents(available)} en Ahorro.` : undefined;
 
@@ -169,18 +169,5 @@ export function ContributeForm({
 				)}
 			</form>
 		</FormSheetPopup>
-	);
-}
-
-export function ContributeDialog({ open, ...props }: ContributeProps & { open: boolean }) {
-	return (
-		<FormSheet
-			open={open}
-			onOpenChange={(next) => {
-				if (!next) props.onClose();
-			}}
-		>
-			{open ? <ContributeForm {...props} /> : null}
-		</FormSheet>
 	);
 }

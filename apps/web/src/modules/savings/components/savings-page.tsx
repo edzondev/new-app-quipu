@@ -5,18 +5,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import type { FunctionArgs } from "convex/server";
 import { useState } from "react";
+import { FormSheetFor } from "#/components/form-sheet";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useEnsureOpenCycle } from "#/hooks/use-ensure-open-cycle";
 import { useLimaDate } from "#/hooks/use-lima-date";
 import { useOpenPlus } from "#/modules/plus/plus-provider";
-import { ContributeDialog } from "./contribute-dialog";
+import { ContributeForm } from "./contribute-dialog";
 import { FundCard } from "./fund-card";
-import { FundGoalDialog } from "./fund-goal-dialog";
+import { FundGoalForm } from "./fund-goal-dialog";
 import type { Goal } from "./goal-card";
 import { GoalFormDialog, type GoalValues } from "./goal-form-dialog";
 import { GoalsSection } from "./goals-section";
-import { WithdrawDialog } from "./withdraw-dialog";
+import { WithdrawForm } from "./withdraw-dialog";
 
 type Panel =
 	| { kind: "contribute" | "withdraw" | "fundGoal" }
@@ -112,15 +113,19 @@ function Savings({
 				onEdit={(id) => setPanel({ kind: "editGoal", id })}
 			/>
 
-			<ContributeDialog
+			<FormSheetFor
 				open={panel?.kind === "contribute" || (panel?.kind === "contributeGoal" && !!goal)}
-				space={space}
-				savingsCents={savingsCents}
-				savedCents={goal?.savedCents ?? fund.data.fundCents}
-				targetCents={goal?.targetCents ?? fund.data.fundGoalCents}
-				goal={goal}
 				onClose={close}
-			/>
+			>
+				<ContributeForm
+					space={space}
+					savingsCents={savingsCents}
+					savedCents={goal?.savedCents ?? fund.data.fundCents}
+					targetCents={goal?.targetCents ?? fund.data.fundGoalCents}
+					goal={goal}
+					onClose={close}
+				/>
+			</FormSheetFor>
 			<GoalFormDialog
 				open={panel?.kind === "newGoal" || (panel?.kind === "editGoal" && !!goal)}
 				space={space}
@@ -132,19 +137,17 @@ function Savings({
 					openPlus({ feature: "goals", onClose: () => setPanel({ kind: "newGoal", draft }) });
 				}}
 			/>
-			<WithdrawDialog
-				open={panel?.kind === "withdraw"}
-				space={space}
-				fundCents={fund.data.fundCents}
-				onClose={close}
-			/>
-			<FundGoalDialog
-				open={panel?.kind === "fundGoal"}
-				space={space}
-				fundGoalCents={fund.data.fundGoalCents}
-				suggestedCents={fund.data.suggestedFundGoalCents}
-				onClose={close}
-			/>
+			<FormSheetFor open={panel?.kind === "withdraw"} onClose={close}>
+				<WithdrawForm space={space} fundCents={fund.data.fundCents} onClose={close} />
+			</FormSheetFor>
+			<FormSheetFor open={panel?.kind === "fundGoal"} onClose={close}>
+				<FundGoalForm
+					space={space}
+					fundGoalCents={fund.data.fundGoalCents}
+					suggestedCents={fund.data.suggestedFundGoalCents}
+					onClose={close}
+				/>
+			</FormSheetFor>
 		</>
 	);
 }

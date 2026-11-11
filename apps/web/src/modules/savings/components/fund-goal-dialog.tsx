@@ -17,7 +17,6 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import {
-	FormSheet,
 	FormSheetDescription,
 	FormSheetFooter,
 	FormSheetHeader,
@@ -39,7 +38,7 @@ type FundGoalProps = {
 	onClose: () => void;
 };
 
-function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoalProps) {
+export function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoalProps) {
 	const setGoal = useConvexMutation(api.goals.setFundGoal);
 	const [confirmingRemove, setConfirmingRemove] = useState(false);
 
@@ -50,6 +49,8 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 	const initial = fundGoalCents ?? suggestedCents;
 	const form = useForm({
 		defaultValues: { amount: initial ? formatCents(initial) : "" },
+		// The same check gates the button and the submit (Enter included).
+		validators: { onSubmit: fundGoalSchema },
 		onSubmit: ({ value }) => save.mutate(toCents(value.amount)),
 	});
 	const amount = useSelector(form.store, (state) => state.values.amount);
@@ -143,18 +144,5 @@ function FundGoalForm({ space, fundGoalCents, suggestedCents, onClose }: FundGoa
 				</AlertDialogPopup>
 			</AlertDialog>
 		</FormSheetPopup>
-	);
-}
-
-export function FundGoalDialog({ open, ...props }: FundGoalProps & { open: boolean }) {
-	return (
-		<FormSheet
-			open={open}
-			onOpenChange={(next) => {
-				if (!next) props.onClose();
-			}}
-		>
-			{open ? <FundGoalForm {...props} /> : null}
-		</FormSheet>
 	);
 }
