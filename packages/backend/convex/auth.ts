@@ -12,7 +12,7 @@ import { env } from "./_generated/server";
 import { DELETION_CODE_TYPE } from "../shared/deletion";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
-import { otpEmail } from "./emails/otp";
+import { OTP_EXPIRES_IN_MINUTES, otpEmail } from "./emails/otp";
 
 export const resend = new Resend(components.resend, { testMode: false });
 
@@ -75,6 +75,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 			}),
 			emailOTP({
 				otpLength: 6,
+				expiresIn: OTP_EXPIRES_IN_MINUTES * 60,
 				allowedAttempts: 3,
 				storeOTP: "hashed",
 				sendVerificationOTP: async ({ email, otp, type }) => {

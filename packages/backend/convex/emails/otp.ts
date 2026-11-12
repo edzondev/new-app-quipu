@@ -1,3 +1,6 @@
+/** How long a sign-in or deletion code lasts. Better Auth reads it too (`expiresIn`, in seconds). */
+export const OTP_EXPIRES_IN_MINUTES = 5;
+
 const LOGO_LIGHT = "https://assets.quipu-finance.app/email/logo-quipu.png";
 const LOGO_DARK = "https://assets.quipu-finance.app/email/logo-quipu-dark.png";
 
@@ -22,7 +25,7 @@ export function otpEmail({
 	const lead = deletion
 		? "Usa este código para eliminar tu cuenta de Quipu."
 		: "Usa este código para entrar a Quipu.";
-	const expiry = "Vence en 5 minutos.";
+	const expiry = `Vence en ${OTP_EXPIRES_IN_MINUTES} minutos.`;
 	const gray = deletion
 		? "Si no fuiste tú, no lo compartas con nadie."
 		: "Si no lo pediste, ignora este correo.";
@@ -36,7 +39,7 @@ export function otpEmail({
 <meta charset="utf-8" />
 <meta name="color-scheme" content="light dark" />
 <meta name="supported-color-schemes" content="light dark" />
-<title>${escapeHtml(subject)}</title>
+<title>${subject}</title>
 <style>
 @media (prefers-color-scheme: dark) {
   .e-bg { background-color: #13110f !important; }
@@ -65,7 +68,7 @@ export function otpEmail({
 </td>
 </tr>
 <tr>
-<td class="e-ink" align="left" style="padding: 0 0 24px; font-family: ${SANS}; font-size: 16px; line-height: 24px; color: #241c15;">${escapeHtml(lead)} <span style="white-space: nowrap;">${expiry}</span></td>
+<td class="e-ink" align="left" style="padding: 0 0 24px; font-family: ${SANS}; font-size: 16px; line-height: 24px; color: #241c15;">${lead} <span style="white-space: nowrap;">${expiry}</span></td>
 </tr>
 <tr>
 <td class="e-box" align="center" style="background-color: #f2f3f5; border-radius: 12px; padding: 20px 16px;">
@@ -73,7 +76,7 @@ export function otpEmail({
 </td>
 </tr>
 <tr>
-<td class="e-mut" align="left" style="padding: 24px 0 0; font-family: ${SANS}; font-size: 14px; line-height: 20px; color: #6d645d;">${escapeHtml(gray)}</td>
+<td class="e-mut" align="left" style="padding: 24px 0 0; font-family: ${SANS}; font-size: 14px; line-height: 20px; color: #6d645d;">${gray}</td>
 </tr>
 <tr>
 <td style="padding: 32px 0 0;">

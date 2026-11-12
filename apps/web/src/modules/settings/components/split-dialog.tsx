@@ -65,7 +65,7 @@ function SplitEditor({ home, space, onDone }: { home: Home; space: Space; onDone
 				/>
 				{preview ? (
 					<p className="mt-5 text-sm">
-						Con este reparto, hoy puedes gastar{" "}
+						Con este reparto, te queda hoy{" "}
 						<span className="font-semibold tabular-nums">S/ {formatCents(preview.leftCents)}</span>.
 					</p>
 				) : null}

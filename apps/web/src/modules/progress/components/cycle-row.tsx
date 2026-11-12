@@ -77,7 +77,7 @@ function Breakdown({
 			})}
 			{detail.fundedCents > 0 ? (
 				<p className="text-sm">
-					Ahorro: {formatMoney(detail.fundedCents)} pasó a {together ? "su" : "tu"} fondo.
+					Ahorro: {formatMoney(detail.fundedCents)} pasó a {together ? "su Ahorro" : "tu fondo"}.
 				</p>
 			) : null}
 		</div>
