@@ -1,18 +1,20 @@
 import { passkey } from "@better-auth/passkey";
-import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
 import { createClient } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { Resend } from "@convex-dev/resend";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { type BetterAuthOptions, betterAuth } from "better-auth/minimal";
 import { emailOTP } from "better-auth/plugins";
-import { components, internal } from "./_generated/api";
-import type { DataModel } from "./_generated/dataModel";
-import { env } from "./_generated/server";
+
 import { DELETION_CODE_TYPE } from "../shared/deletion";
+import { components, internal } from "./_generated/api";
+import { env } from "./_generated/server";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
 import { OTP_EXPIRES_IN_MINUTES, otpEmail } from "./emails/otp";
+
+import type { DataModel } from "./_generated/dataModel";
+import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
 
 export const resend = new Resend(components.resend, { testMode: false });
 
@@ -50,10 +52,21 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 		trustedOrigins: [siteUrl],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: { enabled: false }, // no passwords
+		disabledPaths: [
+			"/email-otp/request-password-reset",
+			"/forget-password/email-otp",
+			"/email-otp/reset-password",
+			"/email-otp/check-verification-otp",
+			"/email-otp/verify-email",
+		],
 		hooks: {
 			// Before Better Auth replaces the previous code with a new one.
 			before: createAuthMiddleware(async (authCtx) => {
 				if (authCtx.path !== "/email-otp/send-verification-otp") return;
+				// HTTP only: auth.api (requestCode, etc.) has no request and may send other types.
+				if (authCtx.request && authCtx.body?.type !== "sign-in") {
+					throw new APIError("BAD_REQUEST");
+				}
 				if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
 				const email = String(authCtx.body?.email ?? "")
 					.trim()

@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
+
 import { api, components, internal } from "../convex/_generated/api";
 import { getLimaDate } from "../shared/dates";
 import { runsAtFor } from "../shared/deletion";
@@ -131,6 +132,38 @@ test("the deletion code does not sign anyone in", async () => {
 			paginationOpts: PAGE,
 		}),
 	).toHaveLength(1);
+});
+
+const CLOSED_AUTH_PATHS = [
+	"/email-otp/request-password-reset",
+	"/forget-password/email-otp",
+	"/email-otp/reset-password",
+	"/email-otp/check-verification-otp",
+	"/email-otp/verify-email",
+] as const;
+
+test("unused Better Auth endpoints respond 404 and send no email", async () => {
+	const { t } = await alone();
+	for (const path of CLOSED_AUTH_PATHS) {
+		const code = await captureOtp(EMAIL, async () => {
+			const res = await post(t, path, { email: EMAIL, otp: "123456", type: "email-verification" });
+			expect(res.status).toBe(404);
+		});
+		expect(code, path).toBeUndefined();
+	}
+});
+
+test("HTTP send-verification-otp only allows sign-in; requestCode still sends the deletion code", async () => {
+	const { t, ana } = await alone();
+	const blocked = await captureOtp(EMAIL, async () => {
+		const res = await post(t, "/email-otp/send-verification-otp", {
+			email: EMAIL,
+			type: "email-verification",
+		});
+		expect(res.status).toBe(400);
+	});
+	expect(blocked).toBeUndefined();
+	expect(await ask(ana)).toMatch(/^\d{6}$/);
 });
 
 test("requestCode is refused while the deletion is pending", async () => {
