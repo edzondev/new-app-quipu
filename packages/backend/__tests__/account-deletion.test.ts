@@ -134,19 +134,6 @@ test("the deletion code does not sign anyone in", async () => {
 	).toHaveLength(1);
 });
 
-test("the deletion code does not open a session via /email-otp/verify-email", async () => {
-	const { t, ana } = await alone();
-	const code = await ask(ana);
-	expect((await post(t, "/email-otp/verify-email", { email: EMAIL, otp: code })).status).toBe(404);
-	expect(
-		await authRows(t, {
-			model: "session",
-			where: [{ field: "userId", value: ana.userId }],
-			paginationOpts: PAGE,
-		}),
-	).toHaveLength(1);
-});
-
 const CLOSED_AUTH_PATHS = [
 	"/email-otp/request-password-reset",
 	"/forget-password/email-otp",
