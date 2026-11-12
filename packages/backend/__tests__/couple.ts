@@ -36,8 +36,6 @@ export function post(t: Harness, path: string, body: object) {
 
 /** Runs `send` with the code going to the log, and returns the code that was sent to `email`. */
 export async function captureOtp(email: string, send: () => Promise<unknown>) {
-	process.env.OTP_DELIVERY = "log";
-	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	const lines: string[] = [];
 	const log = console.log;
 	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
