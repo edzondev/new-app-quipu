@@ -17,7 +17,7 @@ import type { DataModel } from "./_generated/dataModel";
 import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
 
 // App env is present at push; the betterAuth component isolate that imports this file does not see it.
-const polarServer = env.POLAR_SERVER as string | undefined;
+const polarServer = process.env.POLAR_SERVER;
 if (polarServer) {
 	if (env.OTP_DELIVERY === "log" && polarServer === "production") {
 		throw new Error("OTP_DELIVERY=log no se puede con POLAR_SERVER=production");
@@ -58,7 +58,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(componen
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
 	// Placeholder only for betterAuth component analyze (no app env there). Deploy still requires SITE_URL.
-	const baseURL = (env.SITE_URL as string | undefined) ?? "http://localhost:3000";
+	const baseURL = process.env.SITE_URL ?? "http://localhost:3000";
 	const rpID = env.PASSKEY_RP_ID ?? new URL(baseURL).hostname;
 	return {
 		baseURL,
