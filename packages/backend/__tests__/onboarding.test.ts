@@ -1,69 +1,18 @@
-import polarTest from "@convex-dev/polar/test";
-import rateLimiterTest from "@convex-dev/rate-limiter/test";
-import resendTest from "@convex-dev/resend/test";
-import { convexTest } from "convex-test";
 import { afterEach, expect, test, vi } from "vitest";
 import { api, components } from "../convex/_generated/api";
-import authSchema from "../convex/betterAuth/schema";
-import schema from "../convex/schema";
 import { splitIncome } from "../shared/budget";
 import { getFirstCycleRange, getLimaDate } from "../shared/dates";
+import { type Harness, harness, post, sendCode, signIn } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
 });
 
-const modules = import.meta.glob("../convex/**/*.ts");
-const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
-
-function harness() {
-	const t = convexTest(schema, modules);
-	t.registerComponent("betterAuth", authSchema, componentModules);
-	polarTest.register(t);
-	resendTest.register(t);
-	rateLimiterTest.register(t);
-	return t;
-}
-
-function post(t: ReturnType<typeof harness>, path: string, body: object) {
-	return t.fetch(`/api/auth${path}`, {
-		method: "POST",
-		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-		body: JSON.stringify(body),
-	});
-}
-
-/** Sends a code and returns it (OTP_DELIVERY=log prints it instead of emailing it). */
-async function sendCode(t: ReturnType<typeof harness>, email: string) {
-	const lines: string[] = [];
-	const log = console.log;
-	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
-	try {
-		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
-		expect(sent.ok, await sent.clone().text()).toBe(true);
-	} finally {
-		console.log = log;
-	}
-	return lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
-}
-
-function findUser(t: ReturnType<typeof harness>, email: string) {
+function findUser(t: Harness, email: string) {
 	return t.query(components.betterAuth.adapter.findOne, {
 		model: "user",
 		where: [{ field: "email", value: email }],
 	});
-}
-
-async function signIn(t: ReturnType<typeof harness>, email: string, name: string) {
-	const otp = await sendCode(t, email);
-	const res = await post(t, "/sign-in/email-otp", { email, otp, name });
-	expect(res.status, await res.clone().text()).toBe(200);
-	const user = await findUser(t, email);
-	const session = await t.query(components.betterAuth.adapter.findOne, {
-		model: "session",
-		where: [{ field: "userId", value: user._id }],
-	});
-	return t.withIdentity({ subject: user._id, sessionId: session._id });
 }
 
 const good = {

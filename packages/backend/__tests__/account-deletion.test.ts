@@ -11,6 +11,7 @@ import {
 	harness,
 	joinedCouple,
 	post,
+	sendCode,
 	setTrialEnd,
 	startUser,
 	START,
@@ -46,10 +47,7 @@ async function confirmDeletion(person: Person, email = EMAIL) {
 
 async function signBackIn(t: Harness, person: Person, email = EMAIL) {
 	vi.advanceTimersByTime(CODE_WAIT_MS);
-	const code = await captureOtp(email, async () => {
-		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
-		expect(sent.ok).toBe(true);
-	});
+	const code = await sendCode(t, email);
 	expect((await post(t, "/sign-in/email-otp", { email, otp: code })).status).toBe(200);
 	const where = [{ field: "userId" as const, value: person.userId }];
 	await t.mutation(components.betterAuth.adapter.updateOne, {

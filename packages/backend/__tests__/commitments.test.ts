@@ -1,62 +1,11 @@
-import rateLimiterTest from "@convex-dev/rate-limiter/test";
-import resendTest from "@convex-dev/resend/test";
-import { convexTest } from "convex-test";
 import { afterEach, expect, test, vi } from "vitest";
 import { api, components } from "../convex/_generated/api";
-import authSchema from "../convex/betterAuth/schema";
 import { ensureOpenCycle } from "../convex/model/cycles";
-import schema from "../convex/schema";
+import { type Harness, harness, signIn } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
 });
-
-const modules = import.meta.glob("../convex/**/*.ts");
-const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
-
-function harness() {
-	const t = convexTest(schema, modules);
-	t.registerComponent("betterAuth", authSchema, componentModules);
-	resendTest.register(t);
-	rateLimiterTest.register(t);
-	return t;
-}
-
-function post(t: ReturnType<typeof harness>, path: string, body: object) {
-	return t.fetch(`/api/auth${path}`, {
-		method: "POST",
-		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-		body: JSON.stringify(body),
-	});
-}
-
-async function sendCode(t: ReturnType<typeof harness>, email: string) {
-	const lines: string[] = [];
-	const log = console.log;
-	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
-	try {
-		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
-		expect(sent.ok, await sent.clone().text()).toBe(true);
-	} finally {
-		console.log = log;
-	}
-	return lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
-}
-
-async function signIn(t: ReturnType<typeof harness>, email: string, name: string) {
-	const otp = await sendCode(t, email);
-	const res = await post(t, "/sign-in/email-otp", { email, otp, name });
-	expect(res.status, await res.clone().text()).toBe(200);
-	const user = await t.query(components.betterAuth.adapter.findOne, {
-		model: "user",
-		where: [{ field: "email", value: email }],
-	});
-	const session = await t.query(components.betterAuth.adapter.findOne, {
-		model: "session",
-		where: [{ field: "userId", value: user._id }],
-	});
-	return t.withIdentity({ subject: user._id, sessionId: session._id });
-}
 
 const onboard = {
 	cadence: "monthly" as const,
@@ -133,7 +82,7 @@ type Ana = Awaited<ReturnType<typeof signIn>>;
 // Sign in under the fake clock: convex-test never lets _creationTime go back, so a real-time
 // sign-in would date every commitment today. Better Auth sessions last 7 days; stretch it to reach December.
 async function startAnaAt(
-	t: ReturnType<typeof harness>,
+	t: Harness,
 	now: string,
 	plan: Omit<typeof onboard, "cadence"> & { cadence: "monthly" | "biweekly" },
 ) {
@@ -154,7 +103,7 @@ async function startAnaAt(
 	return ana;
 }
 
-function startAnaOct20(t: ReturnType<typeof harness>) {
+function startAnaOct20(t: Harness) {
 	return startAnaAt(t, "2026-10-20T17:00:00.000Z", onboard);
 }
 
@@ -178,11 +127,11 @@ function addSoat(ana: Ana) {
 	});
 }
 
-function firstCommitmentId(t: ReturnType<typeof harness>) {
+function firstCommitmentId(t: Harness) {
 	return t.run(async (ctx) => (await ctx.db.query("commitments").take(1))[0]._id);
 }
 
-async function luzUnpaidIntoNovember(t: ReturnType<typeof harness>) {
+async function luzUnpaidIntoNovember(t: Harness) {
 	const ana = await startAnaOct20(t);
 	await addLuz(ana);
 	vi.setSystemTime(new Date("2026-11-01T17:00:00.000Z"));
@@ -641,7 +590,7 @@ test("a charge due on the cycle's first day is listed as itself, open and then p
 });
 
 // Biweekly: Luz of 25 Oct is forgotten, so on 20 Nov it and the 25 Nov charge are both still ahead of the payments.
-async function luzForgottenIntoNovember20(t: ReturnType<typeof harness>) {
+async function luzForgottenIntoNovember20(t: Harness) {
 	const ana = await startAnaAt(t, "2026-10-20T17:00:00.000Z", { ...onboard, cadence: "biweekly" });
 	await addLuz(ana);
 	vi.setSystemTime(new Date("2026-11-20T17:00:00.000Z"));
