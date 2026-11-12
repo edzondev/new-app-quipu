@@ -223,7 +223,11 @@ function Overview({
 						<span>{whole}</span>
 						<span className="mt-2 text-[0.41em] text-muted-foreground">.{decimals}</span>
 					</p>
-					{note ? <p className="mt-2.5 text-sm text-muted-foreground">{note}</p> : null}
+					{note ? (
+						<p role="status" className="mt-2.5 text-sm text-muted-foreground">
+							{note}
+						</p>
+					) : null}
 					<p className="mt-1.5 text-xs text-muted-foreground">
 						{home.pendingCents > 0
 							? `Descontamos S/ ${formatCents(home.pendingCents)} de compromisos por pagar. `
@@ -297,7 +301,7 @@ function Formula({ home, together }: { home: HomeData; together: boolean }) {
 								</dd>
 							</div>
 							<div className="mt-1 flex justify-between gap-3 border-t border-border pt-1 font-semibold text-foreground">
-								<dt>= puedes gastar hoy</dt>
+								<dt>{together ? "= pueden gastar hoy" : "= puedes gastar hoy"}</dt>
 								<dd className="shrink-0 font-mono whitespace-nowrap">
 									S/ {formatCents(home.dailyCents)}
 								</dd>

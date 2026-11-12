@@ -3,7 +3,7 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { addDays, formatFullDay } from "@quipu/backend/shared/dates";
 import { DELETION_DAYS } from "@quipu/backend/shared/deletion";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useState } from "react";
 import {
@@ -146,10 +146,15 @@ export function DeleteAccountDialog({
 	hasHousehold: boolean;
 	defaultOpen: boolean;
 }) {
+	const navigate = useNavigate();
 	return (
 		<ActionDialog
 			label="Eliminar cuenta"
 			defaultOpen={defaultOpen}
+			onClose={() => {
+				// Quita ?eliminar=true para que la recarga no vuelva a abrir el modal.
+				if (defaultOpen) void navigate({ to: "/settings", search: {}, replace: true });
+			}}
 			className="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-warning-foreground underline-offset-4 hover:underline"
 		>
 			{() => <DeleteAccount hasHousehold={hasHousehold} />}

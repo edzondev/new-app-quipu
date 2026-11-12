@@ -31,7 +31,7 @@ function Streak({
 		return (
 			<p className="mt-2 text-sm text-muted-foreground">
 				{together
-					? "Todavía no llevan ciclos seguidos sin pasarse"
+					? "Aún no llevan ciclos seguidos sin pasarse."
 					: "Todavía no tienes ciclos seguidos sin quedarte sin margen"}
 			</p>
 		);
