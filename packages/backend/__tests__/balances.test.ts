@@ -1,62 +1,11 @@
-import rateLimiterTest from "@convex-dev/rate-limiter/test";
-import resendTest from "@convex-dev/resend/test";
-import { convexTest } from "convex-test";
 import { afterEach, expect, test, vi } from "vitest";
-import { api, components } from "../convex/_generated/api";
-import authSchema from "../convex/betterAuth/schema";
-import schema from "../convex/schema";
+import { api } from "../convex/_generated/api";
 import { splitIncome } from "../shared/budget";
+import { type Harness, harness, signIn } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
 });
-
-const modules = import.meta.glob("../convex/**/*.ts");
-const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
-
-function harness() {
-	const t = convexTest(schema, modules);
-	t.registerComponent("betterAuth", authSchema, componentModules);
-	resendTest.register(t);
-	rateLimiterTest.register(t);
-	return t;
-}
-
-function post(t: ReturnType<typeof harness>, path: string, body: object) {
-	return t.fetch(`/api/auth${path}`, {
-		method: "POST",
-		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-		body: JSON.stringify(body),
-	});
-}
-
-async function sendCode(t: ReturnType<typeof harness>, email: string) {
-	const lines: string[] = [];
-	const log = console.log;
-	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
-	try {
-		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
-		expect(sent.ok, await sent.clone().text()).toBe(true);
-	} finally {
-		console.log = log;
-	}
-	return lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
-}
-
-async function signIn(t: ReturnType<typeof harness>, email: string, name: string) {
-	const otp = await sendCode(t, email);
-	const res = await post(t, "/sign-in/email-otp", { email, otp, name });
-	expect(res.status, await res.clone().text()).toBe(200);
-	const user = await t.query(components.betterAuth.adapter.findOne, {
-		model: "user",
-		where: [{ field: "email", value: email }],
-	});
-	const session = await t.query(components.betterAuth.adapter.findOne, {
-		model: "session",
-		where: [{ field: "userId", value: user._id }],
-	});
-	return t.withIdentity({ subject: user._id, sessionId: session._id });
-}
 
 const SPLIT = { needs: 50, wants: 30, savings: 20 };
 
@@ -301,7 +250,7 @@ test("getHome is empty with no income and nothing carried", async () => {
 	expect(home.empty).toBe(true);
 });
 
-async function startAnaOct20(t: ReturnType<typeof harness>) {
+async function startAnaOct20(t: Harness) {
 	const ana = await signIn(t, "ana@correo.com", "Ana");
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	await ana.mutation(api.profiles.completeOnboarding, { ...onboardOct20, name: "Ana" });

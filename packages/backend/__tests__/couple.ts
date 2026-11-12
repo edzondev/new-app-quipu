@@ -47,14 +47,14 @@ export async function captureOtp(email: string, send: () => Promise<unknown>) {
 	return lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
 }
 
-async function sendCode(t: Harness, email: string) {
+export async function sendCode(t: Harness, email: string) {
 	return await captureOtp(email, async () => {
 		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
 		expect(sent.ok, await sent.clone().text()).toBe(true);
 	});
 }
 
-export async function signUp(t: Harness, email: string, name: string) {
+async function login(t: Harness, email: string, name: string) {
 	const otp = await sendCode(t, email);
 	const res = await post(t, "/sign-in/email-otp", { email, otp, name });
 	expect(res.status, await res.clone().text()).toBe(200);
@@ -62,6 +62,20 @@ export async function signUp(t: Harness, email: string, name: string) {
 		model: "user",
 		where: [{ field: "email", value: email }],
 	});
+	const session = await t.query(components.betterAuth.adapter.findOne, {
+		model: "session",
+		where: [{ field: "userId", value: user._id }],
+	});
+	return { user, session };
+}
+
+export async function signIn(t: Harness, email: string, name: string) {
+	const { user, session } = await login(t, email, name);
+	return t.withIdentity({ subject: user._id, sessionId: session._id });
+}
+
+export async function signUp(t: Harness, email: string, name: string) {
+	const { user } = await login(t, email, name);
 	// Stretch the 7-day session so tests can jump weeks ahead.
 	await t.mutation(components.betterAuth.adapter.updateOne, {
 		input: {

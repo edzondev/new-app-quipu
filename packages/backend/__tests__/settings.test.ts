@@ -1,65 +1,12 @@
-import polarTest from "@convex-dev/polar/test";
-import rateLimiterTest from "@convex-dev/rate-limiter/test";
-import resendTest from "@convex-dev/resend/test";
-import { convexTest } from "convex-test";
 import { afterEach, expect, test, vi } from "vitest";
 import { api, components } from "../convex/_generated/api";
-import authSchema from "../convex/betterAuth/schema";
 import { ensureOpenCycle } from "../convex/model/cycles";
-import schema from "../convex/schema";
 import { getSplitPreview } from "../shared/preview";
+import { type Harness, harness, signIn } from "./couple";
 
 afterEach(() => {
 	vi.useRealTimers();
 });
-
-const modules = import.meta.glob("../convex/**/*.ts");
-const componentModules = import.meta.glob("../convex/betterAuth/**/*.ts");
-
-function harness() {
-	const t = convexTest(schema, modules);
-	t.registerComponent("betterAuth", authSchema, componentModules);
-	polarTest.register(t);
-	resendTest.register(t);
-	rateLimiterTest.register(t);
-	return t;
-}
-
-function post(t: ReturnType<typeof harness>, path: string, body: object) {
-	return t.fetch(`/api/auth${path}`, {
-		method: "POST",
-		headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-		body: JSON.stringify(body),
-	});
-}
-
-async function sendCode(t: ReturnType<typeof harness>, email: string) {
-	const lines: string[] = [];
-	const log = console.log;
-	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
-	try {
-		const sent = await post(t, "/email-otp/send-verification-otp", { email, type: "sign-in" });
-		expect(sent.ok, await sent.clone().text()).toBe(true);
-	} finally {
-		console.log = log;
-	}
-	return lines.find((l) => l.startsWith(`OTP ${email}: `))?.slice(`OTP ${email}: `.length);
-}
-
-async function signIn(t: ReturnType<typeof harness>, email: string, name: string) {
-	const otp = await sendCode(t, email);
-	const res = await post(t, "/sign-in/email-otp", { email, otp, name });
-	expect(res.status, await res.clone().text()).toBe(200);
-	const user = await t.query(components.betterAuth.adapter.findOne, {
-		model: "user",
-		where: [{ field: "email", value: email }],
-	});
-	const session = await t.query(components.betterAuth.adapter.findOne, {
-		model: "session",
-		where: [{ field: "userId", value: user._id }],
-	});
-	return t.withIdentity({ subject: user._id, sessionId: session._id });
-}
 
 type Person = Awaited<ReturnType<typeof signIn>>;
 
@@ -70,7 +17,7 @@ const SPLIT_40 = { needs: 40, wants: 40, savings: 20 };
 
 // Sign in under the fake clock (convex-test never lets _creationTime go back) and stretch the
 // 7-day session so the test can reach November.
-async function startAna(t: ReturnType<typeof harness>, email = "ana@correo.com", name = "Ana") {
+async function startAna(t: Harness, email = "ana@correo.com", name = "Ana") {
 	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
 	const person = await signIn(t, email, name);
 	const user = await t.query(components.betterAuth.adapter.findOne, {
@@ -98,7 +45,7 @@ function addLuz(person: Person) {
 	});
 }
 
-async function payLuz(t: ReturnType<typeof harness>, person: Person) {
+async function payLuz(t: Harness, person: Person) {
 	const id = await t.run(async (ctx) => (await ctx.db.query("commitments").take(1))[0]._id);
 	await person.mutation(api.commitments.markPaid, { space: "personal", id });
 }
