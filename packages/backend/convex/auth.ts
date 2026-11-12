@@ -16,10 +16,20 @@ import { OTP_EXPIRES_IN_MINUTES, otpEmail } from "./emails/otp";
 import type { DataModel } from "./_generated/dataModel";
 import type { AuthFunctions, GenericCtx } from "@convex-dev/better-auth";
 
+// App env is present at push; the betterAuth component isolate that imports this file does not see it.
+const polarServer = process.env.POLAR_SERVER;
+if (polarServer) {
+	if (env.OTP_DELIVERY === "log" && polarServer === "production") {
+		throw new Error("OTP_DELIVERY=log no se puede con POLAR_SERVER=production");
+	}
+	if (env.OTP_DELIVERY !== "log" && !env.RESEND_API_KEY) {
+		throw new Error("Falta RESEND_API_KEY");
+	}
+}
+
 export const resend = new Resend(components.resend, { testMode: false });
 
-export const siteUrl = env.SITE_URL ?? "http://localhost:3000";
-const rpID = env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname;
+export const siteUrl = env.SITE_URL;
 const authFunctions: AuthFunctions = internal.auth;
 
 export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {
@@ -46,10 +56,13 @@ export const authComponent = createClient<DataModel, typeof authSchema>(componen
 	},
 });
 
-export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
-	({
-		baseURL: siteUrl,
-		trustedOrigins: [siteUrl],
+export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
+	// Placeholder only for betterAuth component analyze (no app env there). Deploy still requires SITE_URL.
+	const baseURL = process.env.SITE_URL ?? "http://localhost:3000";
+	const rpID = env.PASSKEY_RP_ID ?? new URL(baseURL).hostname;
+	return {
+		baseURL,
+		trustedOrigins: [baseURL],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: { enabled: false }, // no passwords
 		disabledPaths: [
@@ -80,7 +93,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 			passkey({
 				rpID,
 				rpName: env.PASSKEY_RP_NAME ?? "Quipu",
-				origin: [siteUrl],
+				origin: [baseURL],
 				authenticatorSelection: {
 					residentKey: "preferred",
 					userVerification: "preferred",
@@ -97,7 +110,6 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 						return;
 					}
 					if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
-					if (!env.RESEND_FROM) throw new Error("Falta RESEND_FROM");
 
 					const { subject, html, text } = otpEmail({
 						otp,
@@ -108,7 +120,8 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
 				},
 			}),
 		],
-	}) satisfies BetterAuthOptions;
+	} satisfies BetterAuthOptions;
+};
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => betterAuth(createAuthOptions(ctx));
 export const { onCreate, onUpdate, onDelete } = authComponent.triggersApi();

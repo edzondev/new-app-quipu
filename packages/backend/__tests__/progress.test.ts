@@ -36,8 +36,6 @@ function post(t: ReturnType<typeof harness>, path: string, body: object) {
 }
 
 async function sendCode(t: ReturnType<typeof harness>, email: string) {
-	process.env.OTP_DELIVERY = "log";
-	process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
 	const lines: string[] = [];
 	const log = console.log;
 	console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));

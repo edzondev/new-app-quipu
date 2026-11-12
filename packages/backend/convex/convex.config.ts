@@ -7,12 +7,14 @@ import betterAuth from "./betterAuth/convex.config";
 
 const app = defineApp({
 	env: {
-		SITE_URL: v.optional(v.string()),
+		SITE_URL: v.string(),
+		// Declared so deploy requires it; Better Auth reads it on its own.
+		BETTER_AUTH_SECRET: v.string(),
 		PASSKEY_RP_ID: v.optional(v.string()),
 		PASSKEY_RP_NAME: v.optional(v.string()),
 		RESEND_API_KEY: v.optional(v.string()),
-		RESEND_FROM: v.optional(v.string()),
-		OTP_DELIVERY: v.optional(v.string()),
+		RESEND_FROM: v.string(),
+		OTP_DELIVERY: v.optional(v.literal("log")),
 		POLAR_ORGANIZATION_TOKEN: v.string(),
 		POLAR_WEBHOOK_SECRET: v.string(),
 		POLAR_SERVER: v.union(v.literal("sandbox"), v.literal("production")),

@@ -30,15 +30,16 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
-  readonly OTP_DELIVERY: string | undefined;
+  readonly BETTER_AUTH_SECRET: string;
+  readonly OTP_DELIVERY: "log" | undefined;
   readonly PASSKEY_RP_ID: string | undefined;
   readonly PASSKEY_RP_NAME: string | undefined;
   readonly POLAR_ORGANIZATION_TOKEN: string;
   readonly POLAR_SERVER: "sandbox" | "production";
   readonly POLAR_WEBHOOK_SECRET: string;
   readonly RESEND_API_KEY: string | undefined;
-  readonly RESEND_FROM: string | undefined;
-  readonly SITE_URL: string | undefined;
+  readonly RESEND_FROM: string;
+  readonly SITE_URL: string;
 };
 
 /**

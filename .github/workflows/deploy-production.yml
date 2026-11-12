@@ -36,6 +36,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
       VITE_CONVEX_SITE_URL: ${{ vars.VITE_CONVEX_SITE_URL }}
+      VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -47,11 +48,10 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$CONVEX_DEPLOY_KEY"
           test -n "$VITE_CONVEX_SITE_URL"
+          test -n "$VITE_SITE_URL"
           echo "CLOUDFLARE_ENV=production" > apps/web/.env.production
       - name: Deploy Convex and build web
         working-directory: packages/backend
-        env:
-          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
         run: >-
           pnpm exec convex deploy
           --cmd "pnpm --dir ../../apps/web run build:production"
