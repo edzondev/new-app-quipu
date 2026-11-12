@@ -998,35 +998,33 @@ async function figures(ana: Ana, t: Harness) {
 }
 
 test("only who recorded a saving or a withdrawal changes or deletes it", async () => {
-	const couple = await joinedCouple();
-	const ana = couple.ana.as;
-	const luis = couple.luis.as;
+	const { ana, luis } = await joinedCouple();
 	const household = "household" as const;
-	await ana.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
-	await ana.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
-	await ana.mutation(api.transactions.withdrawSaving, {
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
 		space: household,
 		amountCents: 1_000,
 		reason: "other",
 	});
-	const list = () => luis.query(api.transactions.list, { space: household, today: TODAY });
+	const list = () => luis.as.query(api.transactions.list, { space: household, today: TODAY });
 	const { rows } = await list();
 	const saving = rows.find((row) => row.kind === "saving")?.id;
 	const withdrawal = rows.find((row) => row.kind === "withdrawal")?.id;
 	if (!saving || !withdrawal) throw new Error("missing rows");
 
 	await expect(
-		luis.mutation(api.transactions.updateSaving, {
+		luis.as.mutation(api.transactions.updateSaving, {
 			space: household,
 			id: saving,
 			amountCents: 1,
 		}),
 	).rejects.toThrow(NOT_AUTHOR);
 	await expect(
-		luis.mutation(api.transactions.deleteSaving, { space: household, id: saving }),
+		luis.as.mutation(api.transactions.deleteSaving, { space: household, id: saving }),
 	).rejects.toThrow(NOT_AUTHOR);
 	await expect(
-		luis.mutation(api.transactions.updateWithdrawal, {
+		luis.as.mutation(api.transactions.updateWithdrawal, {
 			space: household,
 			id: withdrawal,
 			amountCents: 1,
@@ -1034,16 +1032,16 @@ test("only who recorded a saving or a withdrawal changes or deletes it", async (
 		}),
 	).rejects.toThrow(NOT_AUTHOR);
 	await expect(
-		luis.mutation(api.transactions.deleteWithdrawal, { space: household, id: withdrawal }),
+		luis.as.mutation(api.transactions.deleteWithdrawal, { space: household, id: withdrawal }),
 	).rejects.toThrow(NOT_AUTHOR);
 
-	await ana.mutation(api.transactions.updateSaving, {
+	await ana.as.mutation(api.transactions.updateSaving, {
 		space: household,
 		id: saving,
 		amountCents: 6_000,
 		note: "Corregido",
 	});
-	await ana.mutation(api.transactions.updateWithdrawal, {
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
 		space: household,
 		id: withdrawal,
 		amountCents: 500,
@@ -1059,8 +1057,8 @@ test("only who recorded a saving or a withdrawal changes or deletes it", async (
 		reason: "emergency",
 	});
 
-	await ana.mutation(api.transactions.deleteWithdrawal, { space: household, id: withdrawal });
-	await ana.mutation(api.transactions.deleteSaving, { space: household, id: saving });
+	await ana.as.mutation(api.transactions.deleteWithdrawal, { space: household, id: withdrawal });
+	await ana.as.mutation(api.transactions.deleteSaving, { space: household, id: saving });
 	expect(
 		(await list()).rows.some((row) => row.kind === "saving" || row.kind === "withdrawal"),
 	).toBe(false);
@@ -1362,29 +1360,28 @@ test("a saving cannot be changed through the id of an expense, nor a withdrawal 
 });
 
 test("saving a saving or a withdrawal with nothing changed leaves no event in Nuestro espacio", async () => {
-	const couple = await joinedCouple();
-	const ana = couple.ana.as;
+	const { ana } = await joinedCouple();
 	const household = "household" as const;
-	await ana.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
-	await ana.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
-	await ana.mutation(api.transactions.withdrawSaving, {
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
 		space: household,
 		amountCents: 1_000,
 		reason: "other",
 	});
-	const { rows } = await ana.query(api.transactions.list, { space: household, today: TODAY });
+	const { rows } = await ana.as.query(api.transactions.list, { space: household, today: TODAY });
 	const saving = rows.find((row) => row.kind === "saving");
 	const withdrawal = rows.find((row) => row.kind === "withdrawal");
 	if (!saving || !withdrawal) throw new Error("missing rows");
-	const eventCount = async () => (await ana.query(api.activity.list, {})).events.length;
+	const eventCount = async () => (await ana.as.query(api.activity.list, {})).events.length;
 	const start = await eventCount();
 
-	await ana.mutation(api.transactions.updateSaving, {
+	await ana.as.mutation(api.transactions.updateSaving, {
 		space: household,
 		id: saving.id,
 		amountCents: 5_000,
 	});
-	await ana.mutation(api.transactions.updateWithdrawal, {
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
 		space: household,
 		id: withdrawal.id,
 		amountCents: 1_000,
@@ -1392,12 +1389,12 @@ test("saving a saving or a withdrawal with nothing changed leaves no event in Nu
 	});
 	expect(await eventCount()).toBe(start);
 
-	await ana.mutation(api.transactions.updateSaving, {
+	await ana.as.mutation(api.transactions.updateSaving, {
 		space: household,
 		id: saving.id,
 		amountCents: 4_000,
 	});
-	await ana.mutation(api.transactions.updateWithdrawal, {
+	await ana.as.mutation(api.transactions.updateWithdrawal, {
 		space: household,
 		id: withdrawal.id,
 		amountCents: 1_000,
@@ -1459,30 +1456,29 @@ test("changing only the note of a saving or a withdrawal keeps every balance", a
 });
 
 test("a new note on a saving or a withdrawal is one event, the same note again is none", async () => {
-	const couple = await joinedCouple();
-	const ana = couple.ana.as;
+	const { ana } = await joinedCouple();
 	const household = "household" as const;
-	await ana.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
-	await ana.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
-	await ana.mutation(api.transactions.withdrawSaving, {
+	await ana.as.mutation(api.transactions.addIncome, { space: household, amountCents: 100_000 });
+	await ana.as.mutation(api.transactions.addSaving, { space: household, amountCents: 5_000 });
+	await ana.as.mutation(api.transactions.withdrawSaving, {
 		space: household,
 		amountCents: 1_000,
 		reason: "other",
 	});
-	const { rows } = await ana.query(api.transactions.list, { space: household, today: TODAY });
+	const { rows } = await ana.as.query(api.transactions.list, { space: household, today: TODAY });
 	const saving = rows.find((row) => row.kind === "saving");
 	const withdrawal = rows.find((row) => row.kind === "withdrawal");
 	if (!saving || !withdrawal) throw new Error("missing rows");
-	const eventCount = async () => (await ana.query(api.activity.list, {})).events.length;
+	const eventCount = async () => (await ana.as.query(api.activity.list, {})).events.length;
 	const start = await eventCount();
 	const edit = async () => {
-		await ana.mutation(api.transactions.updateSaving, {
+		await ana.as.mutation(api.transactions.updateSaving, {
 			space: household,
 			id: saving.id,
 			amountCents: 5_000,
 			note: "Viaje",
 		});
-		await ana.mutation(api.transactions.updateWithdrawal, {
+		await ana.as.mutation(api.transactions.updateWithdrawal, {
 			space: household,
 			id: withdrawal.id,
 			amountCents: 1_000,
