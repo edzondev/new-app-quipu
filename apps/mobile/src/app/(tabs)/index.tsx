@@ -3,6 +3,7 @@ import { DueSoon } from "@/features/home/due-soon";
 import { Envelopes } from "@/features/home/envelopes";
 import { homeHero } from "@/features/home/hero";
 import { SAMPLE_COMMITMENTS, SAMPLE_HOME, SAMPLE_TODAY } from "@/features/home/sample";
+import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,7 +19,7 @@ export default function HomeScreen() {
 			contentContainerClassName="px-6"
 			contentContainerStyle={{
 				paddingTop: insets.top + 22,
-				paddingBottom: insets.bottom + 24,
+				paddingBottom: insets.bottom + TAB_BAR_SPACE,
 			}}
 		>
 			<Text className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
