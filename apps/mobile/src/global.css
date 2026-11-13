@@ -1,2 +1,56 @@
 @import "tailwindcss";
 @import "uniwind";
+
+@layer theme {
+	:root {
+		@variant light {
+			--color-background: oklch(0.977 0.009 84.6);
+			--color-foreground: oklch(0.207 0.016 62.4);
+			--color-popover: oklch(0.977 0.009 84.6);
+			--color-popover-foreground: oklch(0.207 0.016 62.4);
+			--color-primary: oklch(0.55 0.145 39.8);
+			--color-primary-foreground: oklch(0.98 0.007 80.7);
+			--color-secondary: oklch(0.945 0.012 79.8);
+			--color-secondary-foreground: oklch(0.207 0.016 62.4);
+			--color-muted: oklch(0.956 0.011 84.6);
+			--color-muted-foreground: oklch(0.509 0.016 60.3);
+			--color-accent: oklch(0.956 0.011 84.6);
+			--color-accent-foreground: oklch(0.207 0.016 62.4);
+			--color-border: oklch(0.905 0.012 79.8);
+			--color-input: oklch(0.84 0.016 73.7);
+			--color-ring: oklch(0.55 0.145 39.8);
+			--color-warning: oklch(0.66 0.115 72.6);
+			--color-warning-foreground: oklch(0.549 0.1 70.4);
+			--color-success: oklch(0.499 0.078 165.2);
+			--color-success-foreground: oklch(0.4 0.078 165.2);
+			--color-envelope-needs: oklch(0.479 0.06 245.1);
+			--color-envelope-wants: oklch(0.6 0.129 45.2);
+			--color-envelope-savings: oklch(0.5 0.07 168.7);
+		}
+
+		@variant dark {
+			--color-background: oklch(0.179 0.005 67.5);
+			--color-foreground: oklch(0.956 0.005 78.3);
+			--color-popover: oklch(0.219 0.005 67.6);
+			--color-popover-foreground: oklch(0.956 0.005 78.3);
+			--color-primary: oklch(0.719 0.131 42.8);
+			--color-primary-foreground: oklch(0.179 0.005 67.5);
+			--color-secondary: oklch(0.253 0.006 78.2);
+			--color-secondary-foreground: oklch(0.956 0.005 78.3);
+			--color-muted: oklch(0.253 0.006 78.2);
+			--color-muted-foreground: oklch(0.674 0.011 81.8);
+			--color-accent: oklch(0.253 0.006 78.2);
+			--color-accent-foreground: oklch(0.956 0.005 78.3);
+			--color-border: oklch(0.291 0.007 67.6);
+			--color-input: oklch(0.336 0.009 67.5);
+			--color-ring: oklch(0.719 0.131 42.8);
+			--color-warning: oklch(0.791 0.133 79.3);
+			--color-warning-foreground: oklch(0.791 0.133 79.3);
+			--color-success: oklch(0.69 0.078 165.2);
+			--color-success-foreground: oklch(0.78 0.078 165.2);
+			--color-envelope-needs: oklch(0.713 0.097 247.1);
+			--color-envelope-wants: oklch(0.763 0.121 48.9);
+			--color-envelope-savings: oklch(0.73 0.116 168.3);
+		}
+	}
+}
