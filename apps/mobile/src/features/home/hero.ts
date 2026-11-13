@@ -1,11 +1,11 @@
+import type { api } from "@quipu/backend/convex/_generated/api";
 import { formatCents } from "@quipu/backend/shared/budget";
+import type { FunctionReturnType } from "convex/server";
 
-type HomeHeroInput = {
-	overCents: number;
-	spentTodayCents: number;
-	leftCents: number;
-	dailyCents: number;
-};
+type HomeHeroInput = Pick<
+	FunctionReturnType<typeof api.balances.getHome>,
+	"overCents" | "spentTodayCents" | "leftCents" | "dailyCents"
+>;
 
 /** Same rule as the web home page: over → left today → daily. */
 export function homeHero({ overCents, spentTodayCents, leftCents, dailyCents }: HomeHeroInput) {
@@ -14,5 +14,5 @@ export function homeHero({ overCents, spentTodayCents, leftCents, dailyCents }: 
 	const cents = over ? overCents : spent ? leftCents : dailyCents;
 	const [whole, decimals] = formatCents(cents).split(".");
 	const label = over ? "Hoy te pasaste" : spent ? "Te queda hoy" : "Puedes gastar hoy";
-	return { cents, whole, decimals: decimals ?? "00", label, over };
+	return { whole, decimals: decimals ?? "00", label, over };
 }

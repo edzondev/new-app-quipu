@@ -43,6 +43,7 @@ export const SAMPLE_COMMITMENTS: CommitmentList = {
 	paidCents: 0,
 	items: [
 		{
+			// Excepción: dato de ejemplo, se borra al conectar Convex
 			id: "sample_celular" as CommitmentId,
 			name: "Celular",
 			amountCents: 5_000,

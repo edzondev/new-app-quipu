@@ -1,3 +1,4 @@
+import { formatDaysLeft } from "@quipu/backend/shared/dates";
 import { DueSoon } from "@/features/home/due-soon";
 import { Envelopes } from "@/features/home/envelopes";
 import { homeHero } from "@/features/home/hero";
@@ -8,8 +9,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function HomeScreen() {
 	const insets = useSafeAreaInsets();
 	const hero = homeHero(SAMPLE_HOME);
-	const daysLeft =
-		SAMPLE_HOME.daysLeft === 1 ? "Queda 1 día" : `Quedan ${SAMPLE_HOME.daysLeft} días`;
+	const daysLeft = formatDaysLeft(SAMPLE_HOME.daysLeft);
+	const daysLeftLabel = `${daysLeft.charAt(0).toUpperCase()}${daysLeft.slice(1)}`;
 
 	return (
 		<ScrollView
@@ -32,7 +33,7 @@ export default function HomeScreen() {
 					<Text className="text-[36px] text-muted-foreground">.{hero.decimals}</Text>
 				</Text>
 			</View>
-			<Text className="mt-2.5 text-[13px] text-muted-foreground">{daysLeft}</Text>
+			<Text className="mt-2.5 text-[13px] text-muted-foreground">{daysLeftLabel}</Text>
 
 			<View className="mt-[22px]">
 				<Envelopes home={SAMPLE_HOME} />
