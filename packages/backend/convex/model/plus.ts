@@ -5,6 +5,7 @@ import { components } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
 import { authComponent } from "../auth";
+import { limitWrites } from "../rateLimits";
 import { getHousehold, getMemberIds, requireSpace, type SpaceKind } from "./spaces";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -155,8 +156,9 @@ export async function requireWritable(ctx: Ctx, space: Doc<"spaces">) {
 	}
 }
 
-export async function requireWritableSpace(ctx: Ctx, kind: SpaceKind) {
+export async function requireWritableSpace(ctx: MutationCtx, kind: SpaceKind) {
 	const found = await requireSpace(ctx, kind);
+	await limitWrites(ctx, found.userId);
 	await requireWritable(ctx, found.space);
 	return found;
 }

@@ -19,6 +19,7 @@ import { siteUrl } from "./auth";
 import { getPlusStatus, getPlusSubscription } from "./model/plus";
 import { checkAccess, requireUser } from "./model/spaces";
 import { polar, polarCore } from "./polar";
+import { limitBilling } from "./rateLimits";
 
 const currency = v.union(v.literal("pen"), v.literal("usd"), v.literal("eur"));
 const urlValidator = v.object({ url: v.string() });
@@ -94,6 +95,7 @@ export const startCheckout = action({
 	returns: urlValidator,
 	handler: async (ctx, args) => {
 		const user = await requireUser(ctx);
+		await limitBilling(ctx, user._id);
 		if (await getPlusSubscription(ctx, user._id)) {
 			throw new ConvexError("Ya tienes Plus. Cambia de plan desde el portal.");
 		}
@@ -116,6 +118,7 @@ export const openPortal = action({
 	returns: urlValidator,
 	handler: async (ctx, args) => {
 		const user = await requireUser(ctx);
+		await limitBilling(ctx, user._id);
 		const customer = await polar.getCustomerByUserId(ctx, user._id);
 		if (!customer) throw new ConvexError("Aún no tienes una suscripción.");
 		const session = await customerSessionsCreate(polarCore, {

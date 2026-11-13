@@ -96,6 +96,13 @@ export const add = mutation({
 		const { userId, space } = await requireWritableSpace(ctx, kind);
 		parseInput(centsSchema, amountCents);
 		const cleanName = parseInput(nameSchema, name);
+		const existing = await ctx.db
+			.query("commitments")
+			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
+			.take(COMMITMENTS_CAP);
+		if (existing.length >= COMMITMENTS_CAP) {
+			throw new ConvexError("Puedes tener hasta 100 compromisos.");
+		}
 		await ctx.db.insert("commitments", buildRow(space._id, cleanName, amountCents, envelope, when));
 		await logEvent(ctx, space, userId, "commitment_added", {
 			detail: rowLabel(cleanName, amountCents),

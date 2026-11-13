@@ -294,3 +294,12 @@ test("inviteInfo works without a session and gives only the inviter's first name
 	expect(JSON.stringify(info)).not.toContain("Rojas");
 	expect(await t.query(api.household.inviteInfo, { code: "ZZZZZZ" })).toBeNull();
 });
+
+test("createHousehold rejects a name that is too long", async () => {
+	const t = harness();
+	const ana = await startUser(t, "camila@correo.com", "Camila Rojas");
+	await expect(
+		ana.mutation(api.household.createHousehold, { name: "x".repeat(41) }),
+	).rejects.toThrow("Revisa los datos e inténtalo otra vez.");
+	expect(await ana.query(api.household.get, {})).toBeNull();
+});

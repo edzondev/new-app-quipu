@@ -29,6 +29,9 @@ export const NAME_MAX_LENGTH = 40;
 
 export const centsSchema = z.int().check(z.positive());
 export const centsAtMost = (max: number) => centsSchema.check(z.maximum(max));
+/** One movement (expense, income, contribution, saving, withdrawal): at most S/ 1 000 000. */
+export const MAX_MOVEMENT_CENTS = 100_000_000;
+export const movementCentsSchema = centsSchema.check(z.maximum(MAX_MOVEMENT_CENTS));
 export const nameSchema = z.string().check(z.trim(), z.minLength(1), z.maxLength(NAME_MAX_LENGTH));
 /** An absent or blank note is stored as no note. */
 export const noteSchema = z.optional(

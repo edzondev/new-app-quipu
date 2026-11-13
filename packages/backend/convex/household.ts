@@ -161,7 +161,7 @@ export const createHousehold = mutation({
 		if (!personal) throw new ConvexError("Termina tus primeros pasos.");
 		const plan = await requirePlan(ctx, personal);
 
-		const trimmed = name?.trim();
+		const cleanName = name === undefined ? undefined : parseInput(nameSchema, name);
 		const spaceId = await ctx.db.insert("spaces", {
 			kind: "household",
 			ownerId: user._id,
@@ -169,7 +169,7 @@ export const createHousehold = mutation({
 			// The household cycle is its own: it starts like the creator's, then goes its own way.
 			cadence: plan.cadence,
 			cycleStartDay: plan.cycleStartDay,
-			...(trimmed ? { name: trimmed } : {}),
+			...(cleanName !== undefined ? { name: cleanName } : {}),
 		});
 		await ctx.db.insert("spaceMembers", { spaceId, userId: user._id, joinedAt: Date.now() });
 		await createFirstCycle(ctx, spaceId, plan, HOUSEHOLD_SPLIT, getLimaDate());

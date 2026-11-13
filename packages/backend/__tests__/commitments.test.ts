@@ -633,3 +633,33 @@ test("two overdue charges with only the oldest paid list one payment and keep Lu
 	expect(list.items).toMatchObject([{ name: "Luz", status: "overdue", dueDate: "2026-11-25" }]);
 	expect(list.payableCents).toBe(5_000);
 });
+
+test("the 101st commitment is rejected", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	const spaceId = await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		for (let i = 0; i < 100; i++) {
+			await ctx.db.insert("commitments", {
+				spaceId: space._id,
+				name: `C${i}`,
+				amountCents: 1_000,
+				envelope: "needs",
+				frequency: "once",
+				dueDate: "2026-10-25",
+			});
+		}
+		return space._id;
+	});
+	expect(spaceId).toBeTruthy();
+
+	await expect(
+		ana.mutation(api.commitments.add, {
+			space: "personal",
+			name: "Extra",
+			amountCents: 1_000,
+			envelope: "needs",
+			schedule: { frequency: "once", dueDate: "2026-10-26" },
+		}),
+	).rejects.toThrow("Puedes tener hasta 100 compromisos.");
+});
