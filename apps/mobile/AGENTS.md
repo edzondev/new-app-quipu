@@ -15,15 +15,14 @@ This repo uses pnpm. Prefer `pnpm exec` / `pnpm expo` over `npx`.
 ```bash
 pnpm expo install <package>  # ALWAYS use instead of pnpm add — resolves SDK-compatible versions
 pnpm expo start              # start the dev server
-pnpm expo lint               # lint
-pnpm exec tsc --noEmit       # typecheck
+pnpm typecheck               # typecheck (also via turbo from the monorepo root)
 pnpm exec expo-doctor        # diagnose dependency and config issues
 pnpm expo install --fix     # fix incompatible package versions
 ```
 
-From the monorepo root you can also use `pnpm --filter mobile <script>`.
+From the monorepo root you can also use `pnpm --filter mobile <script>`. Lint is oxlint from the repo root (`pnpm lint`), not `expo lint`.
 
-Run lint and typecheck before declaring any task done.
+Run typecheck before declaring any task done.
 
 ## Navigation & Routing
 
@@ -33,7 +32,7 @@ Run lint and typecheck before declaring any task done.
 
 ## Building with EAS
 
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `pnpm exec eas-cli <command>`; substitute that for bare `eas` in docs examples.
+Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `pnpm dlx eas-cli <command>`; substitute that for bare `eas` in docs examples.
 Docs: https://docs.expo.dev/eas/index.md
 
 ## Rules
