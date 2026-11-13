@@ -24,7 +24,7 @@ import {
 } from "./model/commitments";
 import { requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
 import { logEvent } from "./model/events";
-import { BAD_INPUT, parseInput } from "./model/input";
+import { BAD_INPUT, parseInput, parseMovementCents } from "./model/input";
 import { requireWritableSpace } from "./model/plus";
 import { type SpaceKind } from "./model/spaces";
 import { dueAdjustment, dueRule, spaceKind, spendable } from "./schema";
@@ -101,7 +101,7 @@ export const add = mutation({
 			.withIndex("by_spaceId", (q) => q.eq("spaceId", space._id))
 			.take(COMMITMENTS_CAP);
 		if (existing.length >= COMMITMENTS_CAP) {
-			throw new ConvexError("Puedes tener hasta 100 compromisos.");
+			throw new ConvexError(`Puedes tener hasta ${COMMITMENTS_CAP} compromisos.`);
 		}
 		await ctx.db.insert("commitments", buildRow(space._id, cleanName, amountCents, envelope, when));
 		await logEvent(ctx, space, userId, "commitment_added", {
@@ -387,7 +387,7 @@ export const markPaid = mutation({
 		if (!open) throw new ConvexError(ALREADY_PAID);
 
 		const paidCents = amountCents ?? row.amountCents;
-		parseInput(centsSchema, paidCents);
+		parseMovementCents(paidCents);
 
 		const key = AMOUNT_KEYS[row.envelope];
 		await ctx.db.insert("transactions", {

@@ -637,7 +637,7 @@ test("two overdue charges with only the oldest paid list one payment and keep Lu
 test("the 101st commitment is rejected", async () => {
 	const t = harness();
 	const ana = await startAnaOct20(t);
-	const spaceId = await t.run(async (ctx) => {
+	await t.run(async (ctx) => {
 		const space = (await ctx.db.query("spaces").take(1))[0];
 		for (let i = 0; i < 100; i++) {
 			await ctx.db.insert("commitments", {
@@ -649,9 +649,7 @@ test("the 101st commitment is rejected", async () => {
 				dueDate: "2026-10-25",
 			});
 		}
-		return space._id;
 	});
-	expect(spaceId).toBeTruthy();
 
 	await expect(
 		ana.mutation(api.commitments.add, {
@@ -662,4 +660,34 @@ test("the 101st commitment is rejected", async () => {
 			schedule: { frequency: "once", dueDate: "2026-10-26" },
 		}),
 	).rejects.toThrow("Puedes tener hasta 100 compromisos.");
+});
+
+test("paying more than S/ 1 000 000 fails and creates no expense", async () => {
+	const t = harness();
+	const ana = await startAnaOct20(t);
+	await ana.mutation(api.commitments.add, {
+		space: "personal",
+		name: "Luz",
+		amountCents: 5_000,
+		envelope: "needs",
+		schedule: { frequency: "once", dueDate: "2026-10-25" },
+	});
+	const id = await firstCommitmentId(t);
+
+	await expect(
+		ana.mutation(api.commitments.markPaid, {
+			space: "personal",
+			id,
+			amountCents: 100_000_001,
+		}),
+	).rejects.toThrow("El monto máximo es S/ 1 000 000");
+
+	const expenses = await t.run(async (ctx) => {
+		const space = (await ctx.db.query("spaces").take(1))[0];
+		return await ctx.db
+			.query("transactions")
+			.withIndex("by_spaceId_kind", (q) => q.eq("spaceId", space._id).eq("kind", "expense"))
+			.take(5);
+	});
+	expect(expenses).toEqual([]);
 });
