@@ -54,6 +54,7 @@ export default function RegisterScreen() {
 					onChangeText={setNote}
 					placeholder="Ej. almuerzo"
 					maxLength={NOTE_MAX_LENGTH}
+					accessibilityLabel="Concepto"
 				/>
 			</View>
 

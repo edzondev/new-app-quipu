@@ -12,6 +12,7 @@ export function Button({
 	return (
 		<Pressable
 			accessibilityRole="button"
+			accessibilityState={{ disabled }}
 			disabled={disabled}
 			onPress={onPress}
 			className={`items-center justify-center rounded-full bg-primary px-4 py-3.5 ${disabled ? "opacity-50" : ""}`}
