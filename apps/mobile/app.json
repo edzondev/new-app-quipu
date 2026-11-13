@@ -1,11 +1,11 @@
 {
 	"expo": {
-		"name": "mobile",
-		"slug": "mobile",
+		"name": "Quipu",
+		"slug": "quipu",
 		"version": "1.0.0",
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
-		"scheme": "mobile",
+		"scheme": "quipu",
 		"userInterfaceStyle": "automatic",
 		"ios": {
 			"icon": "./assets/expo.icon"
@@ -17,7 +17,8 @@
 				"backgroundImage": "./assets/images/android-icon-background.png",
 				"monochromeImage": "./assets/images/android-icon-monochrome.png"
 			},
-			"predictiveBackGestureEnabled": false
+			"predictiveBackGestureEnabled": false,
+			"package": "com.quipu.finance"
 		},
 		"plugins": [
 			"expo-router",
@@ -33,6 +34,19 @@
 		"experiments": {
 			"typedRoutes": true,
 			"reactCompiler": true
+		},
+		"extra": {
+			"router": {},
+			"eas": {
+				"projectId": "2e4698e7-43bf-4877-bdeb-184c1a83d6f0"
+			}
+		},
+		"owner": "edzondev",
+		"runtimeVersion": {
+			"policy": "appVersion"
+		},
+		"updates": {
+			"url": "https://u.expo.dev/2e4698e7-43bf-4877-bdeb-184c1a83d6f0"
 		}
 	}
 }
