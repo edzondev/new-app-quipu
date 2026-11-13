@@ -120,7 +120,9 @@ test("a return path to another site comes back to Inicio", async () => {
 		"javascript:alert(1)",
 		"",
 	];
-	for (const returnTo of outside) {
+	for (const [i, returnTo] of outside.entries()) {
+		// Billing allows 5 checkouts per minute; refill before the 6th.
+		if (i === 5) vi.advanceTimersByTime(60_000);
 		await user.as.action(api.billing.startCheckout, {
 			interval: "month",
 			currency: "pen",

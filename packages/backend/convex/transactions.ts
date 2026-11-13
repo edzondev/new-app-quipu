@@ -4,8 +4,6 @@ import { moneyLabel, rowLabel } from "../shared/activity";
 import {
 	AMOUNT_KEYS,
 	applyIncome,
-	centsAtMost,
-	centsSchema,
 	type EnvelopeAmounts,
 	noteSchema,
 	subtractAmounts,
@@ -18,9 +16,10 @@ import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { ensureOpenCycle, requireOpenCycle, requireWritableOpenCycle } from "./model/cycles";
 import { logEvent } from "./model/events";
-import { parseInput } from "./model/input";
+import { BAD_INPUT, parseInput, parseMovementCents } from "./model/input";
 import { requireWritableSpace } from "./model/plus";
 import { requirePlan } from "./model/spaces";
+import { limitWrites } from "./rateLimits";
 import {
 	envelope,
 	extraType,
@@ -100,7 +99,7 @@ export const addExpense = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, envelope, note }) => {
 		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
-		parseInput(centsSchema, amountCents);
+		parseMovementCents(amountCents);
 		const key = AMOUNT_KEYS[envelope];
 		await ctx.db.insert("transactions", {
 			kind: "expense",
@@ -131,7 +130,7 @@ export const updateExpense = mutation({
 	handler: async (ctx, { space: kind, id, amountCents, envelope, note }) => {
 		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "expense");
 		if (row.kind !== "expense") throw new ConvexError(NOT_FOUND);
-		parseInput(centsSchema, amountCents);
+		parseMovementCents(amountCents);
 		const oldKey = AMOUNT_KEYS[row.envelope];
 		const newKey = AMOUNT_KEYS[envelope];
 		let envelopes = patchEnvelope(cycle.envelopes, oldKey, row.amountCents);
@@ -184,7 +183,7 @@ export const addIncome = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, extra, forNextCycle: chosen, note }) => {
 		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
-		parseInput(centsSchema, amountCents);
+		parseMovementCents(amountCents);
 		const plan = await requirePlan(ctx, space);
 		const forNextCycle =
 			!extra && isEarlyIncomeWindow(plan.cadence, today, cycle.endDate) && chosen !== false;
@@ -223,7 +222,7 @@ export const updateIncome = mutation({
 	handler: async (ctx, { space: kind, id, amountCents, note }) => {
 		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "income");
 		if (row.kind !== "income") throw new ConvexError(NOT_FOUND);
-		parseInput(centsSchema, amountCents);
+		parseMovementCents(amountCents);
 		const { envelopes, allocation } = applyIncome(
 			subtractAmounts(cycle.envelopes, row.forNextCycle ? ZERO_AMOUNTS : row.allocation),
 			amountCents,
@@ -314,7 +313,8 @@ export const addContribution = mutation({
 	returns: v.null(),
 	handler: async (ctx, { amountCents, envelope: from, toEnvelope, note }) => {
 		const { userId, space, cycle, today } = await requireOpenCycle(ctx, "personal");
-		parseInput(centsSchema, amountCents);
+		await limitWrites(ctx, userId);
+		parseMovementCents(amountCents);
 		const { toCycle } = await requireHouseholdTarget(ctx, userId, today);
 		await ctx.db.insert("transactions", {
 			kind: "contribution",
@@ -349,7 +349,7 @@ export const updateContribution = mutation({
 	returns: v.null(),
 	handler: async (ctx, { id, amountCents, envelope: from, toEnvelope, note }) => {
 		const found = await requireOwnContribution(ctx, id);
-		parseInput(centsSchema, amountCents);
+		parseMovementCents(amountCents);
 		await moveContribution(ctx, found, { amountCents, envelope: from, toEnvelope });
 		await ctx.db.patch("transactions", id, {
 			amountCents,
@@ -390,7 +390,8 @@ export const addSaving = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, goalId, note }) => {
 		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
-		parseInput(centsAtMost(cycle.envelopes.savingsCents), amountCents);
+		parseMovementCents(amountCents);
+		if (amountCents > cycle.envelopes.savingsCents) throw new ConvexError(BAD_INPUT);
 		if (goalId !== undefined) {
 			const goal = await ctx.db.get("goals", goalId);
 			if (!goal || goal.spaceId !== space._id) throw new ConvexError(NOT_FOUND);
@@ -431,7 +432,8 @@ export const withdrawSaving = mutation({
 	returns: v.null(),
 	handler: async (ctx, { space: kind, amountCents, reason, note }) => {
 		const { userId, space, cycle, today } = await requireWritableOpenCycle(ctx, kind);
-		parseInput(centsAtMost(space.fundCents), amountCents);
+		parseMovementCents(amountCents);
+		if (amountCents > space.fundCents) throw new ConvexError(BAD_INPUT);
 		await ctx.db.insert("transactions", {
 			kind: "withdrawal",
 			spaceId: space._id,
@@ -502,7 +504,7 @@ export const updateSaving = mutation({
 		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "saving");
 		if (row.kind !== "saving") throw new ConvexError(NOT_FOUND);
 		const max = cycle.envelopes.savingsCents + row.amountCents;
-		parseInput(centsSchema, amountCents);
+		parseMovementCents(amountCents);
 		if (amountCents > max) throw new ConvexError(savingOverAhorro(max));
 		const cleanNote = parseInput(noteSchema, note);
 		await moveSaving(ctx, space, cycle, row, amountCents);
@@ -547,7 +549,7 @@ export const updateWithdrawal = mutation({
 		const { userId, space, cycle, row } = await requireOwnOpenRow(ctx, kind, id, "withdrawal");
 		if (row.kind !== "withdrawal") throw new ConvexError(NOT_FOUND);
 		const max = space.fundCents + row.amountCents;
-		parseInput(centsSchema, amountCents);
+		parseMovementCents(amountCents);
 		if (amountCents > max) throw new ConvexError(withdrawalOverFund(max));
 		const cleanNote = parseInput(noteSchema, note);
 		await moveWithdrawal(ctx, space, cycle, row, amountCents);

@@ -6,6 +6,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { receivedAportes } from "./budget";
 import { type CloseSummary, summarizeClose } from "./closeSummary";
+import { limitWrites } from "../rateLimits";
 import { requireWritable } from "./plus";
 import { requireOwnerProfile, requirePlan, requireSpace, type SpaceKind } from "./spaces";
 
@@ -233,8 +234,13 @@ export async function getLatestClosed(ctx: Ctx, spaceId: Id<"spaces">) {
 }
 
 /** `requireOpenCycle` for a write: a household without Plus is read-only. */
-export async function requireWritableOpenCycle(ctx: Ctx, kind: SpaceKind, today = getLimaDate()) {
+export async function requireWritableOpenCycle(
+	ctx: MutationCtx,
+	kind: SpaceKind,
+	today = getLimaDate(),
+) {
 	const open = await requireOpenCycle(ctx, kind, today);
+	await limitWrites(ctx, open.userId);
 	await requireWritable(ctx, open.space);
 	return open;
 }

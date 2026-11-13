@@ -1492,3 +1492,62 @@ test("a new note on a saving or a withdrawal is one event, the same note again i
 	await edit();
 	expect(await eventCount()).toBe(start + 2);
 });
+
+test("a movement over S/ 1 000 000 is rejected; S/ 1 000 000 and a bigger goal pass", async () => {
+	const t = harness();
+	const ana = await anaOnOct20(t);
+
+	await expect(
+		ana.mutation(api.transactions.addExpense, {
+			space: "personal",
+			amountCents: 100_000_001,
+			envelope: "needs",
+		}),
+	).rejects.toThrow("El monto máximo es S/ 1 000 000");
+
+	await ana.mutation(api.transactions.addIncome, {
+		space: "personal",
+		amountCents: 100_000_000,
+	});
+	expect(await ana.query(api.balances.getBalances, { space: "personal" })).toMatchObject({
+		needsCents: 25_000 + 50_000_000,
+	});
+
+	await ana.mutation(api.goals.add, {
+		space: "personal",
+		name: "Casa",
+		targetCents: 150_000_000,
+	});
+	expect(await ana.query(api.goals.list, { space: "personal" })).toMatchObject([
+		{ name: "Casa", targetCents: 150_000_000 },
+	]);
+});
+
+test("the 61st write in a minute is rejected, then allowed after a minute", async () => {
+	const t = harness();
+	vi.useFakeTimers({ now: new Date("2026-10-20T17:00:00.000Z") });
+	const ana = await signIn(t, "ana@correo.com", "Ana");
+	await ana.mutation(api.profiles.completeOnboarding, { ...onboard, name: "Ana" });
+
+	for (let i = 0; i < 60; i++) {
+		await ana.mutation(api.transactions.addExpense, {
+			space: "personal",
+			amountCents: 1,
+			envelope: "needs",
+		});
+	}
+	await expect(
+		ana.mutation(api.transactions.addExpense, {
+			space: "personal",
+			amountCents: 1,
+			envelope: "needs",
+		}),
+	).rejects.toThrow("Vas muy rápido. Espera un momento.");
+
+	vi.setSystemTime(new Date("2026-10-20T17:01:00.000Z"));
+	await ana.mutation(api.transactions.addExpense, {
+		space: "personal",
+		amountCents: 1,
+		envelope: "needs",
+	});
+});
