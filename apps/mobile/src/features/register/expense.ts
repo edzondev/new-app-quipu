@@ -5,11 +5,9 @@ import {
 	formatCents,
 	getDailyBudget,
 	MAX_MOVEMENT_CENTS,
-	toCents,
 	type Envelope,
 } from "@quipu/backend/shared/budget";
 import type { FunctionReturnType } from "convex/server";
-import { homeHero } from "@/features/home/hero";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
 
@@ -21,18 +19,8 @@ export const EXPENSE_ENVELOPE_LABELS = EXPENSE_ENVELOPES.map(
 	(envelope) => ENVELOPE_LABELS[envelope],
 );
 
-export function parseExpenseAmount(raw: string): number {
-	return toCents(raw);
-}
-
-export function canSaveExpense({
-	amountCents,
-	envelope,
-}: {
-	amountCents: number;
-	envelope: ExpenseEnvelope | null;
-}): boolean {
-	return amountCents > 0 && amountCents <= MAX_MOVEMENT_CENTS && envelope != null;
+export function canSaveExpense(amountCents: number): boolean {
+	return amountCents > 0 && amountCents <= MAX_MOVEMENT_CENTS;
 }
 
 export function envelopeBalanceCents(
@@ -44,25 +32,16 @@ export function envelopeBalanceCents(
 
 type TodayHome = Pick<
 	Home,
-	| "overCents"
-	| "spentTodayCents"
-	| "leftCents"
-	| "dailyCents"
-	| "needsCents"
-	| "wantsCents"
-	| "pendingCents"
-	| "daysLeft"
+	"leftCents" | "needsCents" | "wantsCents" | "pendingCents" | "daysLeft" | "spentTodayCents"
 >;
 
 /** «Hoy: S/ antes → S/ después». Null while the amount is empty or zero. */
 export function expenseTodayLine(home: TodayHome, amountCents: number): string | null {
 	if (amountCents <= 0) return null;
-	const hero = homeHero(home);
-	const before = `S/ ${hero.whole}.${hero.decimals}`;
 	const after = getDailyBudget({
 		freeCents: home.needsCents + home.wantsCents - home.pendingCents - amountCents,
 		spentTodayCents: home.spentTodayCents + amountCents,
 		daysLeft: home.daysLeft,
 	});
-	return `Hoy: ${before} → S/ ${formatCents(after.leftCents)}`;
+	return `Hoy: S/ ${formatCents(home.leftCents)} → S/ ${formatCents(after.leftCents)}`;
 }

@@ -5,7 +5,6 @@
 	:root {
 		@variant light {
 			--color-background: oklch(0.977 0.009 84.6);
-			--color-card: oklch(1 0 0);
 			--color-foreground: oklch(0.207 0.016 62.4);
 			--color-popover: oklch(0.977 0.009 84.6);
 			--color-popover-foreground: oklch(0.207 0.016 62.4);
@@ -31,7 +30,6 @@
 
 		@variant dark {
 			--color-background: oklch(0.179 0.005 67.5);
-			--color-card: oklch(0.219 0.005 67.6);
 			--color-foreground: oklch(0.956 0.005 78.3);
 			--color-popover: oklch(0.219 0.005 67.6);
 			--color-popover-foreground: oklch(0.956 0.005 78.3);
