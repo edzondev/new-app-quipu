@@ -26,7 +26,7 @@ internal object Notices {
       } else {
         "Detectamos un posible gasto"
       }
-      val open = viewIntent(context, detectedUri(movement, bank, id), id.hashCode())
+      val open = viewIntent(context, detectedUri(movement, bank), id.hashCode())
       val notice = base(context, DETECTED_CHANNEL)
         .setContentTitle(title)
         .setContentText(body(movement, bank))
@@ -69,15 +69,14 @@ internal object Notices {
     return if (merchant.isEmpty()) "$amount · $bank" else "$amount en $merchant · $bank"
   }
 
-  private fun detectedUri(movement: Movement, bank: String, id: String): Uri {
+  private fun detectedUri(movement: Movement, bank: String): Uri {
     val kind = if (movement.kind == Kind.INCOME) "income" else "expense"
     val uri = Uri.Builder()
       .scheme("quipu")
-      .authority("detected")
+      .authority("register")
       .appendQueryParameter("kind", kind)
       .appendQueryParameter("cents", movement.cents.toString())
       .appendQueryParameter("bank", bank)
-      .appendQueryParameter("id", id)
     val merchant = movement.merchant?.trim().orEmpty()
     if (merchant.isNotEmpty()) uri.appendQueryParameter("merchant", merchant)
     return uri.build()
