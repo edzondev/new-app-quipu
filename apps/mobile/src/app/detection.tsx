@@ -9,6 +9,7 @@ import { BlockedStep } from "@/features/detection/blocked-step";
 import { ConsentStep } from "@/features/detection/consent-step";
 import { HomeStep } from "@/features/detection/home-step";
 import {
+	DEFAULT_REMINDER,
 	getBanks,
 	getReminder,
 	isAccessEnabled,
@@ -27,8 +28,8 @@ export default function DetectionScreen() {
 	const [ready, setReady] = useState(false);
 	const [access, setAccess] = useState(false);
 	const [reminderOn, setReminderOn] = useState(false);
-	const [hour, setHour] = useState(23);
-	const [minute, setMinute] = useState(30);
+	const [hour, setHour] = useState(DEFAULT_REMINDER.hour);
+	const [minute, setMinute] = useState(DEFAULT_REMINDER.minute);
 	const [picked, setPicked] = useState<string[] | null>(null);
 	const arm = useRef(false);
 	const waiting = useRef(false);
