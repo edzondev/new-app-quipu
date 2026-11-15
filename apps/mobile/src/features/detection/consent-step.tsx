@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
+import { NumberedLines } from "@/features/detection/numbered-lines";
 import { ReadsBlock } from "@/features/detection/reads-block";
 
 const LINES = [
@@ -14,14 +15,7 @@ export function ConsentStep({ onAccept, onSkip }: { onAccept: () => void; onSkip
 			<Text className="text-2xl font-semibold text-foreground">
 				Anota tus gastos sin escribirlos
 			</Text>
-			<View className="mt-5 gap-3">
-				{LINES.map((line, index) => (
-					<View key={line} className="flex-row gap-3">
-						<Text className="font-mono text-[13px] text-muted-foreground">0{index + 1}</Text>
-						<Text className="flex-1 text-[15px] text-foreground">{line}</Text>
-					</View>
-				))}
-			</View>
+			<NumberedLines lines={LINES} />
 			<ReadsBlock />
 			<Text className="mt-4 text-[13px] text-muted-foreground">
 				Si instalaste Quipu por un enlace, Android puede bloquear este permiso. En la ficha de la
