@@ -116,8 +116,8 @@ export default function DetectionScreen() {
 			{step === "blocked" ? <View className="h-1 bg-warning" /> : null}
 			<ScrollView
 				className="flex-1"
-				contentContainerClassName="px-6"
-				contentContainerStyle={{ paddingTop: 22, paddingBottom: insets.bottom + 24 }}
+				contentContainerClassName="px-6 pt-[22px]"
+				contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
 			>
 				{!ready ? null : banks.length === 0 ? (
 					<View>
