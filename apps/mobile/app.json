@@ -47,7 +47,7 @@
 		},
 		"owner": "edzondev",
 		"runtimeVersion": {
-			"policy": "appVersion"
+			"policy": "fingerprint"
 		},
 		"updates": {
 			"url": "https://u.expo.dev/2e4698e7-43bf-4877-bdeb-184c1a83d6f0"

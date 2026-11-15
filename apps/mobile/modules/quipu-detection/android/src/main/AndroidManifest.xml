@@ -1,0 +1,44 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+  <queries>
+    <package android:name="com.bcp.bank.bcp" />
+    <package android:name="com.bcp.innovacxion.yapeapp" />
+    <package android:name="pe.com.interbank.mobilebanking" />
+    <package android:name="pe.com.scotiabank.blpm.android.client" />
+    <package android:name="com.bbva.nxt_peru" />
+    <package android:name="pe.com.bn.app.bancodelanacion" />
+    <package android:name="pe.com.banbif.pnappmobile" />
+    <package android:name="pe.pichincha.bm" />
+    <package android:name="com.cmac.cajamovilaqp" />
+  </queries>
+
+  <application>
+    <!-- exported=false: solo el sistema lo enlaza, con BIND_NOTIFICATION_LISTENER_SERVICE. -->
+    <service
+      android:name="expo.modules.quipudetection.BankListenerService"
+      android:exported="false"
+      android:label="Quipu"
+      android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+      <intent-filter>
+        <action android:name="android.service.notification.NotificationListenerService" />
+      </intent-filter>
+    </service>
+
+    <!-- PendingIntent explícito: no necesita intent-filter ni exported=true. -->
+    <receiver
+      android:name="expo.modules.quipudetection.ReminderReceiver"
+      android:exported="false" />
+
+    <!-- BOOT_COMPLETED lo manda el sistema, así que llega aunque exported=false. -->
+    <receiver
+      android:name="expo.modules.quipudetection.BootReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>
