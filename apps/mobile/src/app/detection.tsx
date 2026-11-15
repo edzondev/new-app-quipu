@@ -93,14 +93,11 @@ export default function DetectionScreen() {
 	}
 
 	function toggleBank(packageName: string) {
-		setPicked((current) => {
-			const base =
-				current ??
-				banks.filter((bank) => bank.chosen && bank.installed).map((bank) => bank.packageName);
-			return base.includes(packageName)
-				? base.filter((id) => id !== packageName)
-				: [...base, packageName];
-		});
+		setPicked(
+			selected.includes(packageName)
+				? selected.filter((id) => id !== packageName)
+				: [...selected, packageName],
+		);
 	}
 
 	async function continueBanks() {
