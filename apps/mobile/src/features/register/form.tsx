@@ -29,7 +29,12 @@ export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
 	const canSave = canSaveExpense(amountCents);
 	const todayLine = income ? null : expenseTodayLine(SAMPLE_HOME, amountCents);
 	const balanceCents = envelopeBalanceCents(SAMPLE_HOME, envelope);
-	const title = detected?.kind === "expense" ? "Gasto detectado" : "Registrar";
+	const title =
+		detected?.kind === "income"
+			? "Registrar ingreso"
+			: detected?.kind === "expense"
+				? "Gasto detectado"
+				: "Registrar";
 
 	return (
 		<View className="bg-background px-6 pt-3 pb-6">
