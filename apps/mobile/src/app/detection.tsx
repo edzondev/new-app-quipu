@@ -108,7 +108,7 @@ export default function DetectionScreen() {
 		setBanks((rows) =>
 			rows.map((bank) => ({ ...bank, chosen: selected.includes(bank.packageName) })),
 		);
-		setStep("consent");
+		setStep(access ? "home" : "consent");
 	}
 
 	return (
