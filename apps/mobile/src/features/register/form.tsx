@@ -93,7 +93,10 @@ export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
 					label="Guardar"
 					disabled={!canSave}
 					onPress={() => {
-						void markLoggedToday().finally(() => router.back());
+						void markLoggedToday().finally(() => {
+							if (router.canGoBack()) router.back();
+							else router.replace("/(tabs)");
+						});
 					}}
 				/>
 			</View>
