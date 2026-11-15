@@ -25,7 +25,7 @@ type Native = {
 
 const native = requireOptionalNativeModule<Native>("QuipuDetection");
 
-const DEFAULT_REMINDER: Reminder = { enabled: false, hour: 23, minute: 30 };
+export const DEFAULT_REMINDER: Reminder = { enabled: false, hour: 23, minute: 30 };
 
 export function isAccessEnabled(): boolean {
 	return native?.isAccessEnabled() ?? false;

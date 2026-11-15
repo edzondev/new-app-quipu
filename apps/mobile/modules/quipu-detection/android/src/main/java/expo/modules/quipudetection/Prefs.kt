@@ -4,6 +4,8 @@ import android.content.Context
 
 internal data class ReminderPref(val enabled: Boolean, val hour: Int, val minute: Int)
 
+internal val DEFAULT_REMINDER = ReminderPref(enabled = false, hour = 23, minute = 30)
+
 internal object Prefs {
   private const val FILE = "quipu-detection"
   private const val BANKS = "banks"
@@ -35,9 +37,9 @@ internal object Prefs {
   fun reminder(context: Context): ReminderPref {
     val stored = prefs(context)
     return ReminderPref(
-      enabled = stored.getBoolean(ENABLED, false),
-      hour = stored.getInt(HOUR, 23).coerceIn(0, 23),
-      minute = stored.getInt(MINUTE, 30).coerceIn(0, 59),
+      enabled = stored.getBoolean(ENABLED, DEFAULT_REMINDER.enabled),
+      hour = stored.getInt(HOUR, DEFAULT_REMINDER.hour).coerceIn(0, 23),
+      minute = stored.getInt(MINUTE, DEFAULT_REMINDER.minute).coerceIn(0, 59),
     )
   }
 

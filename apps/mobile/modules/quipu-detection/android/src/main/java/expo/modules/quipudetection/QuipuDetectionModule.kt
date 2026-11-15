@@ -51,9 +51,9 @@ class QuipuDetectionModule : Module() {
 
     AsyncFunction("getReminder") {
       val context = context() ?: return@AsyncFunction mapOf(
-        "enabled" to false,
-        "hour" to 23,
-        "minute" to 30,
+        "enabled" to DEFAULT_REMINDER.enabled,
+        "hour" to DEFAULT_REMINDER.hour,
+        "minute" to DEFAULT_REMINDER.minute,
       )
       val saved = Prefs.reminder(context)
       mapOf("enabled" to saved.enabled, "hour" to saved.hour, "minute" to saved.minute)
