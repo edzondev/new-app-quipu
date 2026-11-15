@@ -14,7 +14,7 @@ class ManifestQueriesTest {
     assertFalse(manifest.contains("com.google.android.apps.walletnfcrel"))
     assertTrue(manifest.contains("android.permission.POST_NOTIFICATIONS"))
     assertTrue(manifest.contains("android.permission.RECEIVE_BOOT_COMPLETED"))
-    assertTrue(manifest.contains("android:exported=\"false\""))
+    assertFalse(manifest.contains("android:exported=\"true\""))
     val declared = Regex("""<package\s+android:name="([^"]+)"\s*/>""")
       .findAll(manifest)
       .map { it.groupValues[1] }
