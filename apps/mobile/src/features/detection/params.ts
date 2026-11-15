@@ -16,7 +16,7 @@ function first(value: Param): string {
 	return raw?.trim() ?? "";
 }
 
-/** Deep link params are untrusted: anyone can build quipu://detected. */
+/** Deep link params are untrusted: anyone can build quipu://register. */
 export function parseDetected(params: {
 	kind?: Param;
 	cents?: Param;
