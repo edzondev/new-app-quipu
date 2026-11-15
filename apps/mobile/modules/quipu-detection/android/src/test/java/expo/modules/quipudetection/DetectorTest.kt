@@ -69,6 +69,12 @@ class DetectorTest {
   }
 
   @Test
+  fun commaAfterAFinishedAmountIsPunctuation() {
+    val movement = Detector.detect("Pagaste S/ 40.00, en Wong.")
+    assertEquals(Movement(4000, "Wong", Kind.EXPENSE), movement)
+  }
+
+  @Test
   fun merchantKeepsInternalDot() {
     val movement = Detector.detect("Pagaste S/ 20.00 en E.WONG con tu Tarjeta de Débito.")
     assertEquals(Movement(2000, "E.WONG", Kind.EXPENSE), movement)

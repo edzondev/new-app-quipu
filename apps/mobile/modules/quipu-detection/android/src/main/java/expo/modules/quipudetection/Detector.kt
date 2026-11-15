@@ -27,6 +27,7 @@ internal object Detector {
   )
   private val THOUSANDS = Regex("^\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?\$")
   private val PLAIN = Regex("^\\d+(?:\\.\\d{1,2})?\$")
+  private val DOUBTFUL_COMMA = Regex("^,\\d")
   private val MERCHANT = Regex("(?i)\\ben\\s+(.+?)(?=\\s+con\\s|\\s+por\\s|[\\n;]|[.!?](?:\\s|\$)|\$)")
 
   fun detect(raw: String): Movement? {
@@ -45,8 +46,9 @@ internal object Detector {
     var found: Int? = null
     for (match in AMOUNT.findAll(text)) {
       val token = match.groupValues[1]
-      // "S/ 40,50" no es miles: la regex se quedó en 40 y la coma sigue. Eso es dudoso.
-      if (',' !in token && text.substring(match.range.last + 1).startsWith(",")) return null
+      // "S/ 40,50" no es miles. "S/ 40.00, en Wong" sí: la coma no va seguida de un dígito.
+      val after = text.substring(match.range.last + 1)
+      if (',' !in token && DOUBTFUL_COMMA.containsMatchIn(after)) return null
       val cents = toCents(token) ?: return null
       if (found != null && cents != found) return null
       found = cents
