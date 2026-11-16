@@ -92,12 +92,6 @@ class DetectorTest {
   }
 
   @Test
-  fun yapeOutgoingPayment() {
-    val movement = Detector.detect("Yapeaste S/ 5.00 a Juan Perez")
-    assertEquals(Movement(500, null, Kind.EXPENSE), movement)
-  }
-
-  @Test
   fun balanceAfterTheMovementIsNotAnotherAmount() {
     val movement = Detector.detect(
       "Realizaste un consumo de S/ 40.00 en Wong. Saldo disponible: S/ 1,250.00",

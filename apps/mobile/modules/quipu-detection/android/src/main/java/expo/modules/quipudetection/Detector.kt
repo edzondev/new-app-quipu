@@ -19,7 +19,6 @@ internal object Detector {
     "te envio" to Kind.INCOME,
     "consumo" to Kind.EXPENSE,
     "pagaste" to Kind.EXPENSE,
-    "yapeaste" to Kind.EXPENSE,
   )
 
   // Primero los miles (5,000). Si no, "40,50" se leería como 40 y sobraría la coma.
