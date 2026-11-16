@@ -90,6 +90,52 @@ class DetectorTest {
   fun bothKindsCancel() {
     assertNull(Detector.detect("Pagaste S/ 10.00 y además te envió S/ 10.00."))
   }
+
+  @Test
+  fun yapeOutgoingPayment() {
+    val movement = Detector.detect("Yapeaste S/ 5.00 a Juan Perez")
+    assertEquals(Movement(500, null, Kind.EXPENSE), movement)
+  }
+
+  @Test
+  fun balanceAfterTheMovementIsNotAnotherAmount() {
+    val movement = Detector.detect(
+      "Realizaste un consumo de S/ 40.00 en Wong. Saldo disponible: S/ 1,250.00",
+    )
+    assertEquals(Movement(4000, "Wong", Kind.EXPENSE), movement)
+  }
+
+  @Test
+  fun onlyABalanceIsNotAMovement() {
+    assertNull(Detector.detect("Pagaste en Wong. Saldo S/ 1,250.00"))
+  }
+
+  // Limitación conocida: una promo con «consumo» y un monto se ve igual que un aviso real,
+  // así que se detecta. No se guarda nada sin que la persona toque Guardar.
+  @Test
+  fun promoWithPaymentWordIsDetectedAsAKnownLimit() {
+    val movement = Detector.detect("Acumula puntos con tu consumo desde S/ 500 en Wong.")
+    assertEquals(Movement(50_000, "Wong", Kind.EXPENSE), movement)
+  }
+
+  @Test
+  fun merchantStartingWithConIsKept() {
+    val movement = Detector.detect("Pagaste S/ 12.00 en Con Fuego con tu Tarjeta de Débito.")
+    assertEquals(Movement(1200, "Con Fuego", Kind.EXPENSE), movement)
+  }
+
+  // Limitación conocida: «con» y «por» rodeados de espacios cierran el nombre del comercio.
+  @Test
+  fun merchantStopsAtConOrPorInsideTheName() {
+    assertEquals(
+      Movement(3000, "Pollo", Kind.EXPENSE),
+      Detector.detect("Pagaste S/ 30.00 en Pollo con Papas SAC con tu Tarjeta."),
+    )
+    assertEquals(
+      Movement(3000, "Pagos", Kind.EXPENSE),
+      Detector.detect("Pagaste S/ 30.00 en Pagos por Mayor."),
+    )
+  }
 }
 
 class RecentTest {

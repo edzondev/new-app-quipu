@@ -1,23 +1,16 @@
 package expo.modules.quipudetection
 
 import java.util.Calendar
+import java.util.GregorianCalendar
 import java.util.TimeZone
 
 // El día de Quipu es el de Lima, no el del reloj del teléfono.
 internal object Lima {
   val zone: TimeZone = TimeZone.getTimeZone("America/Lima")
 
+  // GregorianCalendar fijo: Calendar.getInstance() elige el calendario según el idioma del teléfono.
   fun calendar(millis: Long): Calendar =
-    Calendar.getInstance(zone).apply { timeInMillis = millis }
-
-  fun date(millis: Long): String {
-    val c = calendar(millis)
-    return "%04d-%02d-%02d".format(
-      c.get(Calendar.YEAR),
-      c.get(Calendar.MONTH) + 1,
-      c.get(Calendar.DAY_OF_MONTH),
-    )
-  }
+    GregorianCalendar(zone).apply { timeInMillis = millis }
 
   fun at(dayMillis: Long, hour: Int, minute: Int, dayOffset: Int): Long {
     val c = calendar(dayMillis)
@@ -38,12 +31,11 @@ internal fun nextAlarmMillis(nowMillis: Long, hour: Int, minute: Int): Long {
 }
 
 // Doze puede entregar la alarma de la noche después de medianoche. Desde las 02:00 ya es tarde.
-internal fun shouldRemind(nowMillis: Long, hour: Int, minute: Int, loggedDay: String?): Boolean {
+internal fun shouldRemind(nowMillis: Long, hour: Int, minute: Int): Boolean {
   val slot = closestSlot(nowMillis, hour, minute)
   // setInexactRepeating también puede adelantarse un poco.
   if (nowMillis < slot - EARLY_MS) return false
-  if (nowMillis >= cutoffMillis(slot)) return false
-  return loggedDay != Lima.date(slot)
+  return nowMillis < cutoffMillis(slot)
 }
 
 private fun closestSlot(nowMillis: Long, hour: Int, minute: Int): Long {

@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -14,52 +13,50 @@ import android.util.Log
 private const val TAG = "QuipuDetection"
 private const val DETECTED_CHANNEL = "quipu"
 private const val REMINDER_CHANNEL = "quipu-reminder"
+private const val REMINDER_ID = 2302
 
 internal object Notices {
   fun detected(context: Context, movement: Movement, bank: String, id: String) {
-    try {
-      if (!canPost(context)) return
-      val manager = context.getSystemService(NotificationManager::class.java) ?: return
-      channel(manager, DETECTED_CHANNEL, "Quipu")
-      val title = if (movement.kind == Kind.INCOME) {
-        "Detectamos un posible ingreso"
-      } else {
-        "Detectamos un posible gasto"
-      }
-      val open = viewIntent(context, detectedUri(movement, bank), id.hashCode())
-      val notice = base(context, DETECTED_CHANNEL)
-        .setContentTitle(title)
-        .setContentText(body(movement, bank))
-        .setContentIntent(open)
-        .setAutoCancel(true)
-        // En la pantalla de bloqueo se ve la versión pública, sin el monto.
-        .setVisibility(Notification.VISIBILITY_PRIVATE)
-        .setPublicVersion(
-          base(context, DETECTED_CHANNEL)
-            .setContentTitle("Quipu detectó un movimiento")
-            .build(),
-        )
-        .build()
-      manager.notify(id.hashCode(), notice)
-    } catch (e: Exception) {
-      logFail("notice", e)
+    val title = if (movement.kind == Kind.INCOME) {
+      "Detectamos un posible ingreso"
+    } else {
+      "Detectamos un posible gasto"
+    }
+    post(context, DETECTED_CHANNEL, "Quipu", id.hashCode()) {
+      setContentTitle(title)
+      setContentText(body(movement, bank))
+      setContentIntent(viewIntent(context, detectedUri(movement, bank), id.hashCode()))
+      setAutoCancel(true)
+      // En la pantalla de bloqueo se ve la versión pública, sin el monto.
+      setVisibility(Notification.VISIBILITY_PRIVATE)
+      setPublicVersion(
+        base(context, DETECTED_CHANNEL).setContentTitle("Quipu detectó un movimiento").build(),
+      )
     }
   }
 
   fun reminder(context: Context) {
+    post(context, REMINDER_CHANNEL, "Recordatorio diario", REMINDER_ID) {
+      setContentTitle("¿Anotaste tus gastos de hoy?")
+      setContentIntent(viewIntent(context, Uri.parse("quipu://register"), 2303))
+      setAutoCancel(true)
+    }
+  }
+
+  // Sin permiso de notificaciones (Android 13+), notify() no hace nada y no falla.
+  private fun post(
+    context: Context,
+    channelId: String,
+    channelName: String,
+    id: Int,
+    build: Notification.Builder.() -> Unit,
+  ) {
     try {
-      if (!canPost(context)) return
       val manager = context.getSystemService(NotificationManager::class.java) ?: return
-      channel(manager, REMINDER_CHANNEL, "Recordatorio diario")
-      val open = viewIntent(context, Uri.parse("quipu://register"), 2303)
-      val notice = base(context, REMINDER_CHANNEL)
-        .setContentTitle("¿Anotaste tus gastos de hoy?")
-        .setContentIntent(open)
-        .setAutoCancel(true)
-        .build()
-      manager.notify(REMINDER_ID, notice)
+      channel(manager, channelId, channelName)
+      manager.notify(id, base(context, channelId).apply(build).build())
     } catch (e: Exception) {
-      logFail("reminder", e)
+      logFail(channelId, e)
     }
   }
 
@@ -81,14 +78,6 @@ internal object Notices {
     if (merchant.isNotEmpty()) uri.appendQueryParameter("merchant", merchant)
     return uri.build()
   }
-}
-
-private const val REMINDER_ID = 2302
-
-private fun canPost(context: Context): Boolean {
-  if (Build.VERSION.SDK_INT < 33) return true
-  return context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-    PackageManager.PERMISSION_GRANTED
 }
 
 private fun channel(manager: NotificationManager, id: String, name: String) {

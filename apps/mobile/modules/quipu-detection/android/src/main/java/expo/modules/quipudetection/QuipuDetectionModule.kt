@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -12,19 +13,12 @@ class QuipuDetectionModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("QuipuDetection")
 
-    Function("isAccessEnabled") {
-      val context = context() ?: return@Function false
-      accessEnabled(context)
-    }
+    Function("isAccessEnabled") { accessEnabled(context()) }
 
-    Function("openAccessSettings") {
-      val context = context() ?: return@Function null
-      openAccess(context)
-      null
-    }
+    Function("openAccessSettings") { openAccess(context()) }
 
     AsyncFunction("getBanks") {
-      val context = context() ?: return@AsyncFunction emptyList<Map<String, Any>>()
+      val context = context()
       val chosen = Prefs.readBanks(context)
       val pm = context.packageManager
       Banks.all.map { bank ->
@@ -37,35 +31,31 @@ class QuipuDetectionModule : Module() {
       }
     }
 
-    AsyncFunction("setChosenBanks") { ids: List<String> ->
-      val context = context() ?: return@AsyncFunction Unit
-      Prefs.saveBanks(context, ids)
-    }
+    AsyncFunction("setChosenBanks") { ids: List<String> -> Prefs.saveBanks(context(), ids) }
 
     AsyncFunction("setReminder") { enabled: Boolean, hour: Int, minute: Int ->
-      val context = context() ?: return@AsyncFunction Unit
       if (hour !in 0..23 || minute !in 0..59) return@AsyncFunction Unit
+      val context = context()
       Prefs.saveReminder(context, enabled, hour, minute)
       if (enabled) Reminder.schedule(context, hour, minute) else Reminder.cancel(context)
     }
 
-    AsyncFunction("getReminder") {
-      val context = context() ?: return@AsyncFunction mapOf(
-        "enabled" to DEFAULT_REMINDER.enabled,
-        "hour" to DEFAULT_REMINDER.hour,
-        "minute" to DEFAULT_REMINDER.minute,
-      )
+    // Para el arranque de la app: reprograma solo si la alarma no existe (ver Reminder.ensure).
+    AsyncFunction("ensureReminder") {
+      val context = context()
       val saved = Prefs.reminder(context)
-      mapOf("enabled" to saved.enabled, "hour" to saved.hour, "minute" to saved.minute)
+      if (!saved.enabled) return@AsyncFunction Unit
+      Reminder.ensure(context, saved.hour, saved.minute)
     }
 
-    AsyncFunction("markLoggedToday") {
-      val context = context() ?: return@AsyncFunction Unit
-      Prefs.markLoggedToday(context)
+    AsyncFunction("getReminder") {
+      val saved = Prefs.reminder(context())
+      mapOf("enabled" to saved.enabled, "hour" to saved.hour, "minute" to saved.minute)
     }
   }
 
-  private fun context(): Context? = appContext.reactContext?.applicationContext
+  private fun context(): Context =
+    appContext.reactContext?.applicationContext ?: throw Exceptions.ReactContextLost()
 }
 
 private fun installed(pm: PackageManager, packageId: String): Boolean {
@@ -79,16 +69,10 @@ private fun installed(pm: PackageManager, packageId: String): Boolean {
 }
 
 private fun accessEnabled(context: Context): Boolean {
-  return try {
-    val flat = Settings.Secure.getString(
-      context.contentResolver,
-      Settings.Secure.ENABLED_NOTIFICATION_LISTENERS,
-    ) ?: return false
-    flat.split(':').any { it.substringBefore('/') == context.packageName }
-  } catch (e: Exception) {
-    logFail("access", e)
-    false
-  }
+  // Settings.Secure.ENABLED_NOTIFICATION_LISTENERS es @hide: no existe en el SDK público.
+  val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+    ?: return false
+  return flat.split(':').any { it.substringBefore('/') == context.packageName }
 }
 
 private fun openAccess(context: Context) {

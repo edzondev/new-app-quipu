@@ -12,23 +12,13 @@ internal object Prefs {
   private const val ENABLED = "reminder"
   private const val HOUR = "hour"
   private const val MINUTE = "minute"
-  private const val LOGGED = "logged-day"
-
-  // El listener lee esto. Tras la primera carga, SharedPreferences ya está en memoria.
-  @Volatile
-  var banks: Set<String> = emptySet()
-
-  fun loadBanks(context: Context) {
-    banks = readBanks(context)
-  }
 
   fun saveBanks(context: Context, ids: Collection<String>) {
-    val kept = Banks.keep(ids)
     // apply() vuelve al tiro y escribe en segundo plano. commit() trabaría el hilo de la UI.
-    prefs(context).edit().putStringSet(BANKS, kept).apply()
-    banks = kept
+    prefs(context).edit().putStringSet(BANKS, Banks.keep(ids)).apply()
   }
 
+  // El servicio lo lee en cada aviso. Tras la primera carga, SharedPreferences ya está en memoria.
   fun readBanks(context: Context): Set<String> {
     val stored = prefs(context).getStringSet(BANKS, emptySet()) ?: emptySet()
     return Banks.keep(stored)
@@ -49,12 +39,6 @@ internal object Prefs {
       .putInt(HOUR, hour)
       .putInt(MINUTE, minute)
       .apply()
-  }
-
-  fun loggedDay(context: Context): String? = prefs(context).getString(LOGGED, null)
-
-  fun markLoggedToday(context: Context) {
-    prefs(context).edit().putString(LOGGED, Lima.date(System.currentTimeMillis())).apply()
   }
 
   private fun prefs(context: Context) =

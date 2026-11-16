@@ -20,7 +20,7 @@ type Native = {
 	setChosenBanks(packageNames: string[]): Promise<void>;
 	setReminder(enabled: boolean, hour: number, minute: number): Promise<void>;
 	getReminder(): Promise<Reminder>;
-	markLoggedToday(): Promise<void>;
+	ensureReminder(): Promise<void>;
 };
 
 const native = requireOptionalNativeModule<Native>("QuipuDetection");
@@ -55,7 +55,8 @@ export async function getReminder(): Promise<Reminder> {
 	return native.getReminder();
 }
 
-export async function markLoggedToday(): Promise<void> {
+/** Arranque de la app: programa la alarma solo si no existe. Nunca la mueve a mañana. */
+export async function ensureReminder(): Promise<void> {
 	if (!native) return;
-	await native.markLoggedToday();
+	await native.ensureReminder();
 }

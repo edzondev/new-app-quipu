@@ -7,20 +7,6 @@ import android.service.notification.StatusBarNotification
 
 class BankListenerService : NotificationListenerService() {
   private val recent = Recent()
-  private var ready = false
-
-  override fun onListenerConnected() {
-    try {
-      Prefs.loadBanks(this)
-      ready = true
-    } catch (e: Exception) {
-      logFail("connect", e)
-    }
-  }
-
-  override fun onListenerDisconnected() {
-    ready = false
-  }
 
   override fun onNotificationPosted(sbn: StatusBarNotification?) {
     try {
@@ -32,9 +18,8 @@ class BankListenerService : NotificationListenerService() {
   }
 
   private fun posted(sbn: StatusBarNotification) {
-    if (!ready) return
     val pkg = sbn.packageName ?: return
-    if (pkg == packageName || !Banks.contains(pkg) || pkg !in Prefs.banks) return
+    if (pkg == packageName || !Banks.contains(pkg) || pkg !in Prefs.readBanks(this)) return
     val notification = sbn.notification ?: return
     if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
     val text = readText(notification.extras) ?: return
@@ -56,11 +41,6 @@ class BankListenerService : NotificationListenerService() {
     return parts.joinToString("\n")
   }
 
-  private fun readExtra(extras: Bundle, key: String): String? {
-    return try {
-      extras.getCharSequence(key)?.toString()?.trim()?.take(500)?.takeIf { it.isNotEmpty() }
-    } catch (_: Exception) {
-      null
-    }
-  }
+  private fun readExtra(extras: Bundle, key: String): String? =
+    extras.getCharSequence(key)?.toString()?.trim()?.take(500)?.takeIf { it.isNotEmpty() }
 }

@@ -9,7 +9,8 @@ import org.junit.Test
 class ManifestQueriesTest {
   @Test
   fun manifestListsEachCatalogPackageAndNotQueryAll() {
-    val manifest = locateModuleManifest().readText()
+    // Gradle corre los tests con la carpeta android/ del módulo como directorio actual.
+    val manifest = File("src/main/AndroidManifest.xml").readText()
     assertFalse(manifest.contains("QUERY_ALL_PACKAGES"))
     assertFalse(manifest.contains("com.google.android.apps.walletnfcrel"))
     assertTrue(manifest.contains("android.permission.POST_NOTIFICATIONS"))
@@ -21,22 +22,4 @@ class ManifestQueriesTest {
       .toList()
     assertEquals(Banks.all.map { it.packageId }, declared)
   }
-}
-
-internal fun locateModuleManifest(): File {
-  val relative = "apps/mobile/modules/quipu-detection/android/src/main/AndroidManifest.xml"
-  var dir = File(System.getProperty("user.dir") ?: ".").absoluteFile
-  val seen = HashSet<String>()
-  while (seen.add(dir.path)) {
-    val candidates = listOf(
-      File(dir, relative),
-      File(dir, "modules/quipu-detection/android/src/main/AndroidManifest.xml"),
-      File(dir, "src/main/AndroidManifest.xml"),
-    )
-    for (candidate in candidates) {
-      if (candidate.isFile && candidate.readText().contains("BankListenerService")) return candidate
-    }
-    dir = dir.parentFile ?: break
-  }
-  error("AndroidManifest.xml del módulo no encontrado desde ${System.getProperty("user.dir")}")
 }

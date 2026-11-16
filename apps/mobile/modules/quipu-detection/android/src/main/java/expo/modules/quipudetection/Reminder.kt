@@ -20,18 +20,28 @@ internal object Reminder {
     )
   }
 
-  fun cancel(context: Context) {
-    val alarm = context.getSystemService(AlarmManager::class.java) ?: return
-    val intent = pending(context)
-    alarm.cancel(intent)
-    intent.cancel()
+  // Programa solo si no hay alarma. Si ya existe, la deja: schedule() la movería a mañana
+  // aunque la de hoy todavía no haya sonado (el sistema puede atrasar una alarma inexacta).
+  fun ensure(context: Context, hour: Int, minute: Int) {
+    val flags = PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+    if (PendingIntent.getBroadcast(context, REQUEST, intent(context), flags) == null) {
+      schedule(context, hour, minute)
+    }
   }
 
+  fun cancel(context: Context) {
+    val alarm = context.getSystemService(AlarmManager::class.java) ?: return
+    val operation = pending(context)
+    alarm.cancel(operation)
+    operation.cancel()
+  }
+
+  private fun intent(context: Context) = Intent(context, ReminderReceiver::class.java)
+
   private fun pending(context: Context): PendingIntent {
-    val intent = Intent(context, ReminderReceiver::class.java)
     // Mismo request code + UPDATE_CURRENT reemplaza la alarma anterior, no agrega otra.
     val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    return PendingIntent.getBroadcast(context, REQUEST, intent, flags)
+    return PendingIntent.getBroadcast(context, REQUEST, intent(context), flags)
   }
 }
 
@@ -40,8 +50,7 @@ class ReminderReceiver : BroadcastReceiver() {
     try {
       val saved = Prefs.reminder(context)
       if (!saved.enabled) return
-      val now = System.currentTimeMillis()
-      if (!shouldRemind(now, saved.hour, saved.minute, Prefs.loggedDay(context))) return
+      if (!shouldRemind(System.currentTimeMillis(), saved.hour, saved.minute)) return
       Notices.reminder(context)
     } catch (e: Exception) {
       logFail("reminder", e)

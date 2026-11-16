@@ -19,6 +19,7 @@ internal object Detector {
     "te envio" to Kind.INCOME,
     "consumo" to Kind.EXPENSE,
     "pagaste" to Kind.EXPENSE,
+    "yapeaste" to Kind.EXPENSE,
   )
 
   // Primero los miles (5,000). Si no, "40,50" se leería como 40 y sobraría la coma.
@@ -28,6 +29,8 @@ internal object Detector {
   private val THOUSANDS = Regex("^\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?\$")
   private val PLAIN = Regex("^\\d+(?:\\.\\d{1,2})?\$")
   private val DOUBTFUL_COMMA = Regex("^,\\d")
+  // "Saldo disponible: S/ 1,250.00" es el saldo de la cuenta, no el monto del movimiento.
+  private val BALANCE = Regex("(?i)saldo\\D{0,20}\$")
   private val MERCHANT = Regex("(?i)\\ben\\s+(.+?)(?=\\s+con\\s|\\s+por\\s|[\\n;]|[.!?](?:\\s|\$)|\$)")
 
   fun detect(raw: String): Movement? {
@@ -45,6 +48,7 @@ internal object Detector {
   private fun centsOf(text: String): Int? {
     var found: Int? = null
     for (match in AMOUNT.findAll(text)) {
+      if (BALANCE.containsMatchIn(text.substring(0, match.range.first))) continue
       val token = match.groupValues[1]
       // "S/ 40,50" no es miles. "S/ 40.00, en Wong" sí: la coma no va seguida de un dígito.
       val after = text.substring(match.range.last + 1)
