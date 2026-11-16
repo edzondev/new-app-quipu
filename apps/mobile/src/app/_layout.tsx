@@ -1,7 +1,10 @@
 import { Stack } from "expo-router";
 import { useEffect } from "react";
-import { refreshReminder } from "@/features/detection/android";
 import "@/global.css";
+import { ensureReminder } from "../../modules/quipu-detection";
+
+// (tabs) siempre queda debajo: un enlace directo a /register o /detection tiene a dónde volver.
+export const unstable_settings = { anchor: "(tabs)" };
 
 const sheet = {
 	presentation: "formSheet",
@@ -12,7 +15,7 @@ const sheet = {
 
 export default function RootLayout() {
 	useEffect(() => {
-		void refreshReminder();
+		void ensureReminder();
 	}, []);
 
 	return (

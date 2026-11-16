@@ -25,8 +25,10 @@ export function parseDetected(params: {
 }): DetectedDraft | null {
 	const kind = first(params.kind);
 	if (kind !== "expense" && kind !== "income") return null;
-	const cents = Number(first(params.cents));
-	if (!Number.isSafeInteger(cents) || cents <= 0 || cents > MAX_MOVEMENT_CENTS) return null;
+	const rawCents = first(params.cents);
+	if (!/^\d+$/.test(rawCents)) return null;
+	const cents = Number(rawCents);
+	if (cents <= 0 || cents > MAX_MOVEMENT_CENTS) return null;
 	return {
 		kind,
 		cents,

@@ -4,5 +4,6 @@ import { RegisterForm } from "@/features/register/form";
 
 export default function RegisterScreen() {
 	const detected = parseDetected(useLocalSearchParams());
-	return <RegisterForm detected={detected} />;
+	// key: un aviso nuevo con la hoja abierta rehace el formulario en vez de mostrar el anterior.
+	return <RegisterForm key={`${detected?.cents}-${detected?.merchant}`} detected={detected} />;
 }

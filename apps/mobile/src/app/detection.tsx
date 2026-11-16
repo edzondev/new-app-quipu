@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import { AppState, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
-import { askPostNotifications } from "@/features/detection/android";
+import { askPostNotifications, canPostNotifications } from "@/features/detection/android";
 import { BanksStep } from "@/features/detection/banks-step";
 import { BlockedStep } from "@/features/detection/blocked-step";
 import { ConsentStep } from "@/features/detection/consent-step";
 import { HomeStep } from "@/features/detection/home-step";
 import {
+	type Bank,
 	DEFAULT_REMINDER,
 	getBanks,
 	getReminder,
@@ -16,7 +17,6 @@ import {
 	openAccessSettings,
 	setChosenBanks,
 	setReminder,
-	type Bank,
 } from "../../modules/quipu-detection";
 
 type Step = "home" | "banks" | "consent" | "blocked";
@@ -27,24 +27,23 @@ export default function DetectionScreen() {
 	const [banks, setBanks] = useState<Bank[]>([]);
 	const [ready, setReady] = useState(false);
 	const [access, setAccess] = useState(false);
-	const [reminderOn, setReminderOn] = useState(false);
-	const [hour, setHour] = useState(DEFAULT_REMINDER.hour);
-	const [minute, setMinute] = useState(DEFAULT_REMINDER.minute);
+	const [notifications, setNotifications] = useState(true);
+	const [reminder, setReminderState] = useState(DEFAULT_REMINDER);
 	const [picked, setPicked] = useState<string[] | null>(null);
-	const arm = useRef(false);
 	const waiting = useRef(false);
 
 	useEffect(() => {
 		let alive = true;
-		void Promise.all([getBanks(), getReminder()]).then(([rows, saved]) => {
-			if (!alive) return;
-			setBanks(rows);
-			setReminderOn(saved.enabled);
-			setHour(saved.hour);
-			setMinute(saved.minute);
-			setAccess(isAccessEnabled());
-			setReady(true);
-		});
+		void Promise.all([getBanks(), getReminder(), canPostNotifications()]).then(
+			([rows, saved, canPost]) => {
+				if (!alive) return;
+				setBanks(rows);
+				setReminderState(saved);
+				setNotifications(canPost);
+				setAccess(isAccessEnabled());
+				setReady(true);
+			},
+		);
 		return () => {
 			alive = false;
 		};
@@ -52,16 +51,13 @@ export default function DetectionScreen() {
 
 	useEffect(() => {
 		const sub = AppState.addEventListener("change", (state) => {
-			if (state === "background" && arm.current) {
-				arm.current = false;
-				waiting.current = true;
-			}
-			if (state === "active" && waiting.current) {
-				waiting.current = false;
-				const enabled = isAccessEnabled();
-				setAccess(enabled);
-				setStep(enabled ? "home" : "blocked");
-			}
+			if (state !== "active") return;
+			const enabled = isAccessEnabled();
+			setAccess(enabled);
+			void canPostNotifications().then(setNotifications);
+			if (!waiting.current) return;
+			waiting.current = false;
+			setStep(enabled ? "home" : "blocked");
 		});
 		return () => sub.remove();
 	}, []);
@@ -70,27 +66,27 @@ export default function DetectionScreen() {
 		picked ?? banks.filter((bank) => bank.chosen && bank.installed).map((bank) => bank.packageName);
 
 	function close() {
-		if (router.canGoBack()) router.back();
-		else router.replace("/(tabs)");
+		router.back();
 	}
 
 	function openSettings() {
-		arm.current = true;
+		waiting.current = true;
 		openAccessSettings();
 	}
 
 	async function accept() {
-		await askPostNotifications();
+		setNotifications(await askPostNotifications());
 		openSettings();
 	}
 
 	async function toggleReminder(enabled: boolean) {
 		if (enabled) {
 			const granted = await askPostNotifications();
+			setNotifications(granted);
 			if (!granted) return;
 		}
-		setReminderOn(enabled);
-		await setReminder(enabled, hour, minute);
+		setReminderState({ ...reminder, enabled });
+		await setReminder(enabled, reminder.hour, reminder.minute);
 	}
 
 	function toggleBank(packageName: string) {
@@ -143,9 +139,8 @@ export default function DetectionScreen() {
 					<HomeStep
 						banks={banks}
 						access={access}
-						reminderOn={reminderOn}
-						hour={hour}
-						minute={minute}
+						notifications={notifications}
+						reminder={reminder}
 						onToggleReminder={(enabled) => void toggleReminder(enabled)}
 						onChooseBanks={() => setStep("banks")}
 						onClose={close}

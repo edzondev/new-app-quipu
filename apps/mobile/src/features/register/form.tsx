@@ -16,7 +16,6 @@ import {
 	expenseTodayLine,
 } from "@/features/register/expense";
 import { useThemeColor } from "@/lib/use-theme-color";
-import { markLoggedToday } from "../../../modules/quipu-detection";
 
 export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
 	const income = detected?.kind === "income";
@@ -98,10 +97,8 @@ export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
 					label="Guardar"
 					disabled={!canSave}
 					onPress={() => {
-						void markLoggedToday().finally(() => {
-							if (router.canGoBack()) router.back();
-							else router.replace("/(tabs)");
-						});
+						// Later: api.transactions.addExpense
+						router.back();
 					}}
 				/>
 			</View>

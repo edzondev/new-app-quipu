@@ -7,12 +7,21 @@ export function ReadsBlock() {
 				Qué lee Quipu
 			</Text>
 			<Text className="mt-2 text-[15px] text-foreground">
-				Solo el monto y el comercio de los avisos de tus bancos. Nunca tus claves, ni tus saldos, ni
-				el resto de tus notificaciones.
+				Quipu lee el texto de los avisos de los bancos que elijas, en tu teléfono, solo para sacar
+				el monto y el comercio. No guarda ese texto ni lo envía a ningún lado.
 			</Text>
 			<Text className="mt-2 text-[15px] text-foreground">
 				Lo usamos solo para proponerte gastos e ingresos. No se comparte con nadie.
 			</Text>
 		</View>
+	);
+}
+
+export function RestrictedSettingsNote() {
+	return (
+		<Text className="mt-4 text-[13px] text-muted-foreground">
+			Si instalaste Quipu por un enlace, Android puede bloquear este permiso. En la ficha de la app,
+			abre el menú ⋮ y toca «Permitir ajustes restringidos».
+		</Text>
 	);
 }

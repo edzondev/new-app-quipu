@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { NumberedLines } from "@/features/detection/numbered-lines";
-import { ReadsBlock } from "@/features/detection/reads-block";
+import { ReadsBlock, RestrictedSettingsNote } from "@/features/detection/reads-block";
 
 const STEPS = [
 	"Android te muestra una lista.",
@@ -23,6 +23,7 @@ export function BlockedStep({
 			</Text>
 			<NumberedLines lines={STEPS} />
 			<ReadsBlock />
+			<RestrictedSettingsNote />
 			<View className="mt-6 gap-3">
 				<Button label="Abrir Ajustes del teléfono" onPress={onOpenSettings} />
 				<Button label="Seguir registrando a mano" variant="secondary" onPress={onManual} />
