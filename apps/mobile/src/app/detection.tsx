@@ -65,10 +65,6 @@ export default function DetectionScreen() {
 	const selected =
 		picked ?? banks.filter((bank) => bank.chosen && bank.installed).map((bank) => bank.packageName);
 
-	function close() {
-		router.back();
-	}
-
 	function openSettings() {
 		waiting.current = true;
 		openAccessSettings();
@@ -120,7 +116,7 @@ export default function DetectionScreen() {
 							La detección de gastos está en la app de Android.
 						</Text>
 						<View className="mt-6">
-							<Button label="Cerrar" onPress={close} />
+							<Button label="Cerrar" onPress={() => router.back()} />
 						</View>
 					</View>
 				) : step === "banks" ? (
@@ -134,7 +130,7 @@ export default function DetectionScreen() {
 				) : step === "consent" ? (
 					<ConsentStep onAccept={() => void accept()} onSkip={() => setStep("home")} />
 				) : step === "blocked" ? (
-					<BlockedStep onOpenSettings={openSettings} onManual={close} />
+					<BlockedStep onOpenSettings={openSettings} onManual={() => router.back()} />
 				) : (
 					<HomeStep
 						banks={banks}
@@ -143,7 +139,7 @@ export default function DetectionScreen() {
 						reminder={reminder}
 						onToggleReminder={(enabled) => void toggleReminder(enabled)}
 						onChooseBanks={() => setStep("banks")}
-						onClose={close}
+						onClose={() => router.back()}
 					/>
 				)}
 			</ScrollView>
