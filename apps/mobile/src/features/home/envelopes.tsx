@@ -2,16 +2,11 @@ import type { api } from "@quipu/backend/convex/_generated/api";
 import { AMOUNT_KEYS, ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared/budget";
 import type { FunctionReturnType } from "convex/server";
 import { Text, View } from "react-native";
+import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
 
 const ORDER = ["needs", "wants", "savings"] as const;
-
-const ENVELOPE_DOT = {
-	needs: "bg-envelope-needs",
-	wants: "bg-envelope-wants",
-	savings: "bg-envelope-savings",
-} as const;
 
 export function Envelopes({ home }: { home: Home }) {
 	return (
