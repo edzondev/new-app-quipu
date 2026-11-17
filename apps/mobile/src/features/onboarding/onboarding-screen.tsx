@@ -1,4 +1,5 @@
-import { router } from "expo-router";
+import { api } from "@quipu/backend/convex/_generated/api";
+import { useQuery } from "convex/react";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,14 +18,11 @@ import { useOnboarding } from "./use-onboarding";
 export function OnboardingScreen() {
 	const insets = useSafeAreaInsets();
 	const toast = useToast();
-	const flow = useOnboarding((text) => toast.show(text, true));
+	const profile = useQuery(api.profiles.myProfile);
+	const flow = useOnboarding((text) => toast.show(text, true), profile?.name ?? "");
 	const [sheet, setSheet] = useState<"day" | "fixed" | null>(null);
 	const rangeLabel = rangeText(flow.range);
 	const last = flow.step === 3;
-
-	function finish() {
-		router.replace({ pathname: "/", params: { welcome: "1" } });
-	}
 
 	return (
 		<KeyboardAvoidingView
@@ -41,6 +39,9 @@ export function OnboardingScreen() {
 			>
 				{flow.step === 1 ? (
 					<StepToday
+						name={flow.name}
+						nameError={flow.nameError}
+						onName={flow.setName}
 						todayText={flow.todayText}
 						todayMissing={flow.todayMissing}
 						onToday={flow.setTodayText}
@@ -68,8 +69,8 @@ export function OnboardingScreen() {
 			<View className="px-6 pt-3" style={{ paddingBottom: insets.bottom + 12 }}>
 				<Button
 					label={last ? "Empezar mi ciclo" : "Continuar"}
-					disabled={last && flow.number.overIncome}
-					onPress={last ? finish : flow.next}
+					disabled={last && (flow.number.overIncome || flow.saving)}
+					onPress={last ? () => void flow.finish() : flow.next}
 				/>
 			</View>
 
