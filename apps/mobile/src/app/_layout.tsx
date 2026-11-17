@@ -33,8 +33,7 @@ function Screens() {
 	return (
 		<Stack>
 			<Stack.Protected guard={gate === "signed-out"}>
-				<Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
-				<Stack.Screen name="(auth)/code" options={{ headerShown: false }} />
+				<Stack.Screen name="(auth)" options={{ headerShown: false }} />
 			</Stack.Protected>
 			<Stack.Protected guard={gate === "onboarding"}>
 				<Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
 	KeyboardAvoidingView,
@@ -67,6 +67,8 @@ export default function CodeScreen() {
 		if (wrong) return "border-b-2 border-warning";
 		return index === code.length ? "border-b-2 border-foreground" : "border-b border-input";
 	}
+
+	if (!email) return <Redirect href="/sign-in" />;
 
 	return (
 		<KeyboardAvoidingView
