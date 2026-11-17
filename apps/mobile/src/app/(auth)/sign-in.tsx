@@ -87,7 +87,6 @@ export default function SignInScreen() {
 				<Pressable
 					accessibilityRole="button"
 					// Luego: diálogo del sistema (passkey) al conectar Convex.
-					onPress={() => {}}
 					className="flex-row items-center justify-center gap-2 rounded-full border border-input px-4 py-3.5"
 				>
 					<Fingerprint size={18} color={foreground} />

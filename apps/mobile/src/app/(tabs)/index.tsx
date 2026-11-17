@@ -44,15 +44,13 @@ export default function HomeScreen() {
 			<DueSoon items={SAMPLE_COMMITMENTS.items} today={SAMPLE_TODAY} />
 
 			{/* TEMPORAL: enlaces de prueba; se quitan al conectar la sesión real. */}
-			<View className="mt-6 flex-row gap-6">
-				<Pressable
-					accessibilityRole="link"
-					className="min-h-11 justify-center"
-					onPress={() => router.push("/sign-in")}
-				>
-					<Text className="text-[13px] text-muted-foreground underline">Probar: Entrar</Text>
-				</Pressable>
-			</View>
+			<Pressable
+				accessibilityRole="link"
+				className="mt-6 min-h-11 justify-center"
+				onPress={() => router.push("/sign-in")}
+			>
+				<Text className="text-[13px] text-muted-foreground underline">Probar: Entrar</Text>
+			</Pressable>
 		</ScrollView>
 	);
 }
