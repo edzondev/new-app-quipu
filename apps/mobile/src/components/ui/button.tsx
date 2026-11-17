@@ -1,5 +1,11 @@
 import { Pressable, Text } from "react-native";
 
+const VARIANTS = {
+	primary: { box: "bg-primary", text: "text-primary-foreground" },
+	secondary: { box: "bg-secondary", text: "text-secondary-foreground" },
+	warning: { box: "border border-warning", text: "text-warning-foreground" },
+} as const;
+
 export function Button({
 	label,
 	onPress,
@@ -9,22 +15,18 @@ export function Button({
 	label: string;
 	onPress: () => void;
 	disabled?: boolean;
-	variant?: "primary" | "secondary";
+	variant?: keyof typeof VARIANTS;
 }) {
-	const primary = variant === "primary";
+	const { box, text } = VARIANTS[variant];
 	return (
 		<Pressable
 			accessibilityRole="button"
 			accessibilityState={{ disabled }}
 			disabled={disabled}
 			onPress={onPress}
-			className={`items-center justify-center rounded-full px-4 py-3.5 ${primary ? "bg-primary" : "bg-secondary"} ${disabled ? "opacity-50" : ""}`}
+			className={`items-center justify-center rounded-full px-4 py-3.5 ${box} ${disabled ? "opacity-50" : ""}`}
 		>
-			<Text
-				className={`text-[15px] font-semibold ${primary ? "text-primary-foreground" : "text-secondary-foreground"}`}
-			>
-				{label}
-			</Text>
+			<Text className={`text-[15px] font-semibold ${text}`}>{label}</Text>
 		</Pressable>
 	);
 }

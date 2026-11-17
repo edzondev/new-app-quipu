@@ -36,4 +36,11 @@ export const SAMPLE_GOALS: GoalList = [
 		targetMonth: null,
 		savedCents: 60_000,
 	},
+	{
+		id: "sample_ingles" as GoalId,
+		name: "Curso de inglés",
+		targetCents: 120_000,
+		targetMonth: null,
+		savedCents: 30_000,
+	},
 ];

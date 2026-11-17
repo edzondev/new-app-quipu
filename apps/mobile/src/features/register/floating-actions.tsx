@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Plus from "reicon-react-native/icons/Plus";
+import { useSpace } from "@/features/household/space-context";
 import { FLOATING_ACTIONS_OFFSET } from "@/features/navigation/tab-bar";
 import { useThemeColor } from "@/lib/use-theme-color";
 
@@ -10,6 +11,7 @@ const PLUS_SIZE = 44;
 export function FloatingActions() {
 	const insets = useSafeAreaInsets();
 	const foreground = useThemeColor("--color-foreground");
+	const { readOnly } = useSpace();
 
 	return (
 		<View
@@ -20,8 +22,10 @@ export function FloatingActions() {
 			<Pressable
 				accessibilityRole="button"
 				accessibilityLabel="Escribir gasto"
+				accessibilityState={{ disabled: readOnly }}
+				disabled={readOnly}
 				onPress={() => router.push("/register")}
-				className="items-center justify-center rounded-full bg-popover"
+				className={`items-center justify-center rounded-full bg-popover ${readOnly ? "opacity-40" : ""}`}
 				style={{
 					width: PLUS_SIZE,
 					height: PLUS_SIZE,

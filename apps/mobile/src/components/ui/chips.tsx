@@ -10,7 +10,7 @@ export function Chips({
 	onChange: (index: number) => void;
 }) {
 	return (
-		<View className="flex-row gap-2">
+		<View className="flex-row flex-wrap gap-2">
 			{options.map((label, index) => {
 				const selected = index === selectedIndex;
 				return (

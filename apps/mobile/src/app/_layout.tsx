@@ -23,6 +23,11 @@ export default function RootLayout() {
 			<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 			<Stack.Screen name="register" options={sheet} />
 			<Stack.Screen name="detection" options={{ headerShown: false }} />
+			<Stack.Screen name="settings/index" options={{ headerShown: false }} />
+			<Stack.Screen name="settings/security" options={{ headerShown: false }} />
+			<Stack.Screen name="plan" options={{ headerShown: false }} />
+			<Stack.Screen name="report" options={{ headerShown: false }} />
+			<Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
 			<Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
 			<Stack.Screen name="(auth)/code" options={{ headerShown: false }} />
 		</Stack>

@@ -31,9 +31,9 @@ export default function CodeScreen() {
 		setWrong(next.length === CODE_LENGTH && next !== SAMPLE_CODE);
 	}
 
-	// Luego: passkey real y Primeros pasos al conectar Convex.
 	function finish() {
 		router.dismissAll();
+		router.replace("/onboarding");
 	}
 
 	function boxLine(index: number) {
