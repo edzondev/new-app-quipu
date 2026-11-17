@@ -42,7 +42,6 @@ export function useOnboarding(warn: (text: string) => void, profileName: string)
 		}
 	}
 
-	// A saved plan changes the profile and the guard moves to Inicio by itself.
 	async function finish() {
 		if (saving) return;
 		setSaving(true);

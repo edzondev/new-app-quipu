@@ -1,14 +1,14 @@
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { useConvexAuth } from "convex/react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "@/global.css";
-import { useGate } from "@/features/auth/gate";
 import { authClient } from "@/lib/auth-client";
 import { convex } from "@/lib/convex";
 import { ensureReminder } from "../../modules/quipu-detection";
 
-// The splash stays until the session and the profile say which screens exist.
+// The splash stays until the session says which screens exist.
 void SplashScreen.preventAutoHideAsync();
 
 // (tabs) siempre queda debajo: un enlace directo a /register o /detection tiene a dónde volver.
@@ -16,37 +16,34 @@ export const unstable_settings = { anchor: "(tabs)" };
 
 const sheet = {
 	presentation: "formSheet",
-	headerShown: false,
 	sheetAllowedDetents: "fitToContents",
 	sheetGrabberVisible: true,
 } as const;
 
 function Screens() {
-	const gate = useGate();
+	const { isLoading, isAuthenticated } = useConvexAuth();
 
 	useEffect(() => {
-		if (gate !== "loading") void SplashScreen.hideAsync();
-	}, [gate]);
+		if (!isLoading) void SplashScreen.hideAsync();
+	}, [isLoading]);
 
-	if (gate === "loading") return null;
+	if (isLoading) return null;
 
 	return (
-		<Stack>
-			<Stack.Protected guard={gate === "signed-out"}>
-				<Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
-				<Stack.Screen name="(auth)/code" options={{ headerShown: false }} />
+		<Stack screenOptions={{ headerShown: false }}>
+			<Stack.Protected guard={!isAuthenticated}>
+				<Stack.Screen name="(auth)" />
 			</Stack.Protected>
-			<Stack.Protected guard={gate === "onboarding"}>
-				<Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-			</Stack.Protected>
-			<Stack.Protected guard={gate === "app"}>
-				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+			{/* (auth) has no index, so the default fallback would point at "/", which is (tabs). */}
+			<Stack.Protected guard={isAuthenticated} redirectTo="/sign-in">
+				<Stack.Screen name="(tabs)" />
+				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
 				<Stack.Screen name="register" options={sheet} />
-				<Stack.Screen name="detection" options={{ headerShown: false }} />
-				<Stack.Screen name="settings/index" options={{ headerShown: false }} />
-				<Stack.Screen name="settings/security" options={{ headerShown: false }} />
-				<Stack.Screen name="plan" options={{ headerShown: false }} />
-				<Stack.Screen name="report" options={{ headerShown: false }} />
+				<Stack.Screen name="detection" />
+				<Stack.Screen name="settings/index" />
+				<Stack.Screen name="settings/security" />
+				<Stack.Screen name="plan" />
+				<Stack.Screen name="report" />
 			</Stack.Protected>
 		</Stack>
 	);
