@@ -42,6 +42,8 @@ export default function CodeScreen() {
 
 	function change(text: string) {
 		const next = otpDigits(text);
+		// Android re-emits the same text when the keyboard closes; that must not verify again.
+		if (next === code) return;
 		setCode(next);
 		setWrong(false);
 		setMessage(null);
@@ -119,7 +121,6 @@ export default function CodeScreen() {
 						autoComplete="one-time-code"
 						textContentType="oneTimeCode"
 						value={code}
-						editable={!verifying}
 						onChangeText={change}
 						accessibilityLabel="Código de 6 dígitos"
 					/>
