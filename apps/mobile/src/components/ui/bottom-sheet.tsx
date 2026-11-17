@@ -1,21 +1,12 @@
 import { type BottomSheetProps, BottomSheet as ExpoBottomSheet } from "@expo/ui";
-import type { PropsWithChildren } from "react";
 import { View } from "react-native";
 import { useThemeColor } from "@/lib/use-theme-color";
 
-type Props = BottomSheetProps &
-	PropsWithChildren<{
-		isPresented: boolean;
-		onDismiss: () => void;
-	}>;
-
-export function BottomSheet({ isPresented, onDismiss, children, ...props }: Props) {
+export function BottomSheet({ children, ...props }: BottomSheetProps) {
 	const background = useThemeColor("--color-background");
 
 	return (
 		<ExpoBottomSheet
-			isPresented={isPresented}
-			onDismiss={onDismiss}
 			containerColor={background}
 			showDragIndicator={false}
 			contentPadding={0}
