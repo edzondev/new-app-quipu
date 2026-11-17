@@ -1,3 +1,4 @@
+import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 import { createClient } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
@@ -75,7 +76,8 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
 	const rpID = env.PASSKEY_RP_ID ?? new URL(baseURL).hostname;
 	return {
 		baseURL,
-		trustedOrigins: [baseURL],
+		// quipu:// is the scheme in apps/mobile/app.json: the Expo client sends it as its origin.
+		trustedOrigins: [baseURL, "quipu://"],
 		database: authComponent.adapter(ctx),
 		emailAndPassword: { enabled: false }, // no passwords
 		disabledPaths: [
@@ -100,6 +102,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
 			}),
 		},
 		plugins: [
+			expo(),
 			convex({ authConfig }),
 			passkey({
 				rpID,
