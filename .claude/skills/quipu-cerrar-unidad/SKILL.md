@@ -1,6 +1,6 @@
 ---
 name: quipu-cerrar-unidad
-description: Cierra una unidad de trabajo de Quipu. Corre los checks, actualiza docs/estado.md y abre el PR. Úsalo cuando el código de la unidad está listo, o cuando quipu-estado detecta que estado.md quedó atrás.
+description: Cierra una unidad de trabajo de Quipu (móvil o web). Corre los checks, actualiza docs/estado.md y abre el PR. Úsalo cuando el código de la unidad está listo, o cuando quipu-estado detecta que estado.md quedó atrás.
 ---
 
 # Cerrar una unidad
@@ -8,10 +8,11 @@ description: Cierra una unidad de trabajo de Quipu. Corre los checks, actualiza 
 Esto es lo que evita perder el estado. No te saltes el paso 5.
 
 1. Alcance: `git diff master...HEAD --stat` contra el «Terminado» y el «Fuera» de la unidad en `docs/estado.md`.
-2. Checks: la lista de `.agents/skills/verify-quipu/SKILL.md`. Guarda el código de salida de cada comando. Antes de decir que está listo, recuerda a Edzon que ejecute `/principle-prove-it-works` (solo él puede invocarla) y verifica contra el artefacto real (navegador o salida de los comandos), no por «compila».
+2. Checks: la lista de `.agents/skills/verify-quipu/SKILL.md`. Guarda el código de salida de cada comando. Antes de decir que está listo, recuerda a Edzon que ejecute `/principle-prove-it-works` (solo él puede invocarla) y verifica contra el artefacto real (dispositivo, navegador o salida de los comandos), no por «compila».
 3. Revisión: `/quipu-revision`. Sigue solo con `PASA`.
 4. Commit: agrega archivos por nombre. Asunto en inglés, imperativo, una línea, como el historial de git.
 5. Estado, solo en `docs/estado.md`:
+   - Si la unidad es móvil y `estado.md` no la tiene (hoy solo lleva la web), no la inventes: pregunta a Edzon dónde se anota.
    - Mueve la unidad a «Hecho» con su PR y la fecha.
    - Sube la siguiente a «Unidad actual», respetando dependencias. Copia su bloque de la cola con `grep -n "^\*\*U7\." docs/auditoria/AUDITORIA.md` (cambia el número; sirve `tgrep`). Es la única lectura permitida de ese archivo.
    - Completa «Siguientes 5» desde la cola.
@@ -21,8 +22,8 @@ Esto es lo que evita perder el estado. No te saltes el paso 5.
    - **Por qué**: el objetivo de la unidad, en una frase.
    - **Qué cambia**: lista corta por archivo.
    - **Fuera de alcance**
-   - **Checks**: cada comando con su código de salida.
-   - **Verificación**: lo que viste en el navegador, o «no verificado en navegador» con la razón.
+   - **Checks**: cada comando con su código de salida. Si no corriste el e2e web, di «e2e: no corrido, diferido al final del proyecto».
+   - **Verificación**: lo que viste en el navegador, o «no verificado en navegador» con la razón. En móvil: «pendiente de Edzon en el dispositivo» con lo que debe recorrer (tema claro y oscuro, fuente grande, 360 dp).
 7. Termina. Nunca hagas merge. Dile a Edzon que el PR está listo.
 
 `docs/estado.md` no se sube: es local. Lo único que llega a GitHub es el código.

@@ -1,6 +1,6 @@
 ---
 name: quipu-estado
-description: Dice dónde está el proyecto Quipu y cuál es la siguiente unidad de trabajo. Úsalo al empezar cualquier sesión y cuando pregunten "dónde estamos", "qué sigue" o "en qué quedamos". Lee solo docs/estado.md y git. No lee AUDITORIA.md.
+description: Dice dónde está el proyecto Quipu (móvil y web) y cuál es la siguiente unidad de trabajo. Úsalo al empezar cualquier sesión y cuando pregunten "dónde estamos", "qué sigue" o "en qué quedamos". Lee solo docs/estado.md y git. No lee AUDITORIA.md.
 ---
 
 # Dónde estamos
@@ -11,8 +11,9 @@ Solo lectura. No edites nada.
 2. Contrasta con git:
    - `git log --oneline -10 master`
    - `git branch --list` y `gh pr list --state all --limit 5`
-3. Busca desfases. Si la unidad actual ya tiene un PR mergeado, o hay una rama con su nombre, `estado.md` quedó atrás. Dilo y propón `/quipu-cerrar-unidad`.
-4. Responde en 8 líneas o menos:
+3. Móvil: `docs/estado.md` hoy lleva la web. Para la app mira `git log --oneline -10 -- apps/mobile` y el prompt de la unidad que Edzon haya dado. Si no hay unidad móvil definida, dilo y pregunta; no la inventes.
+4. Busca desfases. Si la unidad actual ya tiene un PR mergeado, o hay una rama con su nombre, `estado.md` quedó atrás. Dilo y propón `/quipu-cerrar-unidad`.
+5. Responde en 8 líneas o menos:
    - Unidad actual: id, título, rama y PR si existen.
    - Qué falta para darla por terminada (su línea «Terminado»).
    - Siguiente unidad después de esta.

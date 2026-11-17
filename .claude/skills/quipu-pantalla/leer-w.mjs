@@ -11,18 +11,24 @@ if (!id) {
 const commonDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
 	encoding: "utf8",
 }).trim();
-const html = join(dirname(resolve(commonDir)), "docs", "diseno", "rediseno-movil.html");
-if (!existsSync(html)) {
-	console.error(`No existe ${html}. docs/ no se versiona: pídeselo a Edzon.`);
+// Móvil y referencia en rediseno-movil.html; las pantallas W-* de la web, en rediseno-web.html.
+const dir = join(dirname(resolve(commonDir)), "docs", "diseno");
+const files = ["rediseno-movil.html", "rediseno-web.html"]
+	.map((name) => join(dir, name))
+	.filter(existsSync);
+if (files.length === 0) {
+	console.error(`No existe rediseno-movil.html en ${dir}. docs/ no se versiona: pídeselo a Edzon.`);
 	process.exit(1);
 }
 
-const source = readFileSync(html, "utf8");
-const start = source.indexOf(`id="${id}"`);
-if (start === -1) {
+const source = files
+	.map((file) => readFileSync(file, "utf8"))
+	.find((text) => text.includes(`id="${id}"`));
+if (!source) {
 	console.error(`No existe la pantalla ${id}.`);
 	process.exit(1);
 }
+const start = source.indexOf(`id="${id}"`);
 const next = source.indexOf('<div class="scr', start);
 const block = source.slice(start, next === -1 ? undefined : next);
 
