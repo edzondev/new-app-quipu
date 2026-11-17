@@ -1,11 +1,16 @@
 import type { Cadence, CycleStartDay } from "@quipu/backend/shared/plan";
-import { Text, View } from "react-native";
+import { NAME_MAX } from "@quipu/backend/shared/name";
+import { Text, TextInput, View } from "react-native";
 import { ListRow } from "@/components/ui/list-row";
 import { CadenceChips } from "@/features/cycle/cadence-chips";
 import { startDayLabel } from "@/features/cycle/days";
+import { useThemeColor } from "@/lib/use-theme-color";
 import { MoneyField } from "./money-field";
 
 export function StepToday({
+	name,
+	nameError,
+	onName,
 	todayText,
 	todayMissing,
 	onToday,
@@ -17,6 +22,9 @@ export function StepToday({
 	incomeText,
 	onIncome,
 }: {
+	name: string;
+	nameError: string | null;
+	onName: (text: string) => void;
 	todayText: string;
 	todayMissing: boolean;
 	onToday: (text: string) => void;
@@ -28,9 +36,32 @@ export function StepToday({
 	incomeText: string;
 	onIncome: (text: string) => void;
 }) {
+	const muted = useThemeColor("--color-muted-foreground");
+
 	return (
 		<View>
-			<Text className="text-4xl leading-10 font-semibold text-foreground">¿Cuánto tienes hoy?</Text>
+			<Text className="mb-1 text-sm text-muted-foreground">¿Cómo te llamas?</Text>
+			<TextInput
+				className={`min-h-11 border-b py-2 text-base text-foreground ${nameError ? "border-warning" : "border-input"}`}
+				placeholder="Tu nombre"
+				placeholderTextColor={muted}
+				autoCapitalize="words"
+				autoComplete="given-name"
+				textContentType="givenName"
+				maxLength={NAME_MAX}
+				value={name}
+				onChangeText={onName}
+				accessibilityLabel="¿Cómo te llamas?"
+			/>
+			{nameError ? (
+				<Text accessibilityRole="alert" className="mt-1.5 text-[13px] text-warning-foreground">
+					{nameError}
+				</Text>
+			) : null}
+
+			<Text className="mt-8 text-4xl leading-10 font-semibold text-foreground">
+				¿Cuánto tienes hoy?
+			</Text>
 			<View className="mt-5">
 				<MoneyField value={todayText} onChange={onToday} label="¿Cuánto tienes hoy?" large />
 			</View>

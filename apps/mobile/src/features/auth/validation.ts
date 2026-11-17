@@ -18,3 +18,6 @@ export function formatClock(totalSeconds: number): string {
 	const seconds = totalSeconds % 60;
 	return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
+
+/** Same wait as the server: one code per email every 90 s (convex/rateLimits.ts). */
+export const RESEND_SECONDS = 90;

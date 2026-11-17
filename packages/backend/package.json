@@ -20,6 +20,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@better-auth/expo": "1.7.18",
 		"@better-auth/passkey": "1.7.18",
 		"@convex-dev/better-auth": "0.13.0",
 		"@convex-dev/polar": "0.9.2",

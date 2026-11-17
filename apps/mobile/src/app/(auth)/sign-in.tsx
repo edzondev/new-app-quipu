@@ -14,20 +14,29 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Fingerprint from "reicon-react-native/icons/Fingerprint";
 import { QuipuLogo } from "@/components/quipu-logo";
 import { Button } from "@/components/ui/button";
+import { getAuthErrorMessage } from "@/features/auth/errors";
 import { emailError } from "@/features/auth/validation";
+import { sendSignInCode } from "@/lib/auth-client";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 export default function SignInScreen() {
 	const insets = useSafeAreaInsets();
 	const [email, setEmail] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [sending, setSending] = useState(false);
 	const foreground = useThemeColor("--color-foreground");
 	const muted = useThemeColor("--color-muted-foreground");
 
-	function submit() {
+	async function submit() {
+		if (sending) return;
 		const problem = emailError(email);
 		setError(problem);
-		if (problem === null) router.push({ pathname: "/code", params: { email: email.trim() } });
+		if (problem !== null) return;
+		setSending(true);
+		const { error: sendError } = await sendSignInCode(email.trim());
+		setSending(false);
+		if (sendError) setError(getAuthErrorMessage(sendError));
+		else router.push({ pathname: "/code", params: { email: email.trim() } });
 	}
 
 	return (
@@ -65,7 +74,7 @@ export default function SignInScreen() {
 						setEmail(text);
 						setError(null);
 					}}
-					onSubmitEditing={submit}
+					onSubmitEditing={() => void submit()}
 					accessibilityLabel="Correo"
 				/>
 				{error ? (
@@ -75,7 +84,7 @@ export default function SignInScreen() {
 				) : null}
 
 				<View className="mt-5">
-					<Button label="Enviar código" onPress={submit} />
+					<Button label="Enviar código" disabled={sending} onPress={() => void submit()} />
 				</View>
 
 				<View className="my-4 flex-row items-center gap-3">

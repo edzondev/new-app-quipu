@@ -101,7 +101,7 @@ export function SecurityScreen() {
 				confirmLabel="Cerrar todas"
 				onConfirm={() => {
 					setClosingAll(false);
-					leaveToSignIn();
+					void leaveToSignIn();
 				}}
 			/>
 		</View>
