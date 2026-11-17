@@ -81,7 +81,7 @@ export async function signUp(t: Harness, email: string, name: string) {
 		input: {
 			model: "session",
 			where: [{ field: "userId", value: user._id }],
-			update: { expiresAt: Date.UTC(2027, 0, 1) },
+			update: { expiresAt: Date.UTC(2028, 0, 1) },
 		},
 	});
 	const session = await t.query(components.betterAuth.adapter.findOne, {
