@@ -1,24 +1,22 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { Pressable, Text, View } from "react-native";
+import Check from "reicon-react-native/icons/Check";
 import Plus from "reicon-react-native/icons/Plus";
 import { Button } from "@/components/ui/button";
+import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { goalPercent, missingCents, targetMonthLabel, wholeSoles } from "./progress";
 import { ProgressBar } from "./progress-bar";
 
 type Goal = FunctionReturnType<typeof api.goals.list>[number];
 
-/** Dot and bar colors rotate by position, as in the design. */
-const GOAL_COLORS = [
-	{ dot: "bg-envelope-wants", bar: "bg-envelope-wants" },
-	{ dot: "bg-envelope-needs", bar: "bg-envelope-needs" },
-	{ dot: "bg-envelope-savings", bar: "bg-envelope-savings" },
-] as const;
+const GOAL_COLORS = ["wants", "needs", "savings"] as const;
 
 function GoalCard({ goal, index }: { goal: Goal; index: number }) {
 	const foreground = useThemeColor("--color-foreground");
-	const color = GOAL_COLORS[index % GOAL_COLORS.length];
+	const color = ENVELOPE_DOT[GOAL_COLORS[index % GOAL_COLORS.length]];
+	const savings = useThemeColor("--color-envelope-savings");
 	const done = goal.savedCents >= goal.targetCents;
 	const line = done
 		? "Meta alcanzada"
@@ -29,7 +27,7 @@ function GoalCard({ goal, index }: { goal: Goal; index: number }) {
 			<View className="flex-row items-center justify-between gap-2">
 				<View className="min-w-0 flex-1">
 					<View className="flex-row items-center gap-2.5">
-						<View className={`size-2 shrink-0 rounded-full ${color.dot}`} />
+						<View className={`size-2 shrink-0 rounded-full ${color}`} />
 						<Text
 							className="min-w-0 flex-1 text-[15px] font-semibold text-foreground"
 							numberOfLines={1}
@@ -42,12 +40,15 @@ function GoalCard({ goal, index }: { goal: Goal; index: number }) {
 					</Text>
 				</View>
 				{done ? (
-					<Text className="shrink-0 text-[13px] font-semibold text-envelope-savings">Lista</Text>
+					<View className="shrink-0 flex-row items-center gap-1">
+						<Check size={14} color={savings} />
+						<Text className="text-[13px] font-semibold text-envelope-savings">Lista</Text>
+					</View>
 				) : (
 					<Pressable
 						accessibilityRole="button"
 						accessibilityLabel={`Aportar a ${goal.name}`}
-						// Luego: hoja H2
+						// Luego: hoja G2
 						onPress={() => {}}
 						className="min-h-11 shrink-0 flex-row items-center gap-1"
 					>
@@ -64,7 +65,7 @@ function GoalCard({ goal, index }: { goal: Goal; index: number }) {
 				<ProgressBar
 					percent={goalPercent(goal.savedCents, goal.targetCents)}
 					height="h-[5px]"
-					fill={color.bar}
+					fill={color}
 				/>
 			</View>
 		</View>
@@ -89,7 +90,7 @@ export function Goals({ goals }: { goals: Goal[] }) {
 						Un viaje, una laptop, un curso. Cada meta junta su propio saldo.
 					</Text>
 					<View className="mt-3 self-start">
-						{/* Luego: hoja H4 */}
+						{/* Luego: hoja G4 (con 2 metas en Gratis, K1) */}
 						<Button label="Crear meta" onPress={() => {}} />
 					</View>
 				</View>
@@ -98,7 +99,7 @@ export function Goals({ goals }: { goals: Goal[] }) {
 			)}
 			{goals.length === 0 ? null : (
 				<View className="mt-1.5">
-					{/* Luego: hoja H4 */}
+					{/* Luego: hoja G4 (con 2 metas en Gratis, K1) */}
 					<Button label="Nueva meta" variant="secondary" onPress={() => {}} />
 				</View>
 			)}

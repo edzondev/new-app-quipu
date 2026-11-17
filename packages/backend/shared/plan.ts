@@ -29,7 +29,7 @@ const MONTH_FACTOR: Record<Cadence, { times: number; per: number }> = {
 	biweekly: { times: 2, per: 1 },
 	weekly: { times: 52, per: 12 },
 };
-const FUND_GOAL_MONTHS = 3;
+export const FUND_GOAL_MONTHS = 3;
 
 /** Plan income x Needs share, taken to one month, times 3. Rounded down to the cent. Null without a usual income. */
 export function suggestFundGoalCents(plan: Pick<Plan, "cadence" | "incomeCents">, split: Split) {

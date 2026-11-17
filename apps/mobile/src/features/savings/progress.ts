@@ -1,5 +1,6 @@
 import { formatCents } from "@quipu/backend/shared/budget";
 import { monthName } from "@quipu/backend/shared/dates";
+import { FUND_GOAL_MONTHS } from "@quipu/backend/shared/plan";
 
 /** Same rule as the web: whole percent, capped at 100. */
 export function goalPercent(savedCents: number, targetCents: number) {
@@ -16,10 +17,9 @@ export function wholeSoles(cents: number) {
 	return text.endsWith(".00") ? text.slice(0, -3) : text;
 }
 
-/** Months of Needs the fund covers (a month is a third of the suggested fund goal), cut to 1 decimal: "1.6 meses". */
 export function monthsCovered(fundCents: number, suggestedFundGoalCents: number | null) {
-	if (suggestedFundGoalCents === null) return null;
-	const tenths = Math.floor((fundCents * 30) / suggestedFundGoalCents);
+	if (suggestedFundGoalCents === null || suggestedFundGoalCents <= 0) return null;
+	const tenths = Math.floor((fundCents * FUND_GOAL_MONTHS * 10) / suggestedFundGoalCents);
 	const months = tenths % 10 === 0 ? String(tenths / 10) : (tenths / 10).toFixed(1);
 	return `${months} ${tenths === 10 ? "mes" : "meses"}`;
 }

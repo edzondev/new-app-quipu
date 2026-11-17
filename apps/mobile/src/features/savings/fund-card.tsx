@@ -1,16 +1,17 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
-import { formatCents } from "@quipu/backend/shared/budget";
 import type { FunctionReturnType } from "convex/server";
 import { Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
+import { amountParts } from "@/features/home/hero";
 import { goalPercent, monthsCovered, wholeSoles } from "./progress";
 import { ProgressBar } from "./progress-bar";
 
 type Fund = FunctionReturnType<typeof api.goals.fund>;
 
 export function FundCard({ fund }: { fund: Fund }) {
-	const [whole, decimals] = formatCents(fund.fundCents).split(".");
-	const goalCents = fund.fundGoalCents ?? fund.suggestedFundGoalCents;
+	const { whole, decimals } = amountParts(fund.fundCents);
+	const goal = fund.fundGoalCents ?? fund.suggestedFundGoalCents;
+	const goalCents = goal !== null && goal > 0 ? goal : null;
 	const months = monthsCovered(fund.fundCents, fund.suggestedFundGoalCents);
 	const percent = goalCents === null ? null : goalPercent(fund.fundCents, goalCents);
 
@@ -24,7 +25,7 @@ export function FundCard({ fund }: { fund: Fund }) {
 					<Pressable
 						accessibilityRole="button"
 						hitSlop={8}
-						// Luego: hoja H6
+						// Luego: hoja G6
 						onPress={() => {}}
 						className="min-h-8 shrink-0 justify-center"
 					>
@@ -56,11 +57,11 @@ export function FundCard({ fund }: { fund: Fund }) {
 			)}
 			<View className="mt-3 flex-row gap-2">
 				<View className="flex-1">
-					{/* Luego: hoja H5 */}
+					{/* Luego: hoja G5 */}
 					<Button label="Retirar" variant="secondary" onPress={() => {}} />
 				</View>
 				<View className="flex-1">
-					{/* Luego: hoja H7 */}
+					{/* Luego: hoja G7 */}
 					<Button label="Aportar" onPress={() => {}} />
 				</View>
 			</View>

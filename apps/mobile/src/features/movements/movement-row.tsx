@@ -5,7 +5,6 @@ import { movementText, type Row, type Tone } from "./rows";
 const TONE_TEXT = {
 	default: "text-foreground",
 	savings: "text-envelope-savings",
-	income: "text-success",
 } as const satisfies Record<Tone, string>;
 
 export function MovementRow({ row, goalName }: { row: Row; goalName: string | null }) {
@@ -15,7 +14,7 @@ export function MovementRow({ row, goalName }: { row: Row; goalName: string | nu
 		<View className="flex-row items-center justify-between gap-2.5 border-b border-border py-3">
 			<View className="min-w-0 flex-1 flex-row items-center gap-2.5">
 				<View
-					className={`size-2 shrink-0 rounded-full ${row.envelope ? ENVELOPE_DOT[row.envelope] : "bg-success"}`}
+					className={`size-2 shrink-0 rounded-full ${row.envelope ? ENVELOPE_DOT[row.envelope] : "bg-muted-foreground"}`}
 				/>
 				<View className="min-w-0 flex-1">
 					<Text className="text-[15px] font-semibold text-foreground" numberOfLines={1}>

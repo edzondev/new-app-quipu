@@ -72,6 +72,17 @@ export const SAMPLE_MOVEMENTS: MovementList = {
 		},
 		{
 			// Excepción: dato de ejemplo, se borra al conectar Convex
+			id: "sample_extra" as RowId,
+			kind: "income",
+			amountCents: 8_000,
+			date: "2026-11-12",
+			note: "Ana R.",
+			envelope: null,
+			...NO_LINKS,
+			extra: true,
+		},
+		{
+			// Excepción: dato de ejemplo, se borra al conectar Convex
 			id: "sample_sueldo" as RowId,
 			kind: "income",
 			amountCents: 300_000,
