@@ -9,6 +9,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import { SectionLabel } from "@/components/ui/section-label";
 import { type Cycle, cycleRowValue, splitRowValue } from "@/features/cycle/days";
 import { SAMPLE_HOME, SAMPLE_TODAY } from "@/features/home/sample";
+import { SAMPLE_HOUSEHOLD_HOME } from "@/features/household/sample";
 import { sampleStatus } from "@/features/plus/sample";
 import { Appearance } from "./appearance";
 import { ConfirmSheet } from "./confirm-sheet";
@@ -149,7 +150,7 @@ export function SettingsScreen() {
 				isPresented={sheet === "spaceCycle"}
 				onDismiss={close}
 				cycle={spaceCycle}
-				currentEndDate={SAMPLE_HOME.endDate}
+				currentEndDate={SAMPLE_HOUSEHOLD_HOME.endDate}
 				onSave={setSpaceCycle}
 			/>
 			<SpaceNameSheet

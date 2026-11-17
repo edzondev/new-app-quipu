@@ -86,7 +86,7 @@ export function SecurityScreen() {
 				isPresented={removing !== null}
 				onDismiss={() => setRemoving(null)}
 				title="¿Quitar este dispositivo?"
-				body={`Ya no podrás entrar con huella o rostro en ${removing?.name ?? ""}. Siempre puedes entrar con un código al correo.`}
+				body="Ya no podrás entrar con huella o rostro en este dispositivo. Siempre puedes entrar con un código al correo."
 				confirmLabel="Quitar dispositivo"
 				onConfirm={() => {
 					setPasskeys((rows) => rows.filter((row) => row.id !== removing?.id));

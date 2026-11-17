@@ -26,7 +26,7 @@ function FixedRow({
 				<View className="flex-row items-center">
 					<Text className="text-[13px] text-muted-foreground">Día</Text>
 					<TextInput
-						className="min-w-8 px-1 py-2 text-center font-mono text-[13px] text-foreground"
+						className="min-h-11 min-w-8 px-1 py-2 text-center font-mono text-[13px] text-foreground"
 						keyboardType="number-pad"
 						maxLength={2}
 						value={item.dayText}
