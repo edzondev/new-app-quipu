@@ -70,7 +70,7 @@ export default function MovementsScreen() {
 			ListHeaderComponent={header}
 			ListEmptyComponent={
 				<Text className="mt-[22px] text-sm text-muted-foreground">
-					Nada en {filter} este ciclo.
+					Aún no hay {filter.toLowerCase()} en este ciclo.
 				</Text>
 			}
 			renderSectionHeader={({ section }) => (

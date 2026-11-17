@@ -32,7 +32,6 @@ function effectCents(row: Row) {
 		case "expense":
 			return -row.amountCents;
 		case "income":
-		case "withdrawal":
 			return row.amountCents;
 		default:
 			return 0;
@@ -95,7 +94,7 @@ export function movementText(
 			return {
 				name: name("Retiro del fondo"),
 				detail: row.reason ? REASON_LABELS[row.reason] : "",
-				amount: signedAmount(effectCents(row)),
+				amount: signedAmount(row.amountCents),
 				tone: "default",
 			};
 		case "contribution":
