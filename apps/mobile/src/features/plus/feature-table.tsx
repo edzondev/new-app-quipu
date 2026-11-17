@@ -33,7 +33,7 @@ export function FeatureTable({ heading, highlight }: { heading: string; highligh
 				return (
 					<View
 						key={row.id}
-						className={`min-h-14 flex-row items-center border-b border-border py-2 ${highlight === row.id ? "-mx-2 rounded-xl bg-muted px-2" : ""}`}
+						className={`min-h-12 flex-row items-center border-b border-border py-2 ${highlight === row.id ? "-mx-2 rounded-xl bg-muted px-2" : ""}`}
 					>
 						<View className="mr-3">
 							<Icon size={18} color={muted} />

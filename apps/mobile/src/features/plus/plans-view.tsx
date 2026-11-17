@@ -6,7 +6,7 @@ import {
 } from "@quipu/backend/shared/billing";
 import { formatCents } from "@quipu/backend/shared/budget";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { FeatureTable } from "./feature-table";
 import type { PlusFeature } from "./features";
@@ -69,14 +69,13 @@ export function PlansView({
 	onContinue: () => void;
 }) {
 	const { offers } = usePlus();
-	const { height } = useWindowDimensions();
 	const [interval, setInterval] = useState<Interval>("year");
 	const prices = planPrices(offers);
 	const saved = annualSavings(prices);
 	const price = prices[interval];
 
 	return (
-		<ScrollView style={{ maxHeight: height * 0.8 }} showsVerticalScrollIndicator={false}>
+		<View>
 			<Text className="text-3xl font-semibold text-foreground">Quipu Plus</Text>
 			<Text className="mt-1 text-sm text-muted-foreground">Elige cómo pagar.</Text>
 
@@ -108,12 +107,12 @@ export function PlansView({
 				Pago seguro · Cancela cuando quieras.
 			</Text>
 
-			<Text className="mt-6 text-[15px] font-semibold text-foreground">Lo que suma Plus</Text>
+			<Text className="mt-5 text-[15px] font-semibold text-foreground">Lo que suma Plus</Text>
 			<Text className="mt-0.5 mb-3 text-xs text-muted-foreground">
 				Todo lo de Gratis, más estas funciones.
 			</Text>
 			<FeatureTable heading="Incluye" highlight={highlight} />
 			<Text className="mt-3 text-xs text-muted-foreground">El resto de Quipu sigue gratis.</Text>
-		</ScrollView>
+		</View>
 	);
 }
