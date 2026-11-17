@@ -15,8 +15,15 @@ export function PasskeySheet({
 	const background = useThemeColor("--color-background");
 
 	return (
-		<BottomSheet isPresented={isPresented} onDismiss={onDismiss} containerColor={background}>
+		<BottomSheet
+			isPresented={isPresented}
+			onDismiss={onDismiss}
+			containerColor={background}
+			showDragIndicator={false}
+			contentPadding={0}
+		>
 			<View className="px-6 pt-3 pb-6">
+				<View className="mb-5 h-1 w-9 self-center rounded-full bg-input" />
 				<View className="size-[52px] items-center justify-center rounded-full bg-muted">
 					<Fingerprint size={26} color={foreground} />
 				</View>
