@@ -21,7 +21,7 @@ export const SAMPLE_HOME: Home = {
 	},
 	split: { needs: 50, wants: 30, savings: 20 },
 	reserved: {
-		needsCents: 5_000,
+		needsCents: 20_900,
 		wantsCents: 0,
 		savingsCents: 0,
 	},
@@ -31,20 +31,50 @@ export const SAMPLE_HOME: Home = {
 	overCents: 0,
 	tomorrowCents: null,
 	daysLeft: 22,
-	pendingCents: 5_000,
+	pendingCents: 20_900,
 	planIncomeCents: 300_000,
 	empty: false,
 	earlyWindow: false,
 	earlyIncome: null,
 };
 
+// Excepción: ids de ejemplo, se borran al conectar Convex
+const ID_REVISION = "sample_revision" as CommitmentId;
+const ID_LUZ = "sample_luz" as CommitmentId;
+const ID_CELULAR = "sample_celular" as CommitmentId;
+const ID_SOAT = "sample_soat" as CommitmentId;
+const ID_ALQUILER = "sample_alquiler" as CommitmentId;
+const ID_PAGO_ALQUILER = "sample_pago_alquiler" as CommitmentList["payments"][number]["paymentId"];
+
 export const SAMPLE_COMMITMENTS: CommitmentList = {
-	payableCents: 5_000,
-	paidCents: 0,
+	payableCents: 20_900,
+	paidCents: 90_000,
 	items: [
 		{
-			// Excepción: dato de ejemplo, se borra al conectar Convex
-			id: "sample_celular" as CommitmentId,
+			id: ID_REVISION,
+			name: "Revisión técnica",
+			amountCents: 12_000,
+			envelope: "needs",
+			frequency: "once",
+			dueDate: "2026-10-20",
+			rule: null,
+			adjustment: null,
+			status: "paid",
+			paidOn: "2026-10-18",
+		},
+		{
+			id: ID_LUZ,
+			name: "Luz",
+			amountCents: 6_400,
+			envelope: "needs",
+			frequency: "monthly",
+			dueDate: "2026-11-12",
+			rule: { kind: "day", day: 12 },
+			adjustment: null,
+			status: "overdue",
+		},
+		{
+			id: ID_CELULAR,
 			name: "Celular",
 			amountCents: 5_000,
 			envelope: "needs",
@@ -54,6 +84,38 @@ export const SAMPLE_COMMITMENTS: CommitmentList = {
 			adjustment: null,
 			status: "upcoming",
 		},
+		{
+			id: ID_SOAT,
+			name: "SOAT",
+			amountCents: 9_500,
+			envelope: "needs",
+			frequency: "once",
+			dueDate: "2026-11-20",
+			rule: null,
+			adjustment: null,
+			status: "reserved",
+		},
+		{
+			id: ID_ALQUILER,
+			name: "Alquiler",
+			amountCents: 90_000,
+			envelope: "needs",
+			frequency: "monthly",
+			dueDate: "2026-12-05",
+			rule: { kind: "day", day: 5 },
+			adjustment: null,
+			status: "later",
+		},
 	],
-	payments: [],
+	payments: [
+		{
+			paymentId: ID_PAGO_ALQUILER,
+			id: ID_ALQUILER,
+			name: "Alquiler",
+			envelope: "needs",
+			amountCents: 90_000,
+			paidOn: "2026-11-05",
+			dueDate: "2026-11-05",
+		},
+	],
 };
