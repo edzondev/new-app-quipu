@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { GIFT_MS } from "../shared/billing";
 import { getCycleRange, getLimaDate } from "../shared/dates";
+import { normalizeEmail } from "../shared/email";
 import { nameSchema } from "../shared/name";
 import { isValidPlan, isValidSplit, type Plan } from "../shared/plan";
 import { components, internal } from "./_generated/api";
@@ -125,7 +126,7 @@ export const claim = internalMutation({
 	handler: async (ctx, { userId, email }): Promise<null> => {
 		const row = await ctx.db
 			.query("migrationImports")
-			.withIndex("by_email", (q) => q.eq("email", email.trim().toLowerCase()))
+			.withIndex("by_email", (q) => q.eq("email", normalizeEmail(email)))
 			.unique();
 		if (!row || row.status !== "pending") return null;
 
@@ -214,18 +215,22 @@ export const claimExisting = internalMutation({
 	},
 });
 
-/** How the cut is going. Pending rows are the ones loaded minus these two. */
+/** How the cut is going: how many rows wait, were claimed, or hit a conflict. */
 export const status = internalQuery({
 	args: {},
-	returns: v.object({ claimed: v.number(), conflict: v.number() }),
+	returns: v.object({ pending: v.number(), claimed: v.number(), conflict: v.number() }),
 	handler: async (ctx) => {
-		const count = async (value: "claimed" | "conflict") =>
+		const count = async (value: "pending" | "claimed" | "conflict") =>
 			(
 				await ctx.db
 					.query("migrationImports")
 					.withIndex("by_status", (q) => q.eq("status", value))
 					.take(STATUS_CAP)
 			).length;
-		return { claimed: await count("claimed"), conflict: await count("conflict") };
+		return {
+			pending: await count("pending"),
+			claimed: await count("claimed"),
+			conflict: await count("conflict"),
+		};
 	},
 });

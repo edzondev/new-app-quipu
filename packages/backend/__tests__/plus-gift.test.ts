@@ -62,6 +62,21 @@ test("when the gift ends the person is on Gratis and a third goal needs Plus", a
 	await expect(addGoal("Curso")).rejects.toThrow(NEED_PLUS);
 });
 
+test("during the gift the trial cannot be asked for, and trialEndsAt stays empty", async () => {
+	const { t, user, profile } = await giftedUser();
+	await expect(user.as.mutation(api.profiles.startTrial, {})).rejects.toThrow(
+		"Ya tienes Plus de regalo.",
+	);
+	const stored = await t.run((ctx) =>
+		ctx.db
+			.query("profiles")
+			.withIndex("by_userId", (q) => q.eq("userId", user.userId))
+			.unique(),
+	);
+	expect(stored?.trialEndsAt).toBeUndefined();
+	expect(await profile()).toMatchObject({ hasPlus: true, plusHistory: "none" });
+});
+
 test("after the gift the 14-day trial is still there to ask for", async () => {
 	const { user, profile } = await giftedUser(NOW - 1);
 	expect(await user.as.mutation(api.profiles.startTrial, {})).toEqual({

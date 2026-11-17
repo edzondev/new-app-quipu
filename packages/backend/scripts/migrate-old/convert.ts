@@ -1,6 +1,7 @@
 import type { Infer } from "convex/values";
 import type { migrationImport } from "../../convex/schema";
 import { NAME_MAX_LENGTH, NOTE_MAX_LENGTH } from "../../shared/budget.ts";
+import { normalizeEmail } from "../../shared/email.ts";
 import { addDays, getLimaDate } from "../../shared/dates.ts";
 
 export type ImportRow = Infer<typeof migrationImport>;
@@ -87,7 +88,7 @@ export type Profile = OldExport["profiles"][number];
 type Cycle = OldExport["financialCycles"][number];
 type Envelope = OldExport["envelopes"][number];
 
-/** Why a person of the old app gets no row. */
+/** Why a person of the old app gets no row. Exported so tests can name each one. */
 export type SkipReason =
 	| "unverified"
 	| "duplicateEmail"
@@ -103,7 +104,9 @@ export type Conversion = {
 	dropped: { savingsExpenses: number; emptyGoals: number };
 };
 
-export const MAX_MOVEMENTS = 4000;
+// The claim writes a person's whole row inside the transaction of their sign-up. Convex's own limits
+// on writes per transaction are not caught by the try/catch in onCreate, so stay well under them.
+export const MAX_MOVEMENTS = 1000;
 export const MAX_ROW_BYTES = 900_000;
 const OPENING_NOTE = "Saldo inicial";
 
@@ -116,10 +119,6 @@ const EXTRA_TYPES: Record<
 	corporate_bonus: "bonus",
 	profit_sharing: "bonus",
 };
-
-export function normalizeEmail(email: string) {
-	return email.trim().toLowerCase();
-}
 
 export function groupBy<T>(items: T[], key: (item: T) => string) {
 	const groups = new Map<string, T[]>();

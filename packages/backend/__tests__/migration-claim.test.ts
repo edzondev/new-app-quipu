@@ -209,7 +209,11 @@ test("claiming again brings nothing twice, and the row keeps no money data", asy
 		goals: [],
 		commitments: [],
 	});
-	expect(await t.query(internal.migration.status, {})).toEqual({ claimed: 1, conflict: 0 });
+	expect(await t.query(internal.migration.status, {})).toEqual({
+		pending: 0,
+		claimed: 1,
+		conflict: 0,
+	});
 });
 
 test("an email with no row goes through Primeros pasos as always", async () => {
@@ -262,5 +266,9 @@ test("claimExisting never mixes with a space the person already has: the row is 
 	expect(await importOf(t)).toMatchObject({ status: "conflict" });
 	expect(await countRows(t)).toEqual(before);
 	expect(await as.query(api.profiles.myProfile, {})).toMatchObject({ hasPlus: false });
-	expect(await t.query(internal.migration.status, {})).toEqual({ claimed: 0, conflict: 1 });
+	expect(await t.query(internal.migration.status, {})).toEqual({
+		pending: 0,
+		claimed: 0,
+		conflict: 1,
+	});
 });

@@ -1,4 +1,5 @@
-import { goalTarget, groupBy, type ImportRow, normalizeEmail, type OldExport } from "./convert.ts";
+import { normalizeEmail } from "../../shared/email.ts";
+import { goalTarget, groupBy, type ImportRow, type OldExport } from "./convert.ts";
 
 export type Difference = "missing" | "envelopes" | "fund" | "goals" | "expenses" | "incomes";
 

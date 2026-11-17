@@ -1,6 +1,12 @@
 import { expect, test } from "vitest";
 import { check, isClean } from "../scripts/migrate-old/check";
-import { convert, fits, MAX_MOVEMENTS, type OldExport } from "../scripts/migrate-old/convert";
+import {
+	convert,
+	fits,
+	MAX_MOVEMENTS,
+	type OldExport,
+	type SkipReason,
+} from "../scripts/migrate-old/convert";
 import { counts } from "../scripts/migrate-old/counts";
 
 /** Noon in Lima of that day, as the old app stores a moment. */
@@ -276,7 +282,7 @@ test("a person with a profile and no cycle gets a row with only the gift", () =>
 	expect(row.closed).toEqual([]);
 });
 
-test.each([
+const SKIPS: [string, (old: OldExport) => void, SkipReason][] = [
 	[
 		"an unverified email",
 		(old: OldExport) => void (old.users[0].emailVerified = false),
@@ -303,7 +309,9 @@ test.each([
 		(old: OldExport) => void (old.financialCycles[0].startDate = at("2026-10-01") - 1000),
 		"cycleDates",
 	],
-] as const)("a person with %s gets no row and is counted", (_, change, reason) => {
+];
+
+test.each(SKIPS)("a person with %s gets no row and is counted", (_, change, reason) => {
 	const old = ana();
 	change(old);
 	const result = convert(old);
