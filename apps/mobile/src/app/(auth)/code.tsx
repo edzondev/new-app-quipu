@@ -11,9 +11,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AngleLeft from "reicon-react-native/icons/AngleLeft";
-import { PasskeySheet } from "@/features/auth/passkey-sheet";
-import { SAMPLE_CODE, SAMPLE_RESEND_SECONDS, WRONG_CODE_MESSAGE } from "@/features/auth/sample";
-import { CODE_LENGTH, formatClock, otpDigits } from "@/features/auth/validation";
+import { getAuthErrorMessage } from "@/features/auth/errors";
+import { useResendClock } from "@/features/auth/use-resend-clock";
+import { CODE_LENGTH, formatClock, otpDigits, RESEND_SECONDS } from "@/features/auth/validation";
+import { authClient, sendSignInCode } from "@/lib/auth-client";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 const BOXES = Array.from({ length: CODE_LENGTH }, (_, index) => index);
@@ -22,18 +23,44 @@ export default function CodeScreen() {
 	const insets = useSafeAreaInsets();
 	const { email } = useLocalSearchParams<{ email: string }>();
 	const [code, setCode] = useState("");
+	const [message, setMessage] = useState<string | null>(null);
 	const [wrong, setWrong] = useState(false);
+	const [verifying, setVerifying] = useState(false);
+	const [resending, setResending] = useState(false);
+	const resend = useResendClock(RESEND_SECONDS);
 	const foreground = useThemeColor("--color-foreground");
+
+	// A good code changes the session and the guard moves to the next screen by itself.
+	async function verify(otp: string) {
+		setVerifying(true);
+		const { error } = await authClient.signIn.emailOtp({ email, otp });
+		if (!error) return;
+		setVerifying(false);
+		setWrong(true);
+		setMessage(getAuthErrorMessage(error));
+	}
 
 	function change(text: string) {
 		const next = otpDigits(text);
 		setCode(next);
-		setWrong(next.length === CODE_LENGTH && next !== SAMPLE_CODE);
+		setWrong(false);
+		setMessage(null);
+		if (next.length === CODE_LENGTH && !verifying) void verify(next);
 	}
 
-	function finish() {
-		router.dismissAll();
-		router.replace("/onboarding");
+	async function resendCode() {
+		if (resending) return;
+		setResending(true);
+		const { error } = await sendSignInCode(email);
+		setResending(false);
+		if (error) {
+			setMessage(getAuthErrorMessage(error));
+			return;
+		}
+		setCode("");
+		setWrong(false);
+		setMessage(null);
+		resend.restart();
 	}
 
 	function boxLine(index: number) {
@@ -90,30 +117,34 @@ export default function CodeScreen() {
 						autoComplete="one-time-code"
 						textContentType="oneTimeCode"
 						value={code}
+						editable={!verifying}
 						onChangeText={change}
 						accessibilityLabel="Código de 6 dígitos"
 					/>
 				</View>
 
-				{wrong ? (
+				{message ? (
 					<Text accessibilityRole="alert" className="mt-3 text-[13px] text-warning-foreground">
-						{WRONG_CODE_MESSAGE}
+						{message}
 					</Text>
 				) : null}
 
 				<Text className="mt-4 text-[13px] text-muted-foreground">Vence en 5 minutos.</Text>
 
 				<View className="flex-row flex-wrap items-center justify-between gap-x-6">
-					{wrong ? (
-						// Luego: reenviar al conectar Convex.
-						<Pressable accessibilityRole="button" className="min-h-11 justify-center">
+					{wrong || resend.left === 0 ? (
+						<Pressable
+							accessibilityRole="button"
+							onPress={() => void resendCode()}
+							className="min-h-11 justify-center"
+						>
 							<Text className="text-[13px] font-semibold text-foreground underline">
 								Reenviar código
 							</Text>
 						</Pressable>
 					) : (
 						<Text className="min-h-11 py-3 font-mono text-[13px] text-muted-foreground">
-							Reenviar en {formatClock(SAMPLE_RESEND_SECONDS)}
+							Reenviar en {formatClock(resend.left)}
 						</Text>
 					)}
 					<Pressable
@@ -125,7 +156,6 @@ export default function CodeScreen() {
 					</Pressable>
 				</View>
 			</ScrollView>
-			<PasskeySheet isPresented={code === SAMPLE_CODE} onDismiss={finish} />
 		</KeyboardAvoidingView>
 	);
 }
