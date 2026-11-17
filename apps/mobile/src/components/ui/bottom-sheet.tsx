@@ -1,17 +1,15 @@
-import { BottomSheet as ExpoBottomSheet } from "@expo/ui";
-import type { ReactNode } from "react";
+import { type BottomSheetProps, BottomSheet as ExpoBottomSheet } from "@expo/ui";
+import type { PropsWithChildren } from "react";
 import { View } from "react-native";
 import { useThemeColor } from "@/lib/use-theme-color";
 
-export function BottomSheet({
-	isPresented,
-	onDismiss,
-	children,
-}: {
-	isPresented: boolean;
-	onDismiss: () => void;
-	children: ReactNode;
-}) {
+type Props = BottomSheetProps &
+	PropsWithChildren<{
+		isPresented: boolean;
+		onDismiss: () => void;
+	}>;
+
+export function BottomSheet({ isPresented, onDismiss, children, ...props }: Props) {
 	const background = useThemeColor("--color-background");
 
 	return (
@@ -21,6 +19,7 @@ export function BottomSheet({
 			containerColor={background}
 			showDragIndicator={false}
 			contentPadding={0}
+			{...props}
 		>
 			<View className="px-6 pt-3 pb-6">
 				<View className="mb-5 h-1 w-9 self-center rounded-full bg-input" />
