@@ -23,6 +23,9 @@ export default function RootLayout() {
 			<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 			<Stack.Screen name="register" options={sheet} />
 			<Stack.Screen name="detection" options={{ headerShown: false }} />
+			<Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
+			<Stack.Screen name="(auth)/code" options={{ headerShown: false }} />
+			<Stack.Screen name="(auth)/passkey" options={sheet} />
 		</Stack>
 	);
 }
