@@ -4,7 +4,8 @@ import { Envelopes } from "@/features/home/envelopes";
 import { homeHero } from "@/features/home/hero";
 import { SAMPLE_COMMITMENTS, SAMPLE_HOME, SAMPLE_TODAY } from "@/features/home/sample";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
-import { ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
@@ -41,6 +42,15 @@ export default function HomeScreen() {
 			</View>
 
 			<DueSoon items={SAMPLE_COMMITMENTS.items} today={SAMPLE_TODAY} />
+
+			{/* TEMPORAL: enlaces de prueba; se quitan al conectar la sesión real. */}
+			<Pressable
+				accessibilityRole="link"
+				className="mt-6 min-h-11 justify-center"
+				onPress={() => router.push("/sign-in")}
+			>
+				<Text className="text-[13px] text-muted-foreground underline">Probar: Entrar</Text>
+			</Pressable>
 		</ScrollView>
 	);
 }
