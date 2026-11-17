@@ -5,7 +5,6 @@ import { CadenceChips } from "@/features/cycle/cadence-chips";
 import { startDayLabel } from "@/features/cycle/days";
 import { MoneyField } from "./money-field";
 
-/** B1: what you have today, which day you are paid and, if you want, how much. */
 export function StepToday({
 	todayText,
 	todayMissing,

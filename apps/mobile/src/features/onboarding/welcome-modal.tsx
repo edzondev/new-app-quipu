@@ -143,7 +143,6 @@ function Content({
 	);
 }
 
-/** B4: shown once, the first time Inicio opens after Primeros pasos. The X or «Empezar» close it; «Ver Plus» starts no trial. */
 export function WelcomeModal({
 	visible,
 	name,

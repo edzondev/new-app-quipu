@@ -2,7 +2,6 @@ import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { FEATURE_OFFERS, type PlusFeature } from "./features";
 
-/** K1 offers the trial; K1b, when the trial was already used, goes straight to the plans. */
 export function OfferView({
 	feature,
 	trialAvailable,

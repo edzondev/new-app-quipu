@@ -15,7 +15,6 @@ const ICONS: Record<PlusFeature, ComponentType<{ size?: number; color?: string }
 	report: ChartBar,
 };
 
-/** Gratis against Plus. Without detection on iPhone, the banks row is not there. */
 export function FeatureTable({ heading, highlight }: { heading: string; highlight?: PlusFeature }) {
 	const muted = useThemeColor("--color-muted-foreground");
 	const savings = useThemeColor("--color-envelope-savings");

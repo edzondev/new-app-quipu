@@ -32,7 +32,6 @@ export default function SavingsScreen() {
 		SAMPLE_FUND.fundCents,
 	);
 
-	// Luego: hoja G4 cuando la meta cabe en Gratis.
 	function newGoal() {
 		if (!hasPlus && SAMPLE_GOALS.length >= FREE_PERSONAL_GOAL_CAP) setPlusOpen(true);
 	}

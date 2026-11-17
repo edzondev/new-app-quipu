@@ -39,7 +39,6 @@ function DeleteContent({ email, date, lines, stillPaying, onConfirm, onClose }: 
 				/>
 				<Text className="mt-2 text-[13px] text-muted-foreground">Vence en 5 minutos.</Text>
 				<View className="mt-5 gap-2">
-					{/* Luego: accountDeletion.confirm; «Eliminando…» mientras responde. */}
 					<Button
 						label="Eliminar cuenta"
 						variant="warning"
@@ -81,7 +80,6 @@ function DeleteContent({ email, date, lines, stillPaying, onConfirm, onClose }: 
 				</View>
 			) : null}
 			<View className="mt-6 gap-2">
-				{/* Luego: accountDeletion.requestCode. */}
 				<Button label="Enviar código" variant="warning" onPress={() => setStep("code")} />
 				<Button label="Cancelar" variant="secondary" onPress={onClose} />
 			</View>
@@ -89,7 +87,6 @@ function DeleteContent({ email, date, lines, stillPaying, onConfirm, onClose }: 
 	);
 }
 
-/** L4 and L4b: the same sheet, first the notice and then the code from the email. */
 export function DeleteSheet({
 	isPresented,
 	onDismiss,

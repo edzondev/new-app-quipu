@@ -1,9 +1,7 @@
 export type PlusFeature = "space" | "banks" | "goals" | "report";
 
-/** Without Plus, detection reads the notices of this many banks. */
 export const FREE_BANKS = 2;
 
-/** The rows of «Lo que suma Plus» and of Tu plan, in the order of K1d. */
 export const PLUS_ROWS: { id: PlusFeature; title: string; detail: string | null }[] = [
 	{ id: "space", title: "Nuestro espacio", detail: "Tu pareja entra gratis." },
 	{ id: "banks", title: "Más de 2 bancos", detail: "Solo en Android." },
@@ -11,7 +9,6 @@ export const PLUS_ROWS: { id: PlusFeature; title: string; detail: string | null 
 	{ id: "report", title: "Informe completo de Progreso con PDF y Excel", detail: null },
 ];
 
-/** What K1 says when a Plus function is touched. */
 export const FEATURE_OFFERS: Record<
 	PlusFeature,
 	{ title: string; subtitle: string; points: { title: string; detail: string }[] }

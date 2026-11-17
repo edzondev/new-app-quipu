@@ -5,11 +5,9 @@ import { ListRow } from "@/components/ui/list-row";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { clockText, useReminder } from "./use-reminder";
 
-/** Diario a las 23:30 por defecto. El selector de hora abre al tocar la fila. */
 export function ReminderRow() {
 	const primary = useThemeColor("--color-primary");
 	const { reminder, denied, toggle, setTime } = useReminder();
-	// The picker's starting time is built when it opens: a Date is not created while rendering.
 	const [picking, setPicking] = useState<Date | null>(null);
 
 	function openPicker() {

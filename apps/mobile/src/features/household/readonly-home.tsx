@@ -6,7 +6,6 @@ import { Envelopes } from "@/features/home/envelopes";
 import { amountParts } from "@/features/home/hero";
 import { SAMPLE_HOUSEHOLD_HOME } from "./sample";
 
-/** K4a: the two see the number and the envelopes, nothing can be written until someone has Plus. */
 export function ReadOnlyHome() {
 	const home = SAMPLE_HOUSEHOLD_HOME;
 	const { whole, decimals } = amountParts(home.dailyCents);

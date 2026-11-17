@@ -69,7 +69,6 @@ function NameForm({
 	);
 }
 
-/** L7. Empty goes back to «Nuestro espacio»; `onSave` gets null then. */
 export function SpaceNameSheet({
 	isPresented,
 	onDismiss,

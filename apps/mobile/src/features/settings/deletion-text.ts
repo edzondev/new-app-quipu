@@ -4,12 +4,10 @@ import { runsAtFor } from "@quipu/backend/shared/deletion";
 
 type Space = { partnerName: string | null; plus: { payerIsMe: boolean } };
 
-/** The day the account would be deleted if asked for today: «27 nov». */
 export function deletionDate(today: string) {
 	return formatDay(getLimaDate(new Date(runsAtFor(today))));
 }
 
-/** The lines of L4 that apply to this person. */
 export function deletionLines({
 	space,
 	plusHistory,

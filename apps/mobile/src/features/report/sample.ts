@@ -3,10 +3,8 @@ import type { FunctionReturnType } from "convex/server";
 
 type ClosedCycle = FunctionReturnType<typeof api.progress.list>["cycles"][number];
 
-// Excepción: id de ejemplo, se borra al conectar Convex
 const ID_SEP = "sample_report_sep" as ClosedCycle["id"];
 
-/** The cycle K4e reports: what each envelope had left, and what went to the fund. */
 export const SAMPLE_REPORT_CYCLE: ClosedCycle = {
 	id: ID_SEP,
 	startDate: "2026-09-15",

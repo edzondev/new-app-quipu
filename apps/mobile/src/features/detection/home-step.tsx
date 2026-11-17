@@ -18,7 +18,6 @@ export function HomeStep({
 	access: boolean;
 	notifications: boolean;
 	reminder: Reminder;
-	/** Banks Plus no longer covers (K4d): they stay chosen but do not detect. */
 	paused: string[];
 	onToggleReminder: (enabled: boolean) => void;
 	onChooseBanks: () => void;

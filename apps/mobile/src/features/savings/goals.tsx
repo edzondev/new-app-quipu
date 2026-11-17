@@ -19,7 +19,6 @@ function GoalCard({ goal, index, locked }: { goal: Goal; index: number; locked: 
 	const color = ENVELOPE_DOT[GOAL_COLORS[index % GOAL_COLORS.length]];
 	const savings = useThemeColor("--color-envelope-savings");
 	const done = goal.savedCents >= goal.targetCents;
-	// K4b: without Plus a goal past the free ones keeps its balance but cannot receive more.
 	const readOnly = locked && !done;
 	const line = readOnly
 		? "Activa Plus para aportar"

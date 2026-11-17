@@ -97,7 +97,6 @@ export function PlansView({
 			</View>
 
 			<View className="mt-4">
-				{/* Luego: pago de Google Play al conectar la tienda. */}
 				<Button label="Continuar" disabled={price === null} onPress={onContinue} />
 			</View>
 			<Text className="mt-2 text-center text-xs text-muted-foreground">

@@ -37,7 +37,6 @@ export const SAMPLE_GOALS: GoalList = [
 		savedCents: 60_000,
 	},
 	{
-		// Excepción: dato de ejemplo, se borra al conectar Convex
 		id: "sample_ingles" as GoalId,
 		name: "Curso de inglés",
 		targetCents: 120_000,

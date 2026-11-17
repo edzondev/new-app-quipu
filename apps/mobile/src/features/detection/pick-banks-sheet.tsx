@@ -19,7 +19,6 @@ function PickBanks({
 }) {
 	const [picked, setPicked] = useState(kept);
 
-	// Marking one more than allowed unmarks the last one.
 	function toggle(packageName: string) {
 		setPicked((current) =>
 			current.includes(packageName)
@@ -68,7 +67,6 @@ function PickBanks({
 	);
 }
 
-/** K4c: after Plus ends with more than 2 banks, choose the 2 that keep detecting. */
 export function PickBanksSheet({
 	isPresented,
 	onDismiss,

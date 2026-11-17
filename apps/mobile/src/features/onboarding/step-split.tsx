@@ -32,7 +32,6 @@ function StepButton({
 	);
 }
 
-/** B2: the three envelopes with 50/30/20, in steps of 5 %. It may add up to something else: Continuar says so. */
 export function StepSplit({
 	split,
 	amounts,

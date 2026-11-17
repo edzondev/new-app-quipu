@@ -3,7 +3,6 @@ import { Segmented } from "@/components/ui/segmented";
 
 const MODES = ["system", "light", "dark"] as const;
 
-/** «Sistema» follows the phone's theme. */
 export function Appearance() {
 	const { theme, hasAdaptiveThemes } = useUniwind();
 	const selected = hasAdaptiveThemes ? 0 : theme === "dark" ? 2 : 1;

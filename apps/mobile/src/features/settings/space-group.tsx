@@ -12,7 +12,6 @@ type Household = NonNullable<FunctionReturnType<typeof api.household.get>>;
 
 const limaDay = (ms: number) => formatDay(getLimaDate(new Date(ms)));
 
-/** L1c: the space's name, who is in it and its own cycle. Only shows when the space exists. */
 export function SpaceGroup({
 	household,
 	name,
@@ -50,7 +49,6 @@ export function SpaceGroup({
 						}
 					/>
 					<View className="mt-3">
-						{/* Luego: household.createInvite. */}
 						<Button label="Volver a enviar invitación" variant="secondary" onPress={() => {}} />
 					</View>
 				</>

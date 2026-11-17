@@ -11,18 +11,15 @@ export function stepSplit(split: Split, key: keyof Split, delta: number): Split 
 	return { ...split, [key]: Math.min(100, Math.max(0, split[key] + delta)) };
 }
 
-/** A fixed monthly payment as typed in B3s: the texts are parsed when the number is worked out. */
 export type FixedItem = { id: string; name: string; dayText: string; amountText: string };
 
 export const FIXED_SHORTCUTS = ["Alquiler", "Celular", "Internet", "Servicios", "Otro"];
 
-/** «20 – 31 oct», or both months when the cycle crosses one. */
 export function rangeText({ startDate, endDate }: Range) {
 	const sameMonth = startDate.slice(0, 7) === endDate.slice(0, 7);
 	return `${sameMonth ? Number(startDate.slice(8)) : formatDay(startDate)} – ${formatDay(endDate)}`;
 }
 
-/** What the fixed payments that fall inside the first cycle take before the split. */
 function reservedCents(range: Range, items: FixedItem[]) {
 	const [year, month] = range.startDate.split("-").map(Number);
 	return items.reduce((total, item) => {
@@ -33,7 +30,6 @@ function reservedCents(range: Range, items: FixedItem[]) {
 	}, 0);
 }
 
-/** The number B3 shows: the same rule as Inicio, with today's money and the days of the first cycle. */
 export function firstNumber({
 	todayCents,
 	split,

@@ -5,7 +5,6 @@ const SIZES = {
 	md: { currency: "mt-1.5 text-xl", number: "text-[56px]", decimals: "text-[26px]" },
 } as const;
 
-/** The big number of the day, with its cents smaller. `over` paints it amber. */
 export function DayNumber({
 	whole,
 	decimals,

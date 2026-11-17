@@ -3,7 +3,6 @@ import type { FunctionReturnType } from "convex/server";
 
 type Offers = FunctionReturnType<typeof api.billing.offer>;
 
-/** 24 nov, Lima. */
 export const SAMPLE_TRIAL_ENDS_AT = Date.UTC(2026, 10, 24, 15);
 
 export const SAMPLE_OFFERS: Offers = [
@@ -19,10 +18,6 @@ export const SAMPLE_OFFERS: Offers = [
 	},
 ];
 
-/**
- * Every plan Tu plan can show, to look at each one: `/plan?status=trial`. Without the parameter
- * it is «free». Se borra al conectar Convex: ahí manda `billing.status`.
- */
 const SAMPLE_STATUSES = {
 	free: { kind: "free" },
 	trial: { kind: "trial", endsAt: SAMPLE_TRIAL_ENDS_AT },

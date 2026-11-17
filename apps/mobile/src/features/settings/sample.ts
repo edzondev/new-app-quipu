@@ -21,10 +21,8 @@ export const SAMPLE_PROFILE: Profile = {
 	deletionRunsAt: null,
 };
 
-/** The email is Better Auth's, not Convex's: it comes from the session. */
 export const SAMPLE_EMAIL = "edzon@correo.pe";
 
-/** Nuestro espacio with an invitation still waiting and without Plus (K4a). */
 export const SAMPLE_HOUSEHOLD: Household = {
 	name: null,
 	isOwner: true,
@@ -37,7 +35,6 @@ export const SAMPLE_HOUSEHOLD: Household = {
 	plus: { active: false, payerName: null, payerIsMe: false },
 };
 
-/** A device of Seguridad. Better Auth's `listUserPasskeys` and `listSessions`, ya con su texto. */
 export type Device = { id: string; name: string; detail: string };
 
 export const SAMPLE_PASSKEYS: Device[] = [

@@ -8,7 +8,6 @@ const CORDS = [
 	{ d: "M-45 102C27 7 48 71 66 116s49 57 78 11S207 36 252 52s110 45 240 0", token: "savings" },
 ] as const;
 
-/** The three cords of Quipu, one per envelope, behind the logo of the welcome. */
 export function CordsBand() {
 	const colors = {
 		needs: useThemeColor("--color-envelope-needs"),

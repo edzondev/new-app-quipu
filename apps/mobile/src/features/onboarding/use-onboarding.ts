@@ -9,7 +9,6 @@ type Step = 1 | 2 | 3;
 
 let nextItemId = 0;
 
-/** The three steps of Primeros pasos. `warn` says what a step needs before moving on (amber). */
 export function useOnboarding(warn: (text: string) => void) {
 	const [step, setStep] = useState<Step>(1);
 	const [todayText, setTodayText] = useState("");

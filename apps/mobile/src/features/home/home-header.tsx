@@ -6,7 +6,6 @@ import { useSpace } from "@/features/household/space-context";
 
 const SPACES = ["personal", "household"] as const;
 
-/** The avatar opens Ajustes. With a space, Personal and Nuestro espacio switch what Inicio shows. */
 export function HomeHeader({ name, hasHousehold }: { name: string; hasHousehold: boolean }) {
 	const { space, setSpace } = useSpace();
 

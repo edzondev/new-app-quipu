@@ -58,7 +58,6 @@ function FixedRow({
 	);
 }
 
-/** B3s: the fixed monthly payments. They are held back before the split, and the line says what that does to today's number. */
 export function FixedSheet({
 	isPresented,
 	onDismiss,

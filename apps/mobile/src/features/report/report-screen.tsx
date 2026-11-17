@@ -12,7 +12,6 @@ import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { SAMPLE_REPORT_CYCLE } from "./sample";
 
-// The blurred bars of «Comparar ciclos»: heights only, there is nothing to compare without Plus.
 const LOCKED_BARS = ["h-[52px]", "h-[84px]", "h-[68px]", "h-[100px]"] as const;
 
 function SummaryRow({
@@ -42,7 +41,6 @@ function SummaryRow({
 	);
 }
 
-/** K4e: without Plus the summary of the close shows; the comparison between cycles is locked. */
 export function ReportScreen() {
 	const insets = useSafeAreaInsets();
 	const muted = useThemeColor("--color-muted-foreground");

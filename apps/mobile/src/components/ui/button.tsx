@@ -3,7 +3,6 @@ import { Pressable, Text } from "react-native";
 const VARIANTS = {
 	primary: { box: "bg-primary", text: "text-primary-foreground" },
 	secondary: { box: "bg-secondary", text: "text-secondary-foreground" },
-	// Acciones que cuestan algo: ámbar, nunca rojo.
 	warning: { box: "border border-warning", text: "text-warning-foreground" },
 } as const;
 

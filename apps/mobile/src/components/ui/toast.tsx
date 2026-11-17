@@ -30,7 +30,6 @@ function ToastView({ text, warning }: Toast) {
 	);
 }
 
-/** One message at a time, gone after 3 s. Render `view` last in the screen so it sits on top. */
 export function useToast() {
 	const [toast, setToast] = useState<Toast | null>(null);
 

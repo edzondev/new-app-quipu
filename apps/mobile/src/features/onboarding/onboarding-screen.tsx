@@ -22,7 +22,6 @@ export function OnboardingScreen() {
 	const rangeLabel = rangeText(flow.range);
 	const last = flow.step === 3;
 
-	// Luego: completeOnboarding al conectar Convex. «welcome» abre B4 una sola vez en Inicio.
 	function finish() {
 		router.replace({ pathname: "/", params: { welcome: "1" } });
 	}

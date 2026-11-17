@@ -3,7 +3,6 @@ import type { FunctionReturnType } from "convex/server";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
 
-/** Nuestro espacio, with its own cycle (K4a). */
 export const SAMPLE_HOUSEHOLD_HOME: Home = {
 	startDate: "2026-10-15",
 	endDate: "2026-11-14",

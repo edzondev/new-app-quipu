@@ -31,7 +31,6 @@ export default function CodeScreen() {
 		setWrong(next.length === CODE_LENGTH && next !== SAMPLE_CODE);
 	}
 
-	// Luego: passkey real al conectar Better Auth. Primeros pasos se salta si la cuenta ya tiene plan.
 	function finish() {
 		router.dismissAll();
 		router.replace("/onboarding");

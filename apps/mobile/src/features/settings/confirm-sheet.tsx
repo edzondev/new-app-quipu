@@ -2,7 +2,6 @@ import { Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 
-/** Every confirmation of Ajustes is a bottom sheet, not a dialog (L3). */
 export function ConfirmSheet({
 	isPresented,
 	title,

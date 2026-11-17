@@ -82,7 +82,6 @@ function CycleForm({
 	);
 }
 
-/** L6. The open cycle closes on its date; `onSave` gets the new frequency and start day. */
 export function CycleSheet({
 	isPresented,
 	onDismiss,

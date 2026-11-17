@@ -52,7 +52,6 @@ export default function DetectionScreen() {
 				setReminderState(saved);
 				setNotifications(canPost);
 				setAccess(isAccessEnabled());
-				// K4c shows once when Plus ended and more than 2 banks were left connected.
 				const connected = rows.filter((bank) => bank.chosen && bank.installed).length;
 				setPickerOpen(!hasPlus && connected > FREE_BANKS);
 				setReady(true);
@@ -79,7 +78,6 @@ export default function DetectionScreen() {
 	const selected =
 		picked ?? banks.filter((bank) => bank.chosen && bank.installed).map((bank) => bank.packageName);
 
-	// The first 2 banks connected keep detecting until the person chooses (K4c).
 	const keptBanks = kept ?? selected.slice(0, FREE_BANKS);
 	const paused = hasPlus ? [] : selected.filter((packageName) => !keptBanks.includes(packageName));
 	const chosenBanks = banks.filter((bank) => selected.includes(bank.packageName));
@@ -105,7 +103,6 @@ export default function DetectionScreen() {
 	}
 
 	function toggleBank(packageName: string) {
-		// K1b: a third bank is a Plus function.
 		if (!hasPlus && !selected.includes(packageName) && selected.length >= FREE_BANKS) {
 			setPlusOpen(true);
 			return;

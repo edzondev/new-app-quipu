@@ -9,7 +9,6 @@ import { wholeSoles } from "@/features/savings/progress";
 import type { Cadence } from "@quipu/backend/shared/plan";
 import type { firstNumber } from "./plan";
 
-/** B3: today's number with what you have today, and the fixed payments as an option. */
 export function StepNumber({
 	cadence,
 	todayCents,

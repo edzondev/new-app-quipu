@@ -64,7 +64,6 @@ export function SecurityScreen() {
 					))
 				)}
 				<View className="mt-4">
-					{/* Luego: registrar la llave con Better Auth. */}
 					<Button label="Activar huella o rostro" variant="secondary" onPress={() => {}} />
 				</View>
 

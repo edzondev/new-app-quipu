@@ -36,11 +36,6 @@ function PlusContent({
 	);
 }
 
-/**
- * With a `feature`, the sheet opens as K1 or K1b (a Plus function was touched); without one, as the
- * plans (K1d). «Ver planes» swaps the content, and the touched function stays highlighted (K1e).
- * `onTrial` runs once the trial starts, to say so with a toast.
- */
 export function PlusSheet({
 	isPresented,
 	onDismiss,

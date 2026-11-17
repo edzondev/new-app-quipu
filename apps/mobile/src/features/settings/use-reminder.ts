@@ -6,7 +6,6 @@ export function clockText(hour: number, minute: number) {
 	return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-/** The daily reminder lives in the native module; this only reads it and writes it. */
 export function useReminder() {
 	const [reminder, setReminderState] = useState(DEFAULT_REMINDER);
 	const [denied, setDenied] = useState(false);
