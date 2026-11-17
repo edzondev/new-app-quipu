@@ -34,7 +34,8 @@ function Screens() {
 			<Stack.Protected guard={!isAuthenticated}>
 				<Stack.Screen name="(auth)" />
 			</Stack.Protected>
-			<Stack.Protected guard={isAuthenticated}>
+			{/* (auth) has no index, so the default fallback would point at "/", which is (tabs). */}
+			<Stack.Protected guard={isAuthenticated} redirectTo="/sign-in">
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
 				<Stack.Screen name="register" options={sheet} />
