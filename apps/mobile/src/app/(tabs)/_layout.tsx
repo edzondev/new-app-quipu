@@ -6,6 +6,7 @@ import ChartBar from "reicon-react-native/icons/ChartBar";
 import Home from "reicon-react-native/icons/Home";
 import List from "reicon-react-native/icons/List";
 import ShieldCheck from "reicon-react-native/icons/ShieldCheck";
+import { SpaceProvider } from "@/features/household/space-context";
 import { TabBar } from "@/features/navigation/tab-bar";
 import { FloatingActions } from "@/features/register/floating-actions";
 
@@ -17,7 +18,7 @@ function tabIcon(Icon: ComponentType<{ size?: number; color?: string }>) {
 
 export default function TabsLayout() {
 	return (
-		<>
+		<SpaceProvider>
 			<Tabs
 				tabBar={(props) => <TabBar {...props} />}
 				screenOptions={{
@@ -44,6 +45,6 @@ export default function TabsLayout() {
 				/>
 			</Tabs>
 			<FloatingActions />
-		</>
+		</SpaceProvider>
 	);
 }

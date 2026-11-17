@@ -3,11 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { AppState, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { askPostNotifications, canPostNotifications } from "@/features/detection/android";
 import { BanksStep } from "@/features/detection/banks-step";
 import { BlockedStep } from "@/features/detection/blocked-step";
 import { ConsentStep } from "@/features/detection/consent-step";
 import { HomeStep } from "@/features/detection/home-step";
+import { PickBanksSheet } from "@/features/detection/pick-banks-sheet";
+import { FREE_BANKS } from "@/features/plus/features";
+import { PlusSheet } from "@/features/plus/plus-sheet";
+import { trialStartedText } from "@/features/plus/trial";
+import { usePlus } from "@/features/plus/use-plus";
 import {
 	type Bank,
 	DEFAULT_REMINDER,
@@ -23,6 +29,11 @@ type Step = "home" | "banks" | "consent" | "blocked";
 
 export default function DetectionScreen() {
 	const insets = useSafeAreaInsets();
+	const { hasPlus } = usePlus();
+	const toast = useToast();
+	const [plusOpen, setPlusOpen] = useState(false);
+	const [pickerOpen, setPickerOpen] = useState(false);
+	const [kept, setKept] = useState<string[] | null>(null);
 	const [step, setStep] = useState<Step>("home");
 	const [banks, setBanks] = useState<Bank[]>([]);
 	const [ready, setReady] = useState(false);
@@ -41,13 +52,16 @@ export default function DetectionScreen() {
 				setReminderState(saved);
 				setNotifications(canPost);
 				setAccess(isAccessEnabled());
+				// K4c shows once when Plus ended and more than 2 banks were left connected.
+				const connected = rows.filter((bank) => bank.chosen && bank.installed).length;
+				setPickerOpen(!hasPlus && connected > FREE_BANKS);
 				setReady(true);
 			},
 		);
 		return () => {
 			alive = false;
 		};
-	}, []);
+	}, [hasPlus]);
 
 	useEffect(() => {
 		const sub = AppState.addEventListener("change", (state) => {
@@ -64,6 +78,11 @@ export default function DetectionScreen() {
 
 	const selected =
 		picked ?? banks.filter((bank) => bank.chosen && bank.installed).map((bank) => bank.packageName);
+
+	// The first 2 banks connected keep detecting until the person chooses (K4c).
+	const keptBanks = kept ?? selected.slice(0, FREE_BANKS);
+	const paused = hasPlus ? [] : selected.filter((packageName) => !keptBanks.includes(packageName));
+	const chosenBanks = banks.filter((bank) => selected.includes(bank.packageName));
 
 	function openSettings() {
 		waiting.current = true;
@@ -86,6 +105,11 @@ export default function DetectionScreen() {
 	}
 
 	function toggleBank(packageName: string) {
+		// K1b: a third bank is a Plus function.
+		if (!hasPlus && !selected.includes(packageName) && selected.length >= FREE_BANKS) {
+			setPlusOpen(true);
+			return;
+		}
 		setPicked(
 			selected.includes(packageName)
 				? selected.filter((id) => id !== packageName)
@@ -137,12 +161,35 @@ export default function DetectionScreen() {
 						access={access}
 						notifications={notifications}
 						reminder={reminder}
+						paused={paused}
 						onToggleReminder={(enabled) => void toggleReminder(enabled)}
 						onChooseBanks={() => setStep("banks")}
+						onChangePaused={() => setPickerOpen(true)}
 						onClose={() => router.back()}
 					/>
 				)}
 			</ScrollView>
+			<PickBanksSheet
+				isPresented={pickerOpen}
+				onDismiss={() => setPickerOpen(false)}
+				banks={chosenBanks}
+				kept={keptBanks}
+				onSave={(names) => {
+					setKept(names);
+					setPickerOpen(false);
+				}}
+				onPlans={() => {
+					setPickerOpen(false);
+					setPlusOpen(true);
+				}}
+			/>
+			<PlusSheet
+				isPresented={plusOpen}
+				onDismiss={() => setPlusOpen(false)}
+				feature="banks"
+				onTrial={(endsAt) => toast.show(trialStartedText(endsAt))}
+			/>
+			{toast.view}
 		</View>
 	);
 }

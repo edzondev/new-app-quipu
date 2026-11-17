@@ -1,0 +1,99 @@
+import { router } from "expo-router";
+import { useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
+import { DayGrid } from "@/features/cycle/day-grid";
+import { FixedSheet } from "./fixed-sheet";
+import { rangeText } from "./plan";
+import { StepHeader } from "./step-header";
+import { StepNumber } from "./step-number";
+import { StepSplit } from "./step-split";
+import { StepToday } from "./step-today";
+import { useOnboarding } from "./use-onboarding";
+
+export function OnboardingScreen() {
+	const insets = useSafeAreaInsets();
+	const toast = useToast();
+	const flow = useOnboarding((text) => toast.show(text, true));
+	const [sheet, setSheet] = useState<"day" | "fixed" | null>(null);
+	const rangeLabel = rangeText(flow.range);
+	const last = flow.step === 3;
+
+	// Luego: completeOnboarding al conectar Convex. «welcome» abre B4 una sola vez en Inicio.
+	function finish() {
+		router.replace({ pathname: "/", params: { welcome: "1" } });
+	}
+
+	return (
+		<KeyboardAvoidingView
+			className="flex-1 bg-background"
+			behavior={Platform.OS === "ios" ? "padding" : undefined}
+		>
+			<View style={{ paddingTop: insets.top }}>
+				<StepHeader step={flow.step} onBack={flow.back} />
+			</View>
+			<ScrollView
+				className="flex-1"
+				contentContainerClassName="px-6 pt-2 pb-6"
+				keyboardShouldPersistTaps="handled"
+			>
+				{flow.step === 1 ? (
+					<StepToday
+						todayText={flow.todayText}
+						todayMissing={flow.todayMissing}
+						onToday={flow.setTodayText}
+						cadence={flow.cadence}
+						onCadence={flow.setCadence}
+						startDay={flow.startDay}
+						rangeLabel={rangeLabel}
+						onOpenDay={() => setSheet("day")}
+						incomeText={flow.incomeText}
+						onIncome={flow.setIncomeText}
+					/>
+				) : flow.step === 2 ? (
+					<StepSplit split={flow.split} amounts={flow.number.envelopes} onChange={flow.setSplit} />
+				) : (
+					<StepNumber
+						cadence={flow.cadence}
+						todayCents={flow.todayCents}
+						rangeLabel={rangeLabel}
+						endDate={flow.range.endDate}
+						number={flow.number}
+						onOpenFixed={() => setSheet("fixed")}
+					/>
+				)}
+			</ScrollView>
+			<View className="px-6 pt-3" style={{ paddingBottom: insets.bottom + 12 }}>
+				<Button
+					label={last ? "Empezar mi ciclo" : "Continuar"}
+					disabled={last && flow.number.overIncome}
+					onPress={last ? finish : flow.next}
+				/>
+			</View>
+
+			<BottomSheet isPresented={sheet === "day"} onDismiss={() => setSheet(null)}>
+				<DayGrid
+					cadence={flow.cadence}
+					value={flow.startDay}
+					onPick={(day) => {
+						flow.setStartDay(day);
+						setSheet(null);
+					}}
+				/>
+			</BottomSheet>
+			<FixedSheet
+				isPresented={sheet === "fixed"}
+				onDismiss={() => setSheet(null)}
+				items={flow.items}
+				dailyCents={flow.number.dailyCents}
+				onAdd={flow.addItem}
+				onChange={flow.updateItem}
+				onRemove={flow.removeItem}
+			/>
+			{toast.view}
+		</KeyboardAvoidingView>
+	);
+}
