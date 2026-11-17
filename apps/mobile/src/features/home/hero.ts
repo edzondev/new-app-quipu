@@ -7,12 +7,17 @@ type HomeHeroInput = Pick<
 	"overCents" | "spentTodayCents" | "leftCents" | "dailyCents"
 >;
 
+export function amountParts(cents: number) {
+	const [whole, decimals] = formatCents(cents).split(".");
+	return { whole, decimals: decimals ?? "00" };
+}
+
 /** Same rule as the web home page: over → left today → daily. */
 export function homeHero({ overCents, spentTodayCents, leftCents, dailyCents }: HomeHeroInput) {
 	const over = overCents > 0;
 	const spent = spentTodayCents > 0;
 	const cents = over ? overCents : spent ? leftCents : dailyCents;
-	const [whole, decimals] = formatCents(cents).split(".");
+	const { whole, decimals } = amountParts(cents);
 	const label = over ? "Hoy te pasaste" : spent ? "Te queda hoy" : "Puedes gastar hoy";
-	return { whole, decimals: decimals ?? "00", label, over };
+	return { whole, decimals, label, over };
 }
