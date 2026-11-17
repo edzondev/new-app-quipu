@@ -5,7 +5,6 @@ import { nameSchema } from "@quipu/backend/shared/name";
 import { type Cadence, type CycleStartDay, isValidSplit } from "@quipu/backend/shared/plan";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
-import { router } from "expo-router";
 import { useState } from "react";
 import { DEFAULT_SPLIT, type FixedItem, firstNumber } from "./plan";
 
@@ -56,7 +55,6 @@ export function useOnboarding(warn: (text: string) => void, profileName: string)
 				todayCents,
 				split,
 			});
-			router.replace("/");
 		} catch (error) {
 			warn(
 				error instanceof ConvexError
