@@ -1,6 +1,7 @@
 import { router } from "expo-router";
+import { authClient } from "@/lib/auth-client";
 
-export function leaveToSignIn() {
-	router.dismissAll();
-	router.push("/sign-in");
+export async function leaveToSignIn() {
+	await authClient.signOut();
+	router.replace("/sign-in");
 }

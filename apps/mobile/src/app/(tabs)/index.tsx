@@ -1,5 +1,7 @@
+import { api } from "@quipu/backend/convex/_generated/api";
 import { formatDaysLeft } from "@quipu/backend/shared/dates";
-import { router, useLocalSearchParams } from "expo-router";
+import { useMutation, useQuery } from "convex/react";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,12 +21,13 @@ import { SAMPLE_PROFILE } from "@/features/settings/sample";
 export default function HomeScreen() {
 	const insets = useSafeAreaInsets();
 	const { space } = useSpace();
-	const { welcome } = useLocalSearchParams<{ welcome?: string }>();
+	const profile = useQuery(api.profiles.myProfile);
+	const markWelcomeSeen = useMutation(api.profiles.markWelcomeSeen);
 	const [plansOpen, setPlansOpen] = useState(false);
 	const hero = homeHero(SAMPLE_HOME);
 	const daysLeft = formatDaysLeft(SAMPLE_HOME.daysLeft);
 	const daysLeftLabel = `${daysLeft.charAt(0).toUpperCase()}${daysLeft.slice(1)}`;
-	const closeWelcome = () => router.setParams({ welcome: undefined });
+	const closeWelcome = () => void markWelcomeSeen();
 
 	return (
 		<View className="flex-1 bg-background">
@@ -60,17 +63,10 @@ export default function HomeScreen() {
 					</>
 				)}
 
-				{/* TEMPORAL: enlaces de prueba; se quitan al conectar la sesión real. */}
+				{/* TEMPORAL: enlace de prueba; se quita al conectar el informe del ciclo. */}
 				<Pressable
 					accessibilityRole="link"
 					className="mt-6 min-h-11 justify-center"
-					onPress={() => router.push("/sign-in")}
-				>
-					<Text className="text-[13px] text-muted-foreground underline">Probar: Entrar</Text>
-				</Pressable>
-				<Pressable
-					accessibilityRole="link"
-					className="min-h-11 justify-center"
 					onPress={() => router.push("/report")}
 				>
 					<Text className="text-[13px] text-muted-foreground underline">
@@ -80,8 +76,8 @@ export default function HomeScreen() {
 			</ScrollView>
 
 			<WelcomeModal
-				visible={welcome === "1"}
-				name={SAMPLE_PROFILE.name}
+				visible={profile !== undefined && profile !== null && !profile.welcomeSeen}
+				name={profile?.name ?? ""}
 				onClose={closeWelcome}
 				onSeePlus={() => {
 					closeWelcome();

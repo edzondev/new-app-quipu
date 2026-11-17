@@ -47,7 +47,7 @@ export function SettingsScreen() {
 	const close = () => setSheet(null);
 	function leave() {
 		close();
-		leaveToSignIn();
+		void leaveToSignIn();
 	}
 	const { lines, stillPaying } = deletionLines({
 		space: SAMPLE_PROFILE.hasHousehold ? SAMPLE_HOUSEHOLD : null,
