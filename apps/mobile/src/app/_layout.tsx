@@ -25,7 +25,10 @@ export default function RootLayout() {
 			<Stack.Screen name="detection" options={{ headerShown: false }} />
 			<Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
 			<Stack.Screen name="(auth)/code" options={{ headerShown: false }} />
-			<Stack.Screen name="(auth)/passkey" options={sheet} />
+			<Stack.Screen
+				name="(auth)/passkey"
+				options={{ presentation: "transparentModal", headerShown: false, animation: "none" }}
+			/>
 		</Stack>
 	);
 }
