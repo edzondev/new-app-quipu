@@ -9,7 +9,7 @@ import { ReloadError } from "#/components/reload-error";
 import { Button } from "#/components/ui/button";
 import { toastManager } from "#/components/ui/toast";
 import { useSignOut } from "#/hooks/use-sign-out";
-import { getAuthErrorMessage } from "#/lib/auth-errors";
+import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { readError } from "#/lib/read-error";
 
 export function DeletionPendingPage() {

@@ -6,7 +6,7 @@ import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { useCountdown } from "#/hooks/use-countdown";
 import { authClient, sendSignInCode } from "#/lib/auth-client";
-import { type AuthError, getAuthErrorMessage } from "#/lib/auth-errors";
+import { type AuthError, getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { otpStepSchema } from "#/modules/auth/schemas";
 import { authButton, authInput, authLabel, authLink, authTitle } from "#/modules/auth/styles";
 

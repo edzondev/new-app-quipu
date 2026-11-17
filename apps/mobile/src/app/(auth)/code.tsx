@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AngleLeft from "reicon-react-native/icons/AngleLeft";
-import { getAuthErrorMessage } from "@/features/auth/errors";
+import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { useResendClock } from "@/features/auth/use-resend-clock";
 import { CODE_LENGTH, formatClock, otpDigits, RESEND_SECONDS } from "@/features/auth/validation";
 import { authClient, sendSignInCode } from "@/lib/auth-client";
@@ -33,11 +33,17 @@ export default function CodeScreen() {
 	// A good code changes the session and the guard moves to the next screen by itself.
 	async function verify(otp: string) {
 		setVerifying(true);
-		const { error } = await authClient.signIn.emailOtp({ email, otp });
-		if (!error) return;
-		setVerifying(false);
-		setWrong(true);
-		setMessage(getAuthErrorMessage(error));
+		try {
+			const { error } = await authClient.signIn.emailOtp({ email, otp });
+			if (!error) return;
+			setWrong(true);
+			setMessage(getAuthErrorMessage(error));
+		} catch {
+			setWrong(true);
+			setMessage(getAuthErrorMessage(null));
+		} finally {
+			setVerifying(false);
+		}
 	}
 
 	function change(text: string) {
@@ -53,16 +59,21 @@ export default function CodeScreen() {
 	async function resendCode() {
 		if (resending) return;
 		setResending(true);
-		const { error } = await sendSignInCode(email);
-		setResending(false);
-		if (error) {
-			setMessage(getAuthErrorMessage(error));
-			return;
+		try {
+			const { error } = await sendSignInCode(email);
+			if (error) {
+				setMessage(getAuthErrorMessage(error));
+				return;
+			}
+			setCode("");
+			setWrong(false);
+			setMessage(null);
+			resend.restart();
+		} catch {
+			setMessage(getAuthErrorMessage(null));
+		} finally {
+			setResending(false);
 		}
-		setCode("");
-		setWrong(false);
-		setMessage(null);
-		resend.restart();
 	}
 
 	function boxLine(index: number) {
@@ -138,8 +149,10 @@ export default function CodeScreen() {
 					{wrong || resend.left === 0 ? (
 						<Pressable
 							accessibilityRole="button"
+							accessibilityState={{ disabled: resending }}
+							disabled={resending}
 							onPress={() => void resendCode()}
-							className="min-h-11 justify-center"
+							className={`min-h-11 justify-center ${resending ? "opacity-50" : ""}`}
 						>
 							<Text className="text-[13px] font-semibold text-foreground underline">
 								Reenviar código

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { authClient, reloadTo } from "#/lib/auth-client";
-import type { AuthError } from "#/lib/auth-errors";
+import type { AuthError } from "@quipu/backend/shared/auth-errors";
 
 const END_SESSIONS = {
 	current: () => authClient.signOut(),

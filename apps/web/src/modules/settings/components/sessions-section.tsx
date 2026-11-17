@@ -13,7 +13,7 @@ import {
 import { Button } from "#/components/ui/button";
 import { useSignOut } from "#/hooks/use-sign-out";
 import { authClient } from "#/lib/auth-client";
-import { type AuthError, getAuthErrorMessage } from "#/lib/auth-errors";
+import { type AuthError, getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { EYEBROW } from "#/lib/typography";
 import { type SessionList, sessionsQuery, unwrap } from "../auth-queries";
 import { AuthErrorNotice } from "./auth-error-notice";

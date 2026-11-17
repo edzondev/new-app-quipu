@@ -1,6 +1,6 @@
 import { Button } from "#/components/ui/button";
 import { useSignOut } from "#/hooks/use-sign-out";
-import { type AuthError, getAuthErrorMessage } from "#/lib/auth-errors";
+import { type AuthError, getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 
 /**
  * Listing sessions and adding a key need a session younger than 24 h. When it is older, the only

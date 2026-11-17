@@ -6,7 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { authClient, reloadTo, sendSignInCode } from "#/lib/auth-client";
-import { getAuthErrorMessage } from "#/lib/auth-errors";
+import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { emailStepSchema } from "#/modules/auth/schemas";
 import { authButton, authInput, authLabel, authTitle } from "#/modules/auth/styles";
 
