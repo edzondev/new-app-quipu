@@ -1,10 +1,12 @@
 import { groupCommitments } from "@quipu/backend/shared/commitments";
+import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import AngleDown from "reicon-react-native/icons/AngleDown";
 import Plus from "reicon-react-native/icons/Plus";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { CommitmentRow } from "@/features/commitments/commitment-row";
-import { dueLine, paymentFrequency } from "@/features/commitments/commitment-text";
+import { dueLine, paidBeforeLine, paymentFrequency } from "@/features/commitments/commitment-text";
 import { SAMPLE_COMMITMENTS, SAMPLE_TODAY } from "@/features/home/sample";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { wholeSoles } from "@/features/savings/progress";
@@ -14,9 +16,19 @@ function Title() {
 	return <Text className="text-3xl font-semibold text-foreground">Compromisos</Text>;
 }
 
+function Eyebrow({ children }: { children: ReactNode }) {
+	return (
+		<Text className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+			{children}
+		</Text>
+	);
+}
+
 export default function CommitmentsScreen() {
 	const insets = useSafeAreaInsets();
 	const foreground = useThemeColor("--color-foreground");
+	const muted = useThemeColor("--color-muted-foreground");
+	const [paidBeforeOpen, setPaidBeforeOpen] = useState(false);
 	const paddingTop = insets.top + 22;
 	const { items, payments, payableCents, paidCents } = SAMPLE_COMMITMENTS;
 
@@ -43,6 +55,8 @@ export default function CommitmentsScreen() {
 		);
 	}
 
+	const groups = groupCommitments(items);
+
 	return (
 		<ScrollView
 			className="flex-1 bg-background"
@@ -54,9 +68,7 @@ export default function CommitmentsScreen() {
 				Reservados antes de que gastes un sol.
 			</Text>
 			<View className="mt-[22px] flex-row items-center justify-between gap-2.5">
-				<Text className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
-					Por pagar este ciclo
-				</Text>
+				<Eyebrow>Por pagar este ciclo</Eyebrow>
 				<Pressable
 					accessibilityRole="button"
 					accessibilityLabel="Añadir compromiso"
@@ -75,12 +87,12 @@ export default function CommitmentsScreen() {
 					· S/ {wholeSoles(paidCents)} ya pagado
 				</Text>
 			</View>
-			{groupCommitments(items).pending.map((item) => (
+			{groups.pending.map((item) => (
 				<CommitmentRow
 					key={item.id}
 					name={item.name}
 					amountCents={item.amountCents}
-					line={dueLine(item, false, SAMPLE_TODAY)}
+					line={dueLine(item, item.status, SAMPLE_TODAY)}
 					status={item.status}
 				/>
 			))}
@@ -91,13 +103,54 @@ export default function CommitmentsScreen() {
 					amountCents={payment.amountCents}
 					line={dueLine(
 						{ ...payment, frequency: paymentFrequency(payment, items) },
-						true,
+						"paid",
 						SAMPLE_TODAY,
 					)}
 					status="paid"
 				/>
 			))}
-			{/* Luego: «Más adelante» y «Pagados antes», pendiente de Mira. */}
+			{groups.later.length > 0 ? (
+				<View className="mt-[22px]">
+					<Eyebrow>Más adelante</Eyebrow>
+					{groups.later.map((item) => (
+						<CommitmentRow
+							key={item.id}
+							name={item.name}
+							amountCents={item.amountCents}
+							line={dueLine(item, "later", SAMPLE_TODAY)}
+							status="later"
+						/>
+					))}
+				</View>
+			) : null}
+			{groups.paidBefore.length > 0 ? (
+				<View className="mt-3.5">
+					<Pressable
+						accessibilityRole="button"
+						accessibilityState={{ expanded: paidBeforeOpen }}
+						onPress={() => setPaidBeforeOpen(!paidBeforeOpen)}
+						className="min-h-11 flex-row items-center justify-between gap-2.5"
+					>
+						<Eyebrow>Pagados antes</Eyebrow>
+						<View className={paidBeforeOpen ? "" : "-rotate-90"}>
+							<AngleDown size={16} color={muted} />
+						</View>
+					</Pressable>
+					{paidBeforeOpen
+						? groups.paidBefore.map((item) =>
+								item.status === "paid" ? (
+									<CommitmentRow
+										key={item.id}
+										name={item.name}
+										amountCents={item.amountCents}
+										line={paidBeforeLine(item, SAMPLE_TODAY)}
+										status="paid"
+									/>
+								) : null,
+							)
+						: null}
+				</View>
+			) : null}
 		</ScrollView>
 	);
 }

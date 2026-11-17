@@ -64,7 +64,7 @@ export default function ProgressScreen() {
 			contentContainerStyle={{ paddingTop, paddingBottom: insets.bottom + TAB_BAR_SPACE }}
 		>
 			<Title />
-			<Streak />
+			{SAMPLE_STREAK.hasActive ? <Streak /> : null}
 			{cycles[0].marginCents > 0 ? (
 				<Text className="mt-2.5 text-[13px] text-muted-foreground">
 					Lo que sobró ya está en tus sobres de este ciclo.

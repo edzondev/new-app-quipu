@@ -4,6 +4,7 @@ import type { FunctionReturnType } from "convex/server";
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import AngleDown from "reicon-react-native/icons/AngleDown";
+import { SAMPLE_TODAY } from "@/features/home/sample";
 import { wholeSoles } from "@/features/savings/progress";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 import { useThemeColor } from "@/lib/use-theme-color";
@@ -32,7 +33,7 @@ function Summary({ cycle, icon }: { cycle: Cycle; icon: ReactNode }) {
 					className="min-w-0 flex-1 text-[15px] font-semibold text-foreground"
 					numberOfLines={1}
 				>
-					{cycleTitle(cycle.startDate, cycle.endDate)}
+					{cycleTitle(cycle.startDate, cycle.endDate, SAMPLE_TODAY)}
 				</Text>
 			</View>
 			<Text className={`shrink-0 text-sm ${MARGIN_TEXT[margin.tone]}`}>{margin.text}</Text>
@@ -43,12 +44,12 @@ function Summary({ cycle, icon }: { cycle: Cycle; icon: ReactNode }) {
 
 function Line({
 	envelope,
-	spent,
+	detail,
 	result,
 	over,
 }: {
 	envelope: Envelope;
-	spent: string;
+	detail: string;
 	result: string;
 	over: boolean;
 }) {
@@ -61,7 +62,7 @@ function Line({
 						{ENVELOPE_LABELS[envelope]}
 					</Text>
 					<Text className="font-mono text-xs text-muted-foreground" numberOfLines={1}>
-						{spent}
+						{detail}
 					</Text>
 				</View>
 			</View>
@@ -115,7 +116,7 @@ export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: bo
 							<Line
 								key={envelope}
 								envelope={envelope}
-								spent={`Gastado S/ ${wholeSoles(detail.spent[key])}`}
+								detail={`Gastado S/ ${wholeSoles(detail.spent[key])}`}
 								result={left.text}
 								over={left.over}
 							/>
@@ -124,7 +125,7 @@ export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: bo
 					{detail.fundedCents > 0 ? (
 						<Line
 							envelope="savings"
-							spent={`S/ ${wholeSoles(detail.fundedCents)} pasó a tu fondo`}
+							detail={`Pasó a tu fondo S/ ${wholeSoles(detail.fundedCents)}`}
 							result="Guardado"
 							over={false}
 						/>

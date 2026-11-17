@@ -39,6 +39,7 @@ export const SAMPLE_HOME: Home = {
 };
 
 // Excepción: ids de ejemplo, se borran al conectar Convex
+const ID_REVISION = "sample_revision" as CommitmentId;
 const ID_LUZ = "sample_luz" as CommitmentId;
 const ID_CELULAR = "sample_celular" as CommitmentId;
 const ID_SOAT = "sample_soat" as CommitmentId;
@@ -49,6 +50,18 @@ export const SAMPLE_COMMITMENTS: CommitmentList = {
 	payableCents: 20_900,
 	paidCents: 90_000,
 	items: [
+		{
+			id: ID_REVISION,
+			name: "Revisión técnica",
+			amountCents: 12_000,
+			envelope: "needs",
+			frequency: "once",
+			dueDate: "2026-10-20",
+			rule: null,
+			adjustment: null,
+			status: "paid",
+			paidOn: "2026-10-18",
+		},
 		{
 			id: ID_LUZ,
 			name: "Luz",

@@ -1,10 +1,10 @@
-import { formatDay } from "@quipu/backend/shared/dates";
+import { formatPastDay } from "@quipu/backend/shared/dates";
 import { wholeSoles } from "@/features/savings/progress";
 
 export type MarginTone = "default" | "over" | "muted";
 
-export function cycleTitle(startDate: string, endDate: string) {
-	return `${formatDay(startDate)} – ${formatDay(endDate)}`;
+export function cycleTitle(startDate: string, endDate: string, today: string) {
+	return `${formatPastDay(startDate, today)} – ${formatPastDay(endDate, today)}`;
 }
 
 export function marginText(marginCents: number): { text: string; tone: MarginTone } {
