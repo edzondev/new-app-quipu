@@ -1,4 +1,6 @@
-import { Tabs } from "expo-router";
+import { api } from "@quipu/backend/convex/_generated/api";
+import { useQuery } from "convex/react";
+import { Redirect, Tabs } from "expo-router";
 import type { ComponentType } from "react";
 import type { ColorValue } from "react-native";
 import Calendar from "reicon-react-native/icons/Calendar";
@@ -17,6 +19,14 @@ function tabIcon(Icon: ComponentType<{ size?: number; color?: string }>) {
 }
 
 export default function TabsLayout() {
+	const profile = useQuery(api.profiles.myProfile);
+
+	if (profile === undefined) return null;
+	// Same rules as apps/web/src/routes/_app.tsx, minus deletionRunsAt (no mobile screen for it yet).
+	if (profile === null || (!profile.plan && !profile.hasHousehold)) {
+		return <Redirect href="/onboarding" />;
+	}
+
 	return (
 		<SpaceProvider>
 			<Tabs

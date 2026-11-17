@@ -1,5 +1,6 @@
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
+import { Redirect } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +24,9 @@ export function OnboardingScreen() {
 	const [sheet, setSheet] = useState<"day" | "fixed" | null>(null);
 	const rangeLabel = rangeText(flow.range);
 	const last = flow.step === 3;
+
+	// Primeros pasos can't be reopened once there is a plan or a household.
+	if (profile && (profile.plan || profile.hasHousehold)) return <Redirect href="/" />;
 
 	return (
 		<KeyboardAvoidingView

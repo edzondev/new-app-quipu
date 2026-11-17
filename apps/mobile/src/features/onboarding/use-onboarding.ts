@@ -5,6 +5,7 @@ import { nameSchema } from "@quipu/backend/shared/name";
 import { type Cadence, type CycleStartDay, isValidSplit } from "@quipu/backend/shared/plan";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
+import { router } from "expo-router";
 import { useState } from "react";
 import { DEFAULT_SPLIT, type FixedItem, firstNumber } from "./plan";
 
@@ -42,7 +43,6 @@ export function useOnboarding(warn: (text: string) => void, profileName: string)
 		}
 	}
 
-	// A saved plan changes the profile and the guard moves to Inicio by itself.
 	async function finish() {
 		if (saving) return;
 		setSaving(true);
@@ -56,6 +56,7 @@ export function useOnboarding(warn: (text: string) => void, profileName: string)
 				todayCents,
 				split,
 			});
+			router.replace("/");
 		} catch (error) {
 			warn(
 				error instanceof ConvexError
