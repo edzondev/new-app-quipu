@@ -89,7 +89,10 @@ export function check(old: OldExport, rows: ImportRow[]): CheckResult {
 		expenses: 0,
 		incomes: 0,
 	};
-	const users = groupBy(old.users, (user) => normalizeEmail(user.email));
+	const users = groupBy(
+		old.users.filter((user) => user.emailVerified),
+		(user) => normalizeEmail(user.email),
+	);
 	const profiles = new Map(old.profiles.map((profile) => [profile.userId, profile]));
 	const withData = rows.filter((row) => row.open);
 	for (const row of withData) {
