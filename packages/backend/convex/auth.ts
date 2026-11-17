@@ -6,6 +6,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { type BetterAuthOptions, betterAuth } from "better-auth/minimal";
 import { emailOTP } from "better-auth/plugins";
 
+import { normalizeEmail } from "../shared/email";
 import { DELETION_CODE_TYPE } from "../shared/deletion";
 import { components, internal } from "./_generated/api";
 import { env } from "./_generated/server";
@@ -44,6 +45,18 @@ export const authComponent = createClient<DataModel, typeof authSchema>(componen
 					.unique();
 				if (existing) return;
 				await ctx.db.insert("profiles", { userId: user._id });
+				// Someone from the old app gets their data here. A claim that fails undoes only itself:
+				// the person still signs in, and the row stays pending.
+				try {
+					await ctx.runMutation(internal.migration.claim, {
+						userId: user._id,
+						email: user.email,
+					});
+				} catch (error) {
+					// Only who and why: the rest of the error can carry the person's money.
+					const reason = error instanceof Error ? error.message : String(error);
+					console.error("Migration claim failed", user._id, reason.slice(0, 200));
+				}
 			},
 			onDelete: async (ctx, user) => {
 				const profile = await ctx.db
@@ -81,9 +94,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
 					throw new APIError("BAD_REQUEST");
 				}
 				if (!("runMutation" in ctx)) throw new Error("OTP solo se envía desde una acción");
-				const email = String(authCtx.body?.email ?? "")
-					.trim()
-					.toLowerCase();
+				const email = normalizeEmail(String(authCtx.body?.email ?? ""));
 				const { ok } = await ctx.runMutation(internal.rateLimits.reserveCodeSend, { email });
 				if (!ok) throw new APIError("TOO_MANY_REQUESTS");
 			}),

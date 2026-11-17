@@ -12,7 +12,8 @@
 		"module": "ESNext",
 		"isolatedModules": true,
 		"noEmit": true,
+		"allowImportingTsExtensions": true,
 		"types": ["vite/client"]
 	},
-	"include": ["convex/", "shared/", "__tests__/"]
+	"include": ["convex/", "shared/", "__tests__/", "scripts/"]
 }

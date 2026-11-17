@@ -24,6 +24,7 @@ const orNull = v.union(v.number(), v.null());
 export const plusStatusValidator = v.union(
 	v.object({ kind: v.literal("free") }),
 	v.object({ kind: v.literal("trial"), endsAt: v.number() }),
+	v.object({ kind: v.literal("gift"), endsAt: v.number() }),
 	v.object({ kind: v.literal("trialEnded") }),
 	v.object({
 		kind: v.literal("paid"),
@@ -46,6 +47,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Our Plus trial: 14 days, no card. */
 export const TRIAL_MS = 14 * DAY_MS;
+
+/** Plus for people who came from the old app: 3 months from the day they sign in. */
+export const GIFT_MS = 90 * DAY_MS;
 
 const TRIAL_REMINDER_MS = 2 * DAY_MS;
 
@@ -145,6 +149,12 @@ export function planCard(status: PlusStatus, today: string): PlanCard {
 				action: plans("Ver planes"),
 			};
 		}
+		case "gift":
+			return {
+				title: "Plus de regalo",
+				line: `Hasta el ${limaDay(status.endsAt, today)}. No te cobramos nada.`,
+				action: plans("Ver planes"),
+			};
 		case "trialEnded":
 			return {
 				title: "Tu prueba de Plus terminó",

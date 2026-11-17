@@ -1,5 +1,6 @@
 import { APIError } from "better-auth/api";
 import { ConvexError, type Infer, v } from "convex/values";
+import { normalizeEmail } from "../shared/email";
 import { getLimaDate } from "../shared/dates";
 import { DELETION_CODE_TYPE, runsAtFor } from "../shared/deletion";
 import { internal } from "./_generated/api";
@@ -110,6 +111,11 @@ async function purgeBatch(ctx: MutationCtx, user: Leaving) {
 	for (const type of CODE_TYPES) {
 		await internalAdapter.deleteVerificationByIdentifier(`${type}-otp-${user.email}`);
 	}
+	const imported = await ctx.db
+		.query("migrationImports")
+		.withIndex("by_email", (q) => q.eq("email", normalizeEmail(user.email)))
+		.first();
+	if (imported) await ctx.db.delete("migrationImports", imported._id);
 	await internalAdapter.deleteUser(user._id);
 	return true;
 }

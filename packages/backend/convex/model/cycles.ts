@@ -13,7 +13,7 @@ import { requireOwnerProfile, requirePlan, requireSpace, type SpaceKind } from "
 type Ctx = QueryCtx | MutationCtx;
 
 const ZERO_CARRY = { needsCents: 0, wantsCents: 0 };
-const MAX_SUMMARY_ROWS = 500;
+export const MAX_SUMMARY_ROWS = 500;
 
 export function createFirstCycle(
 	ctx: MutationCtx,

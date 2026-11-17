@@ -131,6 +131,10 @@ export const startTrial = mutation({
 	handler: async (ctx): Promise<Infer<typeof trialResult>> => {
 		const { user, profile } = await requireProfile(ctx);
 		const now = Date.now();
+		// The gift is already Plus: a trial now would start a clock nobody needs.
+		if (profile.giftEndsAt !== undefined && profile.giftEndsAt > now) {
+			throw new ConvexError("Ya tienes Plus de regalo.");
+		}
 		if (profile.trialEndsAt !== undefined && profile.trialEndsAt > now) {
 			return { status: "active", trialEndsAt: profile.trialEndsAt };
 		}
