@@ -99,7 +99,53 @@ const commitmentBase = {
 	envelope: spendable,
 };
 
+const importedBase = { amountCents: v.number(), date: v.string(), note: v.optional(v.string()) };
+
+const importedRow = v.union(
+	v.object({ ...importedBase, kind: v.literal("expense"), envelope: spendable }),
+	v.object({
+		...importedBase,
+		kind: v.literal("income"),
+		allocation: amounts,
+		extraType: v.optional(extraType),
+		toSavings: v.optional(v.boolean()),
+	}),
+);
+
+const importedCycle = {
+	startDate: v.string(),
+	envelopes: amounts,
+	carryIn: spendableAmounts,
+	rows: v.array(importedRow),
+};
+
+/**
+ * One person from the old app, already converted, waiting for that email to sign in. No ids: the
+ * claim puts the new userId. A claimed row keeps only who took it and when.
+ */
+export const migrationImport = v.object({
+	email: v.string(),
+	status: v.union(v.literal("pending"), v.literal("claimed"), v.literal("conflict")),
+	claimedBy: v.optional(v.string()),
+	claimedAt: v.optional(v.number()),
+	name: v.string(),
+	// Absent with `open` when the person never started a cycle: they only get the Plus gift.
+	plan: v.optional(plan),
+	split,
+	fundCents: v.number(),
+	closed: v.array(v.object({ ...importedCycle, endDate: v.string(), closedAt: v.number() })),
+	open: v.optional(v.object(importedCycle)),
+	goals: v.array(v.object({ name: v.string(), targetCents: v.number(), savedCents: v.number() })),
+	commitments: v.array(
+		v.object({ name: v.string(), amountCents: v.number(), envelope: spendable, day: v.number() }),
+	),
+});
+
 export default defineSchema({
+	migrationImports: defineTable(migrationImport)
+		.index("by_email", ["email"])
+		.index("by_status", ["status"]),
+
 	profiles: defineTable({
 		userId: v.string(),
 		plan: v.optional(plan),
@@ -113,6 +159,8 @@ export default defineSchema({
 		// Quipu Plus trial end (ms). Set by us on the server for 14 days, no card, when the person asks.
 		// Polar (web) and RevenueCat (mobile) only charge.
 		trialEndsAt: v.optional(v.number()),
+		// Plus given to people who came from the old app, until this time (ms). Not the trial.
+		giftEndsAt: v.optional(v.number()),
 		// The B1 welcome was closed. On the server so another device does not show it again.
 		welcomeSeenAt: v.optional(v.number()),
 		// The notice that the trial ended (V1) was closed. The same, one time across devices.

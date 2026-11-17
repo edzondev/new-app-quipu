@@ -44,6 +44,16 @@ export const authComponent = createClient<DataModel, typeof authSchema>(componen
 					.unique();
 				if (existing) return;
 				await ctx.db.insert("profiles", { userId: user._id });
+				// Someone from the old app gets their data here. A claim that fails undoes only itself:
+				// the person still signs in, and the row stays pending.
+				try {
+					await ctx.runMutation(internal.migration.claim, {
+						userId: user._id,
+						email: user.email,
+					});
+				} catch (error) {
+					console.error("Migration claim failed", user._id, error);
+				}
 			},
 			onDelete: async (ctx, user) => {
 				const profile = await ctx.db

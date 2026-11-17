@@ -44,19 +44,24 @@ export async function getPlusSubscription(ctx: Ctx | ActionCtx, userId: string) 
 		.at(0);
 }
 
-/** When the trial ends, or null if there is none open. */
-async function getTrialEnd(ctx: Ctx, userId: string) {
-	const endsAt = (await getProfile(ctx, userId))?.trialEndsAt;
+/** When the trial or the gift ends, or null if it is not open. */
+async function getFreeEnd(ctx: Ctx, userId: string, field: "trialEndsAt" | "giftEndsAt") {
+	const endsAt = (await getProfile(ctx, userId))?.[field];
 	return endsAt !== undefined && endsAt > Date.now() ? endsAt : null;
 }
 
-async function hasTrial(ctx: Ctx, userId: string) {
-	return (await getTrialEnd(ctx, userId)) !== null;
+/** Plus nobody pays for: our 14-day trial or the gift to people who came from the old app. */
+async function hasFreePlus(ctx: Ctx, userId: string) {
+	const profile = await getProfile(ctx, userId);
+	const now = Date.now();
+	return [profile?.trialEndsAt, profile?.giftEndsAt].some(
+		(endsAt) => endsAt !== undefined && endsAt > now,
+	);
 }
 
-/** Plus = our 14-day trial still open, or a paid Polar subscription. */
+/** Plus = a trial or a gift still open, or a paid Polar subscription. */
 export async function hasPlus(ctx: Ctx, userId: string) {
-	return (await hasTrial(ctx, userId)) || (await getPlusSubscription(ctx, userId)) !== undefined;
+	return (await hasFreePlus(ctx, userId)) || (await getPlusSubscription(ctx, userId)) !== undefined;
 }
 
 export async function requirePlus(ctx: Ctx, userId: string) {
@@ -98,7 +103,7 @@ export async function getPayerId(ctx: Ctx, space: Doc<"spaces">) {
 	);
 
 	for (const userId of ownerFirst) if (await getPlusSubscription(ctx, userId)) return userId;
-	for (const userId of ownerFirst) if (await hasTrial(ctx, userId)) return userId;
+	for (const userId of ownerFirst) if (await hasFreePlus(ctx, userId)) return userId;
 	for (const userId of ownerFirst) if ((await plusHistory(ctx, userId)) !== "none") return userId;
 	return null;
 }
@@ -140,7 +145,10 @@ export async function getPlusStatus(ctx: Ctx, userId: string): Promise<PlusStatu
 		};
 	}
 
-	const trialEndsAt = await getTrialEnd(ctx, userId);
+	const giftEndsAt = await getFreeEnd(ctx, userId, "giftEndsAt");
+	if (giftEndsAt !== null) return { kind: "gift", endsAt: giftEndsAt };
+
+	const trialEndsAt = await getFreeEnd(ctx, userId, "trialEndsAt");
 	if (trialEndsAt !== null) return { kind: "trial", endsAt: trialEndsAt };
 
 	const history = await plusHistory(ctx, userId);
