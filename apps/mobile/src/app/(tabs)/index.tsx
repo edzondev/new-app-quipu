@@ -52,13 +52,6 @@ export default function HomeScreen() {
 				>
 					<Text className="text-[13px] text-muted-foreground underline">Probar: Entrar</Text>
 				</Pressable>
-				<Pressable
-					accessibilityRole="link"
-					className="min-h-11 justify-center"
-					onPress={() => router.push("/passkey")}
-				>
-					<Text className="text-[13px] text-muted-foreground underline">Probar: Huella</Text>
-				</Pressable>
 			</View>
 		</ScrollView>
 	);

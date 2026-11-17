@@ -1,22 +1,22 @@
 import { BottomSheet, Host } from "@expo/ui";
-import { router } from "expo-router";
 import { Text, View } from "react-native";
 import Fingerprint from "reicon-react-native/icons/Fingerprint";
 import { Button } from "@/components/ui/button";
 import { useThemeColor } from "@/lib/use-theme-color";
 
-export default function PasskeySheet() {
+export function PasskeySheet({
+	isPresented,
+	onDismiss,
+}: {
+	isPresented: boolean;
+	onDismiss: () => void;
+}) {
 	const foreground = useThemeColor("--color-foreground");
 	const background = useThemeColor("--color-background");
 
-	// Luego: passkey real y Primeros pasos al conectar Convex.
-	function finish() {
-		router.dismissAll();
-	}
-
 	return (
-		<Host style={{ flex: 1 }}>
-			<BottomSheet isPresented onDismiss={finish} containerColor={background}>
+		<Host>
+			<BottomSheet isPresented={isPresented} onDismiss={onDismiss} containerColor={background}>
 				<View className="px-6 pt-3 pb-6">
 					<View className="size-[52px] items-center justify-center rounded-full bg-muted">
 						<Fingerprint size={26} color={foreground} />
@@ -28,8 +28,8 @@ export default function PasskeySheet() {
 						Usa tu huella, rostro o el desbloqueo de tu celular. Sin códigos.
 					</Text>
 					<View className="mt-6 gap-2">
-						<Button label="Activar huella o rostro" onPress={finish} />
-						<Button label="Ahora no" variant="secondary" onPress={finish} />
+						<Button label="Activar huella o rostro" onPress={onDismiss} />
+						<Button label="Ahora no" variant="secondary" onPress={onDismiss} />
 					</View>
 				</View>
 			</BottomSheet>

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AngleLeft from "reicon-react-native/icons/AngleLeft";
+import { PasskeySheet } from "@/features/auth/passkey-sheet";
 import { SAMPLE_CODE, SAMPLE_RESEND_SECONDS, WRONG_CODE_MESSAGE } from "@/features/auth/sample";
 import { CODE_LENGTH, formatClock, otpDigits } from "@/features/auth/validation";
 import { useThemeColor } from "@/lib/use-theme-color";
@@ -28,7 +29,11 @@ export default function CodeScreen() {
 		const next = otpDigits(text);
 		setCode(next);
 		setWrong(next.length === CODE_LENGTH && next !== SAMPLE_CODE);
-		if (next === SAMPLE_CODE) router.push("/passkey");
+	}
+
+	// Luego: passkey real y Primeros pasos al conectar Convex.
+	function finish() {
+		router.dismissAll();
 	}
 
 	function boxLine(index: number) {
@@ -120,6 +125,7 @@ export default function CodeScreen() {
 					</Pressable>
 				</View>
 			</ScrollView>
+			<PasskeySheet isPresented={code === SAMPLE_CODE} onDismiss={finish} />
 		</KeyboardAvoidingView>
 	);
 }
