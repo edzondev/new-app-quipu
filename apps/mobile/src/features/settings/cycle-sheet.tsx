@@ -8,10 +8,11 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import { ListRow } from "@/components/ui/list-row";
+import { SheetHeader } from "@/components/ui/sheet-header";
 import { CadenceChips } from "@/features/cycle/cadence-chips";
 import { type Cycle, currentCycleText } from "@/features/cycle/cycle-days";
 import { DayList } from "@/features/cycle/day-list";
+import { DayRow } from "@/features/cycle/day-row";
 
 // The sheet unmounts its content when it closes: each opening starts from the saved cycle.
 function CycleForm({
@@ -38,6 +39,7 @@ function CycleForm({
 					setDay(picked);
 					setPicking(false);
 				}}
+				onClose={() => setPicking(false)}
 			/>
 		);
 	}
@@ -47,9 +49,11 @@ function CycleForm({
 
 	return (
 		<View>
-			<Text className="text-3xl font-semibold text-foreground">Tu ciclo</Text>
-			<Text className="mt-1 text-sm text-muted-foreground">Ahora: {currentCycleText(cycle)}.</Text>
-			<View className="mt-5">
+			<SheetHeader title="Tu ciclo" onClose={onClose} />
+			<Text className="mt-1.5 text-sm leading-[21px] text-muted-foreground">
+				Ahora: {currentCycleText(cycle)}.
+			</Text>
+			<View className="mt-4">
 				<CadenceChips
 					cadence={cadence}
 					onChange={(picked) => {
@@ -58,17 +62,21 @@ function CycleForm({
 					}}
 				/>
 			</View>
-			<View className="mt-2">
-				<ListRow
+			<View className="mt-3">
+				<DayRow
 					label="Te pagan"
 					value={getStartDayLabel(cadence, day)}
+					accessibilityLabel={`Te pagan ${getStartDayLabel(cadence, day)}. Cambiar`}
 					onPress={() => setPicking(true)}
 				/>
 			</View>
-			<Text className="mt-3 text-[13px] text-muted-foreground">
-				{describeCycleChange(next, currentEndDate)}
-			</Text>
-			<View className="mt-5">
+			<View className="mt-3.5 flex-row items-start gap-2.5 rounded-[18px] bg-muted px-3.5 py-3">
+				<View className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
+				<Text className="min-w-0 flex-1 text-[13px] leading-[19.5px] font-medium text-foreground">
+					{describeCycleChange(next, currentEndDate)}
+				</Text>
+			</View>
+			<View className="mt-[18px] mb-2">
 				<Button
 					label="Guardar"
 					disabled={unchanged}

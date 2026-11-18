@@ -15,10 +15,12 @@ export function StepName({
 
 	return (
 		<View>
-			<Text className="text-4xl leading-10 font-semibold text-foreground">¿Cómo te llamas?</Text>
-			<Text className="mt-6 mb-1 text-sm text-muted-foreground">Tu nombre</Text>
+			<Text className="text-4xl leading-[40px] font-semibold text-foreground">
+				¿Cómo te llamas?
+			</Text>
+			<Text className="mt-7 text-[13.5px] font-medium text-muted-foreground">Tu nombre</Text>
 			<TextInput
-				className={`min-h-11 border-b py-2 text-base text-foreground ${nameError ? "border-warning" : "border-input"}`}
+				className={`mt-1 border-b-[1.5px] px-0 pt-2 pb-2.5 text-[28px] font-medium text-foreground ${nameError ? "border-warning" : "border-foreground"}`}
 				placeholder="Tu nombre"
 				placeholderTextColor={muted}
 				autoCapitalize="words"

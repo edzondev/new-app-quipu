@@ -27,7 +27,7 @@ export function Button({
 			accessibilityHint={accessibilityHint}
 			disabled={disabled}
 			onPress={onPress}
-			className={`items-center justify-center rounded-full px-4 py-3.5 ${box} ${disabled ? "opacity-50" : ""}`}
+			className={`h-[52px] items-center justify-center rounded-full px-[26px] ${box} ${disabled ? "opacity-50" : ""}`}
 		>
 			<Text className={`text-[15px] font-semibold ${text}`}>{label}</Text>
 		</Pressable>
