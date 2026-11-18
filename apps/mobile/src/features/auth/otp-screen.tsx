@@ -45,6 +45,7 @@ export function OtpScreen() {
 		} catch {
 			// The call rejected instead of answering: no server response, almost always no network.
 			setVerifying(false);
+			setWrong(true);
 			toast.show(OFFLINE_TEXT, true);
 		}
 	}

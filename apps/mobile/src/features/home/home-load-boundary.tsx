@@ -21,13 +21,7 @@ export class HomeLoadBoundary extends Component<Props, State> {
 
 	render() {
 		if (this.state.failed) {
-			return (
-				<ReloadError
-					message="No pudimos cargar tu inicio."
-					detail="Tus datos están a salvo. Prueba otra vez."
-					onRetry={this.retry}
-				/>
-			);
+			return <ReloadError message="No pudimos cargar tu inicio." onRetry={this.retry} />;
 		}
 		return this.props.children;
 	}
