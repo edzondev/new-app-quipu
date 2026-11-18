@@ -10,6 +10,7 @@ export function ListRow({
 	right,
 	onPress,
 	warning = false,
+	accessibilityLabel,
 }: {
 	label: string;
 	sub?: string;
@@ -17,6 +18,7 @@ export function ListRow({
 	right?: ReactNode;
 	onPress?: () => void;
 	warning?: boolean;
+	accessibilityLabel?: string;
 }) {
 	const muted = useThemeColor("--color-muted-foreground");
 	const className = "min-h-12 flex-row items-center gap-2 border-b border-border";
@@ -42,7 +44,12 @@ export function ListRow({
 	);
 
 	return onPress ? (
-		<Pressable accessibilityRole="button" onPress={onPress} className={className}>
+		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={accessibilityLabel}
+			onPress={onPress}
+			className={className}
+		>
 			{body}
 		</Pressable>
 	) : (

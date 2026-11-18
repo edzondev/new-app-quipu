@@ -1,8 +1,8 @@
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { Redirect } from "expo-router";
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,17 @@ function OnboardingForm({ name }: { name: string }) {
 	const [dayOpen, setDayOpen] = useState(false);
 	const last = flow.step === 4;
 	const waitsForFrequency = flow.step === 2 && flow.plan === null;
+	const { step, back } = flow;
+
+	// Android back goes to the step before; on the first step it keeps its default.
+	useEffect(() => {
+		if (step === 1) return;
+		const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+			back();
+			return true;
+		});
+		return () => subscription.remove();
+	}, [step, back]);
 
 	return (
 		<KeyboardAvoidingView

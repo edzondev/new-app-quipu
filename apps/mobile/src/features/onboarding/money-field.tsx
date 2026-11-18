@@ -26,7 +26,7 @@ export function MoneyField({
 				keyboardType="decimal-pad"
 				value={value}
 				onChangeText={(text) => onChange(text.replace(/[^\d.,]/g, ""))}
-				placeholder="0"
+				placeholder="0.00"
 				placeholderTextColor={muted}
 				accessibilityLabel={label}
 			/>

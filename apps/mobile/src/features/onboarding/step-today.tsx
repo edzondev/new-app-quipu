@@ -12,7 +12,9 @@ export function StepToday({
 }) {
 	return (
 		<View>
-			<Text className="text-4xl leading-10 font-semibold text-foreground">¿Cuánto tienes hoy?</Text>
+			<Text className="text-[32px] leading-[35px] font-semibold text-foreground">
+				¿Cuánto tienes hoy?
+			</Text>
 			<Text className="mt-6 mb-2 text-sm text-muted-foreground">Efectivo y cuentas, juntos</Text>
 			<MoneyField
 				value={todayText}

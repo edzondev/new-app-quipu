@@ -36,7 +36,7 @@ export function StepCycle({
 
 	return (
 		<View>
-			<Text className="text-4xl leading-10 font-semibold text-foreground">
+			<Text className="text-[32px] leading-[35px] font-semibold text-foreground">
 				¿Cada cuánto te pagan?
 			</Text>
 			<View
@@ -74,6 +74,7 @@ export function StepCycle({
 					</Text>
 					<ListRow
 						label={getStartDayLabel(plan.cadence, plan.cycleStartDay)}
+						accessibilityLabel={`${getStartDayTitle(plan.cadence)} ${getStartDayLabel(plan.cadence, plan.cycleStartDay)}. Cambiar`}
 						right={
 							<View className="flex-row items-center gap-2">
 								<Text className="text-sm font-semibold text-foreground">Cambiar</Text>
