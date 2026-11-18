@@ -2,7 +2,7 @@ import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { useConvexAuth } from "convex/react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import "@/global.css";
 import { authClient } from "@/lib/auth-client";
@@ -23,12 +23,16 @@ const sheet = {
 
 function Screens() {
 	const { isLoading, isAuthenticated } = useConvexAuth();
+	// Convex reports isLoading again on every session change (sign in, sign out) until the server confirms
+	// the token. Only the first load blanks the app; later ones keep the current screen instead of a gray one.
+	const [loaded, setLoaded] = useState(false);
+	if (!isLoading && !loaded) setLoaded(true);
 
 	useEffect(() => {
-		if (!isLoading) void SplashScreen.hideAsync();
-	}, [isLoading]);
+		if (loaded) void SplashScreen.hideAsync();
+	}, [loaded]);
 
-	if (isLoading) return null;
+	if (!loaded) return null;
 
 	return (
 		<Stack screenOptions={{ headerShown: false }}>
