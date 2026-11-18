@@ -1,6 +1,6 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import type { Cycle } from "@/features/cycle/days";
+import type { Cycle } from "@/features/cycle/cycle-days";
 
 type Profile = NonNullable<FunctionReturnType<typeof api.profiles.myProfile>>;
 type Household = NonNullable<FunctionReturnType<typeof api.household.get>>;

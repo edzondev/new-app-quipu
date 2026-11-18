@@ -8,7 +8,7 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { ConfirmSheet } from "./confirm-sheet";
 import { type Device, SAMPLE_PASSKEYS, SAMPLE_SESSIONS } from "./sample";
-import { leaveToSignIn } from "./session";
+import { signOutAndGoToSignIn } from "./sign-out";
 
 function DeviceRow({ device, onRemove }: { device: Device; onRemove?: () => void }) {
 	const muted = useThemeColor("--color-muted-foreground");
@@ -101,7 +101,7 @@ export function SecurityScreen() {
 				confirmLabel="Cerrar todas"
 				onConfirm={() => {
 					setClosingAll(false);
-					void leaveToSignIn();
+					void signOutAndGoToSignIn();
 				}}
 			/>
 		</View>

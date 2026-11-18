@@ -1,5 +1,5 @@
 import { formatPastDay } from "@quipu/backend/shared/dates";
-import { wholeSoles } from "@/features/savings/progress";
+import { wholeSoles } from "@/features/savings/goal-progress";
 
 export type MarginTone = "default" | "over" | "muted";
 

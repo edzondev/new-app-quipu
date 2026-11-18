@@ -11,7 +11,7 @@ import {
 	currentCycleText,
 	cycleChangeNote,
 	startDayLabel,
-} from "@/features/cycle/days";
+} from "@/features/cycle/cycle-days";
 
 // The sheet unmounts its content when it closes: each opening starts from the saved cycle.
 function CycleForm({

@@ -7,7 +7,7 @@ import Plus from "reicon-react-native/icons/Plus";
 import { Button } from "@/components/ui/button";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 import { useThemeColor } from "@/lib/use-theme-color";
-import { goalPercent, missingCents, targetMonthLabel, wholeSoles } from "./progress";
+import { goalPercent, missingCents, targetMonthLabel, wholeSoles } from "./goal-progress";
 import { ProgressBar } from "./progress-bar";
 
 type Goal = FunctionReturnType<typeof api.goals.list>[number];

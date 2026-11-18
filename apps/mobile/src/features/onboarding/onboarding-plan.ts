@@ -30,7 +30,7 @@ function reservedCents(range: Range, items: FixedItem[]) {
 	}, 0);
 }
 
-export function firstNumber({
+export function firstCyclePreview({
 	todayCents,
 	split,
 	range,

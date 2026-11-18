@@ -1,6 +1,6 @@
 import type { Cadence } from "@quipu/backend/shared/plan";
 import { Chips } from "@/components/ui/chips";
-import { CADENCE_LABELS, CADENCE_ORDER } from "./days";
+import { CADENCE_LABELS, CADENCE_ORDER } from "./cycle-days";
 
 export function CadenceChips({
 	cadence,

@@ -6,7 +6,7 @@ import { DayNumber } from "@/features/home/day-number";
 import { DueSoon } from "@/features/home/due-soon";
 import { EmptyCycle } from "@/features/home/empty-states";
 import { Envelopes } from "@/features/home/envelopes";
-import { homeHero } from "@/features/home/hero";
+import { todaySpendSummary } from "@/features/home/today-spend";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
 type CommitmentList = FunctionReturnType<typeof api.commitments.list>;
@@ -22,7 +22,7 @@ export function PersonalHome({
 }) {
 	if (home.empty) return <EmptyCycle startDate={home.startDate} endDate={home.endDate} />;
 
-	const hero = homeHero(home);
+	const hero = todaySpendSummary(home);
 	const daysLeft = formatDaysLeft(home.daysLeft);
 	const daysLeftLabel = `${daysLeft.charAt(0).toUpperCase()}${daysLeft.slice(1)}`;
 

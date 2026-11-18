@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { askPostNotifications, canPostNotifications } from "@/features/detection/android";
+import {
+	askPostNotifications,
+	canPostNotifications,
+} from "@/features/detection/notification-permission";
 import { DEFAULT_REMINDER, getReminder, setReminder } from "../../../modules/quipu-detection";
 
 export function clockText(hour: number, minute: number) {

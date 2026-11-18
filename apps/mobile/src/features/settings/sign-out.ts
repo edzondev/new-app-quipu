@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { Alert } from "react-native";
 import { authClient } from "@/lib/auth-client";
 
-export async function leaveToSignIn() {
+export async function signOutAndGoToSignIn() {
 	try {
 		const { error } = await authClient.signOut();
 		if (error) throw error;

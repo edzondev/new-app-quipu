@@ -6,7 +6,7 @@ import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { ListRow } from "@/components/ui/list-row";
 import { SectionLabel } from "@/components/ui/section-label";
-import { type Cycle, cycleRowValue, splitRowValue } from "@/features/cycle/days";
+import { type Cycle, cycleRowValue, splitRowValue } from "@/features/cycle/cycle-days";
 
 type Household = NonNullable<FunctionReturnType<typeof api.household.get>>;
 

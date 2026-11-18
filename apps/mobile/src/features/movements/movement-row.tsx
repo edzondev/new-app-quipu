@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
-import { movementText, type Row, type Tone } from "./rows";
+import { movementText, type Row, type Tone } from "./movement-rows";
 
 const TONE_TEXT = {
 	default: "text-foreground",

@@ -4,7 +4,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Chips } from "@/components/ui/chips";
 import { useThemeColor } from "@/lib/use-theme-color";
-import { FIXED_SHORTCUTS, type FixedItem } from "./plan";
+import { FIXED_SHORTCUTS, type FixedItem } from "./onboarding-plan";
 
 function FixedRow({
 	item,

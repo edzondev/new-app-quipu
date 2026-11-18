@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { DayNumber } from "@/features/home/day-number";
 import { Envelopes } from "@/features/home/envelopes";
-import { amountParts } from "@/features/home/hero";
+import { amountParts } from "@/features/home/today-spend";
 import { SAMPLE_HOUSEHOLD_HOME } from "./sample";
 
 export function ReadOnlyHome() {

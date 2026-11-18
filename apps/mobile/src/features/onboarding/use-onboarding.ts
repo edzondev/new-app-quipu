@@ -6,7 +6,7 @@ import { type Cadence, type CycleStartDay, isValidSplit } from "@quipu/backend/s
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { useState } from "react";
-import { DEFAULT_SPLIT, type FixedItem, firstNumber } from "./plan";
+import { DEFAULT_SPLIT, type FixedItem, firstCyclePreview } from "./onboarding-plan";
 
 type Step = 1 | 2 | 3;
 
@@ -28,7 +28,7 @@ export function useOnboarding(warn: (text: string) => void, profileName: string)
 
 	const todayCents = toCents(todayText);
 	const range = getFirstCycleRange(cadence, startDay, getLimaDate());
-	const number = firstNumber({ todayCents, split, range, items });
+	const number = firstCyclePreview({ todayCents, split, range, items });
 
 	function next() {
 		if (step === 1) {
