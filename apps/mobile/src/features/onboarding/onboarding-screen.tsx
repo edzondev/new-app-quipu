@@ -64,7 +64,7 @@ function OnboardingForm({ name }: { name: string }) {
 			</View>
 			<ScrollView
 				className="flex-1"
-				contentContainerClassName="px-6 pt-2 pb-6"
+				contentContainerClassName="px-6 pt-4 pb-6"
 				keyboardShouldPersistTaps="handled"
 			>
 				{flow.step === 1 ? (
@@ -112,6 +112,7 @@ function OnboardingForm({ name }: { name: string }) {
 							flow.setStartDay(String(day));
 							setDayOpen(false);
 						}}
+						onClose={() => setDayOpen(false)}
 					/>
 				) : null}
 			</BottomSheet>

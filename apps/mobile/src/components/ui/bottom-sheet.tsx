@@ -14,8 +14,8 @@ export function BottomSheet({ children, ...props }: BottomSheetProps) {
 		>
 			{/* The sheet is its own Compose window: React Native content has to be hosted to be sized and to get touches and scroll. */}
 			<RNHostView matchContents={{ vertical: true }}>
-				<View className="px-6 pt-3 pb-6">
-					<View className="mb-5 h-1 w-9 self-center rounded-full bg-input" />
+				<View className="px-6 pt-2.5 pb-6">
+					<View className="mb-3.5 h-[5px] w-10 self-center rounded-full bg-input" />
 					{children}
 				</View>
 			</RNHostView>

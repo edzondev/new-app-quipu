@@ -3,14 +3,13 @@ import {
 	FREQUENCIES,
 	FREQUENCY_LABELS,
 	type Frequency,
-	getCyclePlan,
+	type getCyclePlan,
 	getStartDayLabel,
 	getStartDayTitle,
 } from "@quipu/backend/shared/start-day";
 import { Pressable, Text, View } from "react-native";
-import AngleRight from "reicon-react-native/icons/AngleRight";
 import Check from "reicon-react-native/icons/Check";
-import { ListRow } from "@/components/ui/list-row";
+import { DayRow } from "@/features/cycle/day-row";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { MoneyField } from "./money-field";
 
@@ -32,7 +31,6 @@ export function StepCycle({
 	onIncome: (text: string) => void;
 }) {
 	const background = useThemeColor("--color-background");
-	const muted = useThemeColor("--color-muted-foreground");
 
 	return (
 		<View>
@@ -52,14 +50,14 @@ export function StepCycle({
 							accessibilityRole="radio"
 							accessibilityState={{ checked }}
 							onPress={() => onFrequency(value)}
-							className={`min-h-[52px] w-[48%] flex-row items-center gap-2 rounded-2xl ${checked ? "border-2 border-foreground bg-secondary px-2.5" : "border border-input px-[11px]"}`}
+							className={`min-h-[52px] w-[48.5%] flex-row items-center gap-2 rounded-[14px] ${checked ? "border-2 border-foreground bg-muted px-2.5" : "border border-input px-[11px]"}`}
 						>
 							<View
 								className={`size-5 items-center justify-center rounded-full ${checked ? "bg-foreground" : "border-[1.5px] border-muted-foreground"}`}
 							>
 								{checked ? <Check size={12} color={background} /> : null}
 							</View>
-							<Text className="shrink text-sm leading-tight font-semibold text-foreground">
+							<Text className="min-w-0 shrink text-sm leading-[17px] font-semibold text-foreground">
 								{FREQUENCY_LABELS[value]}
 							</Text>
 						</Pressable>
@@ -69,31 +67,28 @@ export function StepCycle({
 
 			{plan && plan.frequency !== "variable" ? (
 				<>
-					<Text className="mt-[18px] mb-0.5 text-sm text-muted-foreground">
+					<Text className="mt-[18px] text-[13.5px] font-medium text-muted-foreground">
 						{getStartDayTitle(plan.cadence)}
 					</Text>
-					<ListRow
-						label={getStartDayLabel(plan.cadence, plan.cycleStartDay)}
-						accessibilityLabel={`${getStartDayTitle(plan.cadence)} ${getStartDayLabel(plan.cadence, plan.cycleStartDay)}. Cambiar`}
-						right={
-							<View className="flex-row items-center gap-2">
-								<Text className="text-sm font-semibold text-foreground">Cambiar</Text>
-								<AngleRight size={16} color={muted} />
-							</View>
-						}
-						onPress={onOpenDay}
-					/>
+					<View className="mt-0.5">
+						<DayRow
+							label={getStartDayLabel(plan.cadence, plan.cycleStartDay)}
+							value="Cambiar"
+							accessibilityLabel={`${getStartDayTitle(plan.cadence)} ${getStartDayLabel(plan.cadence, plan.cycleStartDay)}. Cambiar`}
+							onPress={onOpenDay}
+						/>
+					</View>
 				</>
 			) : null}
 
 			{/* The region stays mounted so a screen reader announces what appears in it. */}
 			<View
 				accessibilityLiveRegion="polite"
-				className={plan ? "mt-3 rounded-2xl bg-secondary px-3.5 py-3" : undefined}
+				className={plan ? "mt-3 rounded-2xl bg-muted px-3.5 py-3" : undefined}
 			>
 				{plan ? (
 					<>
-						<Text className="text-[15px] leading-5 font-semibold text-foreground">
+						<Text className="text-[15px] leading-[20px] font-semibold text-foreground">
 							{describePayday(plan.frequency, plan.cycleStartDay)}
 						</Text>
 						<Text className="mt-1 text-xs text-muted-foreground">
@@ -109,7 +104,7 @@ export function StepCycle({
 
 			{plan && plan.frequency !== "variable" ? (
 				<>
-					<Text className="mt-[18px] mb-2 text-sm text-muted-foreground">
+					<Text className="mt-[18px] text-[13.5px] font-medium text-muted-foreground">
 						¿Cuánto te pagan? · opcional
 					</Text>
 					<MoneyField
