@@ -1,8 +1,8 @@
 import { formatRange, getFirstCycleRange } from "@quipu/backend/shared/dates";
 import {
 	DEFAULT_START_DAY,
-	type Frequency,
 	describePayday,
+	type Frequency,
 	getStartDayHelp,
 	getStartDayTitle,
 	isFrequency,
@@ -12,7 +12,7 @@ import { useSelector } from "@tanstack/react-form";
 import { Button } from "#/components/ui/button";
 import { withForm } from "#/hooks/use-app-form";
 import {
-	FrequencyToggle,
+	FrequencyRadios,
 	MoneyField,
 	StartDaySelect,
 } from "#/modules/onboarding/components/cycle-fields";
@@ -47,7 +47,7 @@ export const CycleStep = withForm({
 				>
 					<form.Field name="cycleStep.frequency">
 						{(field) => (
-							<FrequencyToggle
+							<FrequencyRadios
 								value={field.state.value}
 								onChange={(next) => {
 									field.handleChange(next);
@@ -59,50 +59,70 @@ export const CycleStep = withForm({
 						)}
 					</form.Field>
 
-					{plan ? (
-						<>
-							{plan.frequency === "variable" ? null : (
-								<form.Field name="cycleStep.startDay">
-									{(field) => (
-										<StartDaySelect
-											cadence={plan.cadence}
-											name={field.name}
-											value={field.state.value}
-											onChange={field.handleChange}
-											onBlur={field.handleBlur}
-											label={getStartDayTitle(plan.cadence)}
-											help={getStartDayHelp(plan.cadence)}
-											className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-										/>
-									)}
-								</form.Field>
+					{plan && plan.frequency !== "variable" ? (
+						<form.Field name="cycleStep.startDay">
+							{(field) => (
+								<StartDaySelect
+									cadence={plan.cadence}
+									name={field.name}
+									value={field.state.value}
+									onChange={field.handleChange}
+									onBlur={field.handleBlur}
+									label={getStartDayTitle(plan.cadence)}
+									help={getStartDayHelp(plan.cadence)}
+								/>
 							)}
-							<p className="mt-6 text-sm">{describePayday(plan.frequency, plan.cycleStartDay)}</p>
-							<p className="mt-6 text-xs text-muted-foreground">Tu primer ciclo</p>
-							<p className="mt-1 text-sm">{plan.firstCycle}</p>
+						</form.Field>
+					) : null}
 
-							{plan.frequency === "variable" ? (
-								<p className="mt-3 text-xs text-muted-foreground">Lo cambias en Ajustes.</p>
-							) : (
-								<>
-									<form.Field name="cycleStep.cycleIncome">
-										{(field) => (
-											<MoneyField
-												field={field}
-												label="¿Cuánto te pagan? · opcional"
-												ariaLabel="Cuánto te pagan"
-												size="md"
-												className="mt-10"
-											/>
-										)}
-									</form.Field>
-									<p className="mt-3 text-xs text-muted-foreground">Si varía, déjalo vacío.</p>
-								</>
-							)}
+					{/* The region stays mounted so a screen reader announces what appears in it. */}
+					<div
+						role="status"
+						aria-live="polite"
+						className={plan ? "mt-3.5 max-w-110 rounded-2xl bg-muted px-4.5 py-3.5" : undefined}
+					>
+						{plan ? (
+							<>
+								<p className="text-[15px] font-semibold">
+									{describePayday(plan.frequency, plan.cycleStartDay)}
+								</p>
+								<p className="mt-1 text-xs text-muted-foreground">
+									Tu primer ciclo{" "}
+									<span className="ml-1 text-sm tabular-nums text-foreground">
+										{plan.firstCycle}
+									</span>
+								</p>
+								{plan.frequency === "variable" ? (
+									<p className="mt-1 text-xs text-muted-foreground">Lo cambias en Ajustes.</p>
+								) : null}
+							</>
+						) : null}
+					</div>
+
+					{plan && plan.frequency !== "variable" ? (
+						<>
+							<form.Field name="cycleStep.cycleIncome">
+								{(field) => (
+									<MoneyField
+										field={field}
+										label="¿Cuánto te pagan? · opcional"
+										ariaLabel="Cuánto te pagan"
+										size="md"
+										className="mt-5.5 max-w-110"
+									/>
+								)}
+							</form.Field>
+							<p className="mt-1.5 text-xs text-muted-foreground">Si varía, déjalo vacío.</p>
 						</>
 					) : null}
 
-					<Button type="submit" variant="default" size="xl" className="mt-10 rounded-full px-8">
+					<Button
+						type="submit"
+						variant="default"
+						size="xl"
+						disabled={plan === null}
+						className="mt-7.5 rounded-full px-8"
+					>
 						Continuar
 					</Button>
 				</form>

@@ -2,7 +2,7 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatDay } from "@quipu/backend/shared/dates";
 import { type Cadence, isSamePlan, type Plan, parseStartDay } from "@quipu/backend/shared/plan";
-import { DEFAULT_START_DAY } from "@quipu/backend/shared/start-day";
+import { DEFAULT_START_DAY, describeCycleChange } from "@quipu/backend/shared/start-day";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -16,7 +16,6 @@ import {
 } from "#/components/form-sheet";
 import { readError } from "#/lib/read-error";
 import { CadenceToggle, StartDaySelect } from "#/modules/onboarding/components/cycle-fields";
-import { getJoinedCycleText } from "../cycle-summary";
 import { ActionDialog } from "./action-dialog";
 
 type Props = {
@@ -54,7 +53,9 @@ function CycleEditor({
 		onSuccess: onDone,
 	});
 	// Going back to the current plan clears the pending change, so there is nothing to explain.
-	const joinedText = isSamePlan(plan, candidate) ? null : getJoinedCycleText(candidate, currentEnd);
+	const changeText = isSamePlan(plan, candidate)
+		? null
+		: describeCycleChange(candidate, currentEnd);
 
 	return (
 		<form
@@ -80,8 +81,14 @@ function CycleEditor({
 						setStartDay(DEFAULT_START_DAY[next]);
 					}}
 				/>
-				<StartDaySelect cadence={cadence} name="startDay" value={startDay} onChange={setStartDay} />
-				{joinedText ? <p className="mt-4 text-sm text-muted-foreground">{joinedText}</p> : null}
+				<StartDaySelect
+					cadence={cadence}
+					name="startDay"
+					value={startDay}
+					onChange={setStartDay}
+					label="Te pagan"
+				/>
+				{changeText ? <p className="mt-4 text-sm text-muted-foreground">{changeText}</p> : null}
 				{save.isError ? (
 					<p role="alert" className="wrap-break-word mt-3 text-xs text-warning-foreground">
 						{readError(save.error)}
