@@ -104,7 +104,7 @@ export function StartDaySelect({
 					onChange={(e) => onChange(e.target.value)}
 					className="rounded-full bg-muted px-4 py-2 min-h-11 text-base sm:text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				>
-					{getStartDayOptions(cadence).map((option) => (
+					{getStartDayOptions(cadence, value).map((option) => (
 						<option key={option.value} value={option.value}>
 							{option.label}
 						</option>

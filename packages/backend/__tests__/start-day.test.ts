@@ -24,6 +24,19 @@ describe("getStartDayOptions", () => {
 		expect(options[14]).toEqual({ value: "last", label: "15 y fin de mes" });
 	});
 
+	test("a saved biweekly day the list does not offer stays selectable, before 15 y fin de mes", () => {
+		const options = getStartDayOptions("biweekly", "20");
+		expect(options).toHaveLength(16);
+		expect(options[14]).toEqual({ value: "20", label: "Día 20" });
+		expect(options[15].value).toBe("last");
+	});
+
+	test("a saved day the list offers adds nothing", () => {
+		expect(getStartDayOptions("biweekly", "14")).toHaveLength(15);
+		expect(getStartDayOptions("biweekly", "last")).toHaveLength(15);
+		expect(getStartDayOptions("monthly", "31")).toHaveLength(32);
+	});
+
 	test("weekly goes from Monday to Sunday", () => {
 		const options = getStartDayOptions("weekly");
 		expect(options.map((option) => option.label)).toEqual([

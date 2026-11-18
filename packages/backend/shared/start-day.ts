@@ -25,8 +25,11 @@ export const DEFAULT_START_DAY: Record<Frequency, string> = {
 
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
-/** What the pay day select offers: weekdays from Monday, or month days (1 to 14 for biweekly) and "last". */
-export function getStartDayOptions(cadence: Cadence) {
+/**
+ * What the pay day select offers: weekdays from Monday, or month days (1 to 14 for biweekly) and "last".
+ * A `saved` day the list no longer offers (a biweekly 15 to 31) stays in it, so the select shows it.
+ */
+export function getStartDayOptions(cadence: Cadence, saved?: string) {
 	if (cadence === "weekly") {
 		return WEEK_ORDER.map((day) => ({
 			value: String(day),
@@ -34,11 +37,15 @@ export function getStartDayOptions(cadence: Cadence) {
 		}));
 	}
 	const lastNumbered = cadence === "biweekly" ? 14 : MAX_MONTH_DAY;
+	const numbered = Array.from({ length: lastNumbered }, (_, index) => ({
+		value: String(index + 1),
+		label: `Día ${index + 1}`,
+	}));
+	const isOffered =
+		saved === undefined || saved === "last" || numbered.some((o) => o.value === saved);
 	return [
-		...Array.from({ length: lastNumbered }, (_, index) => ({
-			value: String(index + 1),
-			label: `Día ${index + 1}`,
-		})),
+		...numbered,
+		...(isOffered ? [] : [{ value: saved, label: `Día ${saved}` }]),
 		{ value: "last", label: cadence === "biweekly" ? BIWEEKLY_LAST_LABEL : "Fin de mes" },
 	];
 }
