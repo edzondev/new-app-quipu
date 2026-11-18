@@ -20,10 +20,16 @@ export const TodayStep = withForm({
 			>
 				<form.Field name="todayStep.todayAmount">
 					{(field) => (
-						<MoneyField field={field} ariaLabel="Cuánto tienes hoy" size="lg" className="mt-12" />
+						<MoneyField
+							field={field}
+							label="Efectivo y cuentas, juntos"
+							ariaLabel="Cuánto tienes hoy"
+							size="lg"
+							className="mt-6.5 max-w-110"
+						/>
 					)}
 				</form.Field>
-				<Button type="submit" variant="default" size="xl" className="mt-10 rounded-full px-8">
+				<Button type="submit" variant="default" size="xl" className="mt-7.5 rounded-full px-8">
 					Continuar
 				</Button>
 			</form>

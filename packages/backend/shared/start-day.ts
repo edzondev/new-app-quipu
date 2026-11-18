@@ -1,8 +1,10 @@
+import { addDays, formatDay, getNextCycleRange } from "./dates";
 import {
 	BIWEEKLY_LAST_LABEL,
 	type Cadence,
 	type CycleStartDay,
 	MAX_MONTH_DAY,
+	type Plan,
 	parseStartDay,
 	WEEKDAY_NAMES,
 } from "./plan";
@@ -82,4 +84,19 @@ export function describePayday(frequency: Frequency, startDay: CycleStartDay) {
 		case "monthly":
 			return startDay === "last" ? "Te pagan a fin de mes." : `Te pagan el día ${startDay}.`;
 	}
+}
+
+/** "del 1 al 14 nov" inside a month, "del 1 nov al 14 dic" across two. */
+function describeSpan(startDate: string, endDate: string) {
+	return startDate.slice(0, 7) === endDate.slice(0, 7)
+		? `del ${Number(startDate.slice(8))} al ${formatDay(endDate)}`
+		: `del ${formatDay(startDate)} al ${formatDay(endDate)}`;
+}
+
+/** What Ajustes tells before saving a new cycle: when the open one closes, the next one, and the pay days from then on. */
+export function describeCycleChange(nextPlan: Plan, currentEnd: string) {
+	const { cadence, cycleStartDay } = nextPlan;
+	const next = getNextCycleRange(cadence, cycleStartDay, addDays(currentEnd, 1));
+	const payday = describePayday(cadence, cycleStartDay);
+	return `Tu ciclo actual cierra el ${formatDay(currentEnd)}. El siguiente va ${describeSpan(next.startDate, next.endDate)}. Desde ahí, ${payday.charAt(0).toLowerCase()}${payday.slice(1)}`;
 }

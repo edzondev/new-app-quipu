@@ -3,6 +3,7 @@ import { cycleStepSchema, todayStepSchema } from "../shared/onboarding-schemas";
 import { type Cadence, isValidStartDay, parseStartDay } from "../shared/plan";
 import {
 	DEFAULT_START_DAY,
+	describeCycleChange,
 	describePayday,
 	getStartDayOptions,
 	resolveCycle,
@@ -87,6 +88,26 @@ describe("describePayday", () => {
 
 	test("without a fixed pay it says how the plan is made", () => {
 		expect(describePayday("variable", 1)).toBe("Planeamos por mes, del 1 a fin de mes.");
+	});
+});
+
+describe("describeCycleChange", () => {
+	test("tells when the open cycle closes, the next one and the pay days", () => {
+		expect(describeCycleChange({ cadence: "biweekly", cycleStartDay: "last" }, "2026-10-31")).toBe(
+			"Tu ciclo actual cierra el 31 oct. El siguiente va del 1 al 14 nov. Desde ahí, te pagan el 15 y a fin de mes.",
+		);
+	});
+
+	test("a short stretch joins the next period, so the next cycle crosses months", () => {
+		expect(describeCycleChange({ cadence: "monthly", cycleStartDay: 15 }, "2026-10-31")).toBe(
+			"Tu ciclo actual cierra el 31 oct. El siguiente va del 1 nov al 14 dic. Desde ahí, te pagan el día 15.",
+		);
+	});
+
+	test("weekly names the weekday", () => {
+		expect(describeCycleChange({ cadence: "weekly", cycleStartDay: 5 }, "2026-10-29")).toBe(
+			"Tu ciclo actual cierra el 29 oct. El siguiente va del 30 oct al 5 nov. Desde ahí, te pagan cada viernes.",
+		);
 	});
 });
 
