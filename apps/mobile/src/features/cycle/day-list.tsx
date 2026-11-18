@@ -1,18 +1,17 @@
-import { ScrollView } from "@expo/ui";
 import { type Cadence, type CycleStartDay, parseStartDay } from "@quipu/backend/shared/plan";
 import {
 	getStartDayHelp,
 	getStartDayOptions,
 	getStartDayTitle,
 } from "@quipu/backend/shared/start-day";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import Check from "reicon-react-native/icons/Check";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 const ROW_HEIGHT = 48;
 const MAX_LIST_HEIGHT = ROW_HEIGHT * 7.5;
 
-/** One day to pick, in a list that scrolls on its own: an RN ScrollView would crash inside the native sheet. */
+/** One day to pick, in a list that scrolls inside the sheet. */
 export function DayList({
 	cadence,
 	value,
