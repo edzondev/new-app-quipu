@@ -29,7 +29,7 @@ import {
 import { SegmentedControl, SegmentedControlItem } from "#/components/ui/segmented-control";
 import { useSignOut } from "#/hooks/use-sign-out";
 import { useReadOnlyGate } from "#/modules/household/use-read-only-gate";
-import { getAuthErrorMessage } from "#/lib/auth-errors";
+import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { setTheme, THEMES, useTheme } from "#/lib/theme";
 import { useRegister } from "#/modules/register/register-dialog";
 

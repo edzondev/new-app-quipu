@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Fingerprint from "reicon-react-native/icons/Fingerprint";
 import { QuipuLogo } from "@/components/quipu-logo";
 import { Button } from "@/components/ui/button";
-import { getAuthErrorMessage } from "@/features/auth/errors";
+import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { emailError } from "@/features/auth/validation";
 import { sendSignInCode } from "@/lib/auth-client";
 import { useThemeColor } from "@/lib/use-theme-color";
@@ -33,10 +33,15 @@ export default function SignInScreen() {
 		setError(problem);
 		if (problem !== null) return;
 		setSending(true);
-		const { error: sendError } = await sendSignInCode(email.trim());
-		setSending(false);
-		if (sendError) setError(getAuthErrorMessage(sendError));
-		else router.push({ pathname: "/code", params: { email: email.trim() } });
+		try {
+			const { error: sendError } = await sendSignInCode(email.trim());
+			if (sendError) setError(getAuthErrorMessage(sendError));
+			else router.push({ pathname: "/code", params: { email: email.trim() } });
+		} catch {
+			setError(getAuthErrorMessage(null));
+		} finally {
+			setSending(false);
+		}
 	}
 
 	return (

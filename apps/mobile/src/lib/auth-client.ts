@@ -9,13 +9,14 @@ const siteUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
 if (!siteUrl) throw new Error("Falta EXPO_PUBLIC_CONVEX_SITE_URL");
 
 const scheme = Constants.expoConfig?.scheme;
+if (typeof scheme !== "string") throw new Error("Falta scheme en app.json");
 
 export const authClient = createAuthClient({
 	baseURL: siteUrl,
 	plugins: [
 		convexClient(),
 		emailOTPClient(),
-		expoClient({ scheme: String(scheme), storagePrefix: String(scheme), storage: SecureStore }),
+		expoClient({ scheme, storagePrefix: scheme, storage: SecureStore }),
 	],
 });
 

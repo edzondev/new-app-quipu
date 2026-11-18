@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { authClient } from "#/lib/auth-client";
-import type { AuthError } from "#/lib/auth-errors";
+import type { AuthError } from "@quipu/backend/shared/auth-errors";
 
 /** Better Auth returns `{ data, error }`; TanStack Query wants a value or a throw. */
 export async function unwrap<T>(

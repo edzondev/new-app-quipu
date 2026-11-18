@@ -1,33 +1,35 @@
 import { api } from "@quipu/backend/convex/_generated/api";
-import { formatDaysLeft } from "@quipu/backend/shared/dates";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLimaDate } from "@/features/cycle/use-lima-date";
+import { useOpenCycle } from "@/features/cycle/use-open-cycle";
 import { ReadOnlyHome } from "@/features/household/readonly-home";
 import { useSpace } from "@/features/household/space-context";
-import { DayNumber } from "@/features/home/day-number";
-import { DueSoon } from "@/features/home/due-soon";
-import { Envelopes } from "@/features/home/envelopes";
+import { EmptyPersonal } from "@/features/home/empty-states";
 import { HomeHeader } from "@/features/home/home-header";
-import { homeHero } from "@/features/home/hero";
-import { SAMPLE_COMMITMENTS, SAMPLE_HOME, SAMPLE_TODAY } from "@/features/home/sample";
+import { PersonalHome } from "@/features/home/personal-home";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { WelcomeModal } from "@/features/onboarding/welcome-modal";
 import { PlusSheet } from "@/features/plus/plus-sheet";
-import { SAMPLE_PROFILE } from "@/features/settings/sample";
 
 export default function HomeScreen() {
 	const insets = useSafeAreaInsets();
 	const { space } = useSpace();
+	const today = useLimaDate();
 	const profile = useQuery(api.profiles.myProfile);
 	const markWelcomeSeen = useMutation(api.profiles.markWelcomeSeen);
 	const [plansOpen, setPlansOpen] = useState(false);
-	const hero = homeHero(SAMPLE_HOME);
-	const daysLeft = formatDaysLeft(SAMPLE_HOME.daysLeft);
-	const daysLeftLabel = `${daysLeft.charAt(0).toUpperCase()}${daysLeft.slice(1)}`;
+	const hasPersonalPlan = space === "personal" && !!profile?.plan;
+	const opened = useOpenCycle(today, hasPersonalPlan);
+	const args = opened ? ({ space: "personal", today } as const) : "skip";
+	const home = useQuery(api.balances.getHome, args);
+	const commitments = useQuery(api.commitments.list, args);
 	const closeWelcome = () => void markWelcomeSeen();
+
+	if (!profile) return null;
 
 	return (
 		<View className="flex-1 bg-background">
@@ -39,29 +41,17 @@ export default function HomeScreen() {
 					paddingBottom: insets.bottom + TAB_BAR_SPACE,
 				}}
 			>
-				<HomeHeader name={SAMPLE_PROFILE.name} hasHousehold={SAMPLE_PROFILE.hasHousehold} />
+				<HomeHeader name={profile.name} hasHousehold={profile.hasHousehold} />
 
 				{space === "household" ? (
 					<View className="mt-6">
 						<ReadOnlyHome />
 					</View>
-				) : (
-					<>
-						<Text className="mt-6 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
-							{hero.label}
-						</Text>
-						<View className="mt-2">
-							<DayNumber whole={hero.whole} decimals={hero.decimals} over={hero.over} />
-						</View>
-						<Text className="mt-2.5 text-[13px] text-muted-foreground">{daysLeftLabel}</Text>
-
-						<View className="mt-[22px]">
-							<Envelopes home={SAMPLE_HOME} />
-						</View>
-
-						<DueSoon items={SAMPLE_COMMITMENTS.items} today={SAMPLE_TODAY} />
-					</>
-				)}
+				) : !profile.plan ? (
+					<EmptyPersonal />
+				) : home && commitments ? (
+					<PersonalHome home={home} items={commitments.items} today={today} />
+				) : null}
 
 				{/* TEMPORAL: enlace de prueba; se quita al conectar el informe del ciclo. */}
 				<Pressable
@@ -76,8 +66,8 @@ export default function HomeScreen() {
 			</ScrollView>
 
 			<WelcomeModal
-				visible={profile !== undefined && profile !== null && !profile.welcomeSeen}
-				name={profile?.name ?? ""}
+				visible={!profile.welcomeSeen}
+				name={profile.name}
 				onClose={closeWelcome}
 				onSeePlus={() => {
 					closeWelcome();
