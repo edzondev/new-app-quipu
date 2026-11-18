@@ -49,14 +49,20 @@ export function OtpStep({ email, onChangeEmail, onVerified }: Props) {
 	async function resend() {
 		setError(null);
 		setIsResending(true);
-		const { error } = await sendSignInCode(email);
-		setIsResending(false);
-		if (error) {
-			setError(error);
-			return;
+		try {
+			const { error } = await sendSignInCode(email);
+			if (error) {
+				setError(error);
+				return;
+			}
+			form.setFieldValue("otp", "");
+			restart();
+		} catch {
+			// The call rejected instead of answering (no network): show the generic message.
+			setError({});
+		} finally {
+			setIsResending(false);
 		}
-		form.setFieldValue("otp", "");
-		restart();
 	}
 
 	return (

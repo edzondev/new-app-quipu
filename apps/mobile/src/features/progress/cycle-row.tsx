@@ -1,11 +1,15 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
-import { AMOUNT_KEYS, ENVELOPE_LABELS, type Envelope } from "@quipu/backend/shared/budget";
+import {
+	AMOUNT_KEYS,
+	ENVELOPE_LABELS,
+	type Envelope,
+	wholeSoles,
+} from "@quipu/backend/shared/budget";
 import type { FunctionReturnType } from "convex/server";
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import AngleDown from "reicon-react-native/icons/AngleDown";
 import { SAMPLE_TODAY } from "@/features/home/sample";
-import { wholeSoles } from "@/features/savings/goal-progress";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { cycleTitle, leftText, marginText, type MarginTone } from "./cycle-text";

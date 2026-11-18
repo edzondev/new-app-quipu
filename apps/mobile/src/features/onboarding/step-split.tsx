@@ -1,10 +1,14 @@
-import { AMOUNT_KEYS, ENVELOPE_LABELS, type EnvelopeAmounts } from "@quipu/backend/shared/budget";
+import {
+	AMOUNT_KEYS,
+	ENVELOPE_LABELS,
+	type EnvelopeAmounts,
+	wholeSoles,
+} from "@quipu/backend/shared/budget";
 import type { Split } from "@quipu/backend/shared/plan";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import Minus from "reicon-react-native/icons/Minus";
 import Plus from "reicon-react-native/icons/Plus";
-import { wholeSoles } from "@/features/savings/goal-progress";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { SPLIT_STEP, stepSplit } from "./onboarding-plan";

@@ -7,7 +7,7 @@ import { SAMPLE_HOME } from "@/features/home/sample";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { FundCard } from "@/features/savings/fund-card";
 import { Goals } from "@/features/savings/goals";
-import { wholeSoles } from "@/features/savings/goal-progress";
+import { wholeSoles } from "@quipu/backend/shared/budget";
 import { PlusSheet } from "@/features/plus/plus-sheet";
 import { trialStartedText } from "@/features/plus/trial";
 import { usePlus } from "@/features/plus/use-plus";

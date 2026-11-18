@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { parseDetected } from "@/features/detection/params";
-import { RegisterForm } from "@/features/register/form";
+import { RegisterForm } from "@/features/register/register-form";
 
 export function RegisterScreen() {
 	const detected = parseDetected(useLocalSearchParams());
