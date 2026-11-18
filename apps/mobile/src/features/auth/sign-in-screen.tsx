@@ -1,17 +1,10 @@
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-	KeyboardAvoidingView,
-	Platform,
-	Pressable,
-	ScrollView,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Fingerprint from "reicon-react-native/icons/Fingerprint";
+import { KeyboardAvoidingView } from "@/components/ui/keyboard-avoiding-view";
 import { QuipuLogo } from "@/components/quipu-logo";
 import { Button } from "@/components/ui/button";
 import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
@@ -45,10 +38,7 @@ export function SignInScreen() {
 	}
 
 	return (
-		<KeyboardAvoidingView
-			className="flex-1 bg-background"
-			behavior={Platform.OS === "ios" ? "padding" : undefined}
-		>
+		<KeyboardAvoidingView className="flex-1 bg-background" behavior="padding">
 			<ScrollView
 				contentContainerClassName="grow px-6"
 				contentContainerStyle={{ paddingTop: insets.top + 22, paddingBottom: insets.bottom + 12 }}

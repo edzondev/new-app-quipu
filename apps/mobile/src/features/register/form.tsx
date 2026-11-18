@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { Button } from "@/components/ui/button";
+import { KeyboardAvoidingView } from "@/components/ui/keyboard-avoiding-view";
 import { Segmented } from "@/components/ui/segmented";
 import { TextField } from "@/components/ui/text-field";
 import type { DetectedDraft } from "@/features/detection/params";
@@ -36,7 +37,7 @@ export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
 				: "Registrar";
 
 	return (
-		<View className="bg-background px-6 pt-3 pb-6">
+		<KeyboardAvoidingView behavior="padding" className="bg-background px-6 pt-3 pb-6">
 			<Text className="text-2xl font-semibold text-foreground">{title}</Text>
 			{detected?.bank ? (
 				<Text className="mt-1 text-[13px] text-muted-foreground">{detected.bank}</Text>
@@ -102,6 +103,6 @@ export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
 					}}
 				/>
 			</View>
-		</View>
+		</KeyboardAvoidingView>
 	);
 }
