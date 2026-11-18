@@ -8,6 +8,7 @@ import ChartBar from "reicon-react-native/icons/ChartBar";
 import Home from "reicon-react-native/icons/Home";
 import List from "reicon-react-native/icons/List";
 import ShieldCheck from "reicon-react-native/icons/ShieldCheck";
+import { HomeLoading } from "@/features/home/home-skeleton";
 import { SpaceProvider } from "@/features/household/space-context";
 import { TabBar } from "@/features/navigation/tab-bar";
 import { FloatingActions } from "@/features/register/floating-actions";
@@ -21,7 +22,7 @@ function tabIcon(Icon: ComponentType<{ size?: number; color?: string }>) {
 export default function TabsLayout() {
 	const profile = useQuery(api.profiles.myProfile);
 
-	if (profile === undefined) return null;
+	if (profile === undefined) return <HomeLoading />;
 	// Same rules as apps/web/src/routes/_app.tsx, minus deletionRunsAt (no mobile screen for it yet).
 	if (profile === null || (!profile.plan && !profile.hasHousehold)) {
 		return <Redirect href="/onboarding" />;

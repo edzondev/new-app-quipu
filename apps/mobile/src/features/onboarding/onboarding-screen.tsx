@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { DayGrid } from "@/features/cycle/day-grid";
 import { FixedSheet } from "./fixed-sheet";
@@ -25,6 +26,16 @@ export function OnboardingScreen() {
 	const rangeLabel = rangeText(flow.range);
 	const last = flow.step === 3;
 
+	// The form waits for the profile: with a plan, Primeros pasos is closed and the form must not flash.
+	if (profile === undefined) {
+		return (
+			<View className="flex-1 gap-3 bg-background px-6" style={{ paddingTop: insets.top + 12 }}>
+				<Skeleton className="h-10 w-56" />
+				<Skeleton className="h-14" />
+				<Skeleton className="h-14" />
+			</View>
+		);
+	}
 	// Primeros pasos can't be reopened once there is a personal plan.
 	if (profile?.plan) return <Redirect href="/" />;
 
