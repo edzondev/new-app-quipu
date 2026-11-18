@@ -1,18 +1,16 @@
 import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { Redirect } from "expo-router";
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/toast";
-import { DayGrid } from "@/features/cycle/day-grid";
-import { FixedSheet } from "./fixed-sheet";
-import { rangeText } from "./onboarding-plan";
+import { DayList } from "@/features/cycle/day-list";
+import { StepCycle } from "./step-cycle";
 import { StepHeader } from "./step-header";
-import { StepNumber } from "./step-number";
+import { StepName } from "./step-name";
 import { StepSplit } from "./step-split";
 import { StepToday } from "./step-today";
 import { useOnboarding } from "./use-onboarding";
@@ -40,11 +38,21 @@ export function OnboardingScreen() {
 
 function OnboardingForm({ name }: { name: string }) {
 	const insets = useSafeAreaInsets();
-	const toast = useToast();
-	const flow = useOnboarding((text) => toast.show(text, true), name);
-	const [sheet, setSheet] = useState<"day" | "fixed" | null>(null);
-	const rangeLabel = rangeText(flow.range);
-	const last = flow.step === 3;
+	const flow = useOnboarding(name);
+	const [dayOpen, setDayOpen] = useState(false);
+	const last = flow.step === 4;
+	const waitsForFrequency = flow.step === 2 && flow.plan === null;
+	const { step, back } = flow;
+
+	// Android back goes to the step before; on the first step it keeps its default.
+	useEffect(() => {
+		if (step === 1) return;
+		const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+			back();
+			return true;
+		});
+		return () => subscription.remove();
+	}, [step, back]);
 
 	return (
 		<KeyboardAvoidingView
@@ -60,62 +68,53 @@ function OnboardingForm({ name }: { name: string }) {
 				keyboardShouldPersistTaps="handled"
 			>
 				{flow.step === 1 ? (
-					<StepToday
-						name={flow.name}
-						nameError={flow.nameError}
-						onName={flow.setName}
-						todayText={flow.todayText}
-						todayMissing={flow.todayMissing}
-						onToday={flow.setTodayText}
-						cadence={flow.cadence}
-						onCadence={flow.setCadence}
-						startDay={flow.startDay}
-						rangeLabel={rangeLabel}
-						onOpenDay={() => setSheet("day")}
+					<StepName name={flow.name} nameError={flow.nameError} onName={flow.setName} />
+				) : flow.step === 2 ? (
+					<StepCycle
+						frequency={flow.frequency}
+						onFrequency={flow.setFrequency}
+						plan={flow.plan}
+						onOpenDay={() => setDayOpen(true)}
 						incomeText={flow.incomeText}
+						incomeError={flow.incomeError}
 						onIncome={flow.setIncomeText}
 					/>
-				) : flow.step === 2 ? (
-					<StepSplit split={flow.split} amounts={flow.number.envelopes} onChange={flow.setSplit} />
+				) : flow.step === 3 ? (
+					<StepToday
+						todayText={flow.todayText}
+						todayError={flow.todayError}
+						onToday={flow.setTodayText}
+					/>
 				) : (
-					<StepNumber
-						cadence={flow.cadence}
-						todayCents={flow.todayCents}
-						rangeLabel={rangeLabel}
-						endDate={flow.range.endDate}
-						number={flow.number}
-						onOpenFixed={() => setSheet("fixed")}
+					<StepSplit
+						split={flow.split}
+						amounts={flow.envelopes}
+						onChange={flow.setSplit}
+						error={flow.splitError ?? flow.saveError}
 					/>
 				)}
 			</ScrollView>
 			<View className="px-6 pt-3" style={{ paddingBottom: insets.bottom + 12 }}>
 				<Button
-					label={last ? "Empezar mi ciclo" : "Continuar"}
-					disabled={last && (flow.number.overIncome || flow.saving)}
+					label={last ? (flow.saving ? "Guardando…" : "Empezar mi ciclo") : "Continuar"}
+					disabled={waitsForFrequency || (last && flow.saving)}
+					accessibilityHint={waitsForFrequency ? "Elige cada cuánto te pagan" : undefined}
 					onPress={last ? () => void flow.finish() : flow.next}
 				/>
 			</View>
 
-			<BottomSheet isPresented={sheet === "day"} onDismiss={() => setSheet(null)}>
-				<DayGrid
-					cadence={flow.cadence}
-					value={flow.startDay}
-					onPick={(day) => {
-						flow.setStartDay(day);
-						setSheet(null);
-					}}
-				/>
+			<BottomSheet isPresented={dayOpen} onDismiss={() => setDayOpen(false)}>
+				{flow.plan ? (
+					<DayList
+						cadence={flow.plan.cadence}
+						value={flow.plan.cycleStartDay}
+						onPick={(day) => {
+							flow.setStartDay(String(day));
+							setDayOpen(false);
+						}}
+					/>
+				) : null}
 			</BottomSheet>
-			<FixedSheet
-				isPresented={sheet === "fixed"}
-				onDismiss={() => setSheet(null)}
-				items={flow.items}
-				dailyCents={flow.number.dailyCents}
-				onAdd={flow.addItem}
-				onChange={flow.updateItem}
-				onRemove={flow.removeItem}
-			/>
-			{toast.view}
 		</KeyboardAvoidingView>
 	);
 }

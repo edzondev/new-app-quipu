@@ -1,12 +1,10 @@
-import { formatRange, getFirstCycleRange } from "@quipu/backend/shared/dates";
 import {
 	DEFAULT_START_DAY,
 	describePayday,
-	type Frequency,
+	getCyclePlan,
 	getStartDayHelp,
 	getStartDayTitle,
 	isFrequency,
-	resolveCycle,
 } from "@quipu/backend/shared/start-day";
 import { useSelector } from "@tanstack/react-form";
 import { Button } from "#/components/ui/button";
@@ -19,20 +17,13 @@ import {
 import { StepHeader } from "#/modules/onboarding/components/step-header";
 import { emptyValues } from "#/modules/onboarding/default-values";
 
-/** What the picked frequency and day save as, and the first cycle they give. */
-function getPlan(frequency: Frequency, startDay: string, today: string) {
-	const cycle = resolveCycle(frequency, startDay);
-	const { startDate, endDate } = getFirstCycleRange(cycle.cadence, cycle.cycleStartDay, today);
-	return { frequency, ...cycle, firstCycle: formatRange(startDate, endDate) };
-}
-
 export const CycleStep = withForm({
 	defaultValues: emptyValues,
 	props: { today: "", onBack: () => {}, onSubmit: () => {} },
 	render: function Render({ form, today, onBack, onSubmit }) {
 		const frequency = useSelector(form.store, (state) => state.values.cycleStep.frequency);
 		const startDay = useSelector(form.store, (state) => state.values.cycleStep.startDay);
-		const plan = isFrequency(frequency) ? getPlan(frequency, startDay, today) : null;
+		const plan = isFrequency(frequency) ? getCyclePlan(frequency, startDay, today) : null;
 
 		return (
 			<>

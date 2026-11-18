@@ -5,9 +5,42 @@ import {
 	DEFAULT_START_DAY,
 	describeCycleChange,
 	describePayday,
+	getCyclePlan,
+	getStartDayLabel,
 	getStartDayOptions,
 	resolveCycle,
 } from "../shared/start-day";
+
+describe("getStartDayLabel", () => {
+	test("names the day the way the select and the rows show it", () => {
+		expect(getStartDayLabel("monthly", 3)).toBe("Día 3");
+		expect(getStartDayLabel("monthly", "last")).toBe("Fin de mes");
+		expect(getStartDayLabel("biweekly", "last")).toBe("15 y fin de mes");
+		expect(getStartDayLabel("weekly", 5)).toBe("Viernes");
+		expect(getStartDayLabel("weekly", 0)).toBe("Domingo");
+	});
+});
+
+describe("getCyclePlan", () => {
+	// The examples of B2, B2v-mes, B2v-semana and B2v-sinfijo: today is Tuesday 20 Oct.
+	const TODAY = "2026-10-20";
+
+	test.each([
+		["biweekly", "last", "20 oct → 30 oct"],
+		["monthly", "last", "20 oct → 30 oct"],
+		["weekly", "5", "20 oct → 22 oct"],
+		["variable", "1", "20 oct → 31 oct"],
+	] as const)("%s from day %s gives the first cycle %s", (frequency, startDay, firstCycle) => {
+		expect(getCyclePlan(frequency, startDay, TODAY).firstCycle).toBe(firstCycle);
+	});
+
+	test("carries what is saved: no fixed pay is a monthly plan from day 1", () => {
+		expect(getCyclePlan("variable", "5", TODAY)).toMatchObject({
+			cadence: "monthly",
+			cycleStartDay: 1,
+		});
+	});
+});
 
 describe("getStartDayOptions", () => {
 	test("monthly offers day 1 to 31 and the end of the month", () => {

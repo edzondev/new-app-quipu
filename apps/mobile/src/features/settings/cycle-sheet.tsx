@@ -1,17 +1,17 @@
-import type { CycleStartDay } from "@quipu/backend/shared/plan";
+import { type CycleStartDay, parseStartDay } from "@quipu/backend/shared/plan";
+import {
+	DEFAULT_START_DAY,
+	describeCycleChange,
+	getStartDayLabel,
+} from "@quipu/backend/shared/start-day";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { ListRow } from "@/components/ui/list-row";
 import { CadenceChips } from "@/features/cycle/cadence-chips";
-import { DayGrid } from "@/features/cycle/day-grid";
-import {
-	type Cycle,
-	currentCycleText,
-	cycleChangeNote,
-	startDayLabel,
-} from "@/features/cycle/cycle-days";
+import { type Cycle, currentCycleText } from "@/features/cycle/cycle-days";
+import { DayList } from "@/features/cycle/day-list";
 
 // The sheet unmounts its content when it closes: each opening starts from the saved cycle.
 function CycleForm({
@@ -31,7 +31,7 @@ function CycleForm({
 
 	if (picking) {
 		return (
-			<DayGrid
+			<DayList
 				cadence={cadence}
 				value={day}
 				onPick={(picked) => {
@@ -54,19 +54,19 @@ function CycleForm({
 					cadence={cadence}
 					onChange={(picked) => {
 						setCadence(picked);
-						setDay(1);
+						setDay(parseStartDay(DEFAULT_START_DAY[picked]));
 					}}
 				/>
 			</View>
 			<View className="mt-2">
 				<ListRow
-					label="Empieza el"
-					value={startDayLabel(cadence, day)}
+					label="Te pagan"
+					value={getStartDayLabel(cadence, day)}
 					onPress={() => setPicking(true)}
 				/>
 			</View>
 			<Text className="mt-3 text-[13px] text-muted-foreground">
-				{cycleChangeNote(next, currentEndDate)}
+				{describeCycleChange(next, currentEndDate)}
 			</Text>
 			<View className="mt-5">
 				<Button
