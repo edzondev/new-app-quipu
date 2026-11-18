@@ -36,13 +36,13 @@ export default function CodeScreen() {
 		try {
 			const { error } = await authClient.signIn.emailOtp({ email, otp });
 			if (!error) return;
+			setVerifying(false);
 			setWrong(true);
 			setMessage(getAuthErrorMessage(error));
 		} catch {
+			setVerifying(false);
 			setWrong(true);
 			setMessage(getAuthErrorMessage(null));
-		} finally {
-			setVerifying(false);
 		}
 	}
 
