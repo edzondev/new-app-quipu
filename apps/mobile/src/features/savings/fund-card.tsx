@@ -2,8 +2,8 @@ import type { api } from "@quipu/backend/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
-import { amountParts } from "@/features/home/hero";
-import { goalPercent, monthsCovered, wholeSoles } from "./progress";
+import { amountParts } from "@/features/home/today-spend";
+import { goalPercent, monthsCovered, wholeSoles } from "./goal-progress";
 import { ProgressBar } from "./progress-bar";
 
 type Fund = FunctionReturnType<typeof api.goals.fund>;

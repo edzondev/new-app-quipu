@@ -1,6 +1,6 @@
 import type { Cadence, CycleStartDay } from "@quipu/backend/shared/plan";
 import { Pressable, Text, View } from "react-native";
-import { MONTH_DAYS, WEEK_CELLS } from "./days";
+import { MONTH_DAYS, WEEK_CELLS } from "./cycle-days";
 
 function DayCell({
 	label,

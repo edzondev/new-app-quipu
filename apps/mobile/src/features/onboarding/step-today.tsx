@@ -3,7 +3,7 @@ import { NAME_MAX } from "@quipu/backend/shared/name";
 import { Text, TextInput, View } from "react-native";
 import { ListRow } from "@/components/ui/list-row";
 import { CadenceChips } from "@/features/cycle/cadence-chips";
-import { startDayLabel } from "@/features/cycle/days";
+import { startDayLabel } from "@/features/cycle/cycle-days";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { MoneyField } from "./money-field";
 

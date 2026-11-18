@@ -2,7 +2,7 @@ import { Linking, Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import type { Bank } from "../../../modules/quipu-detection";
 
-export function HomeStep({
+export function DetectionStatusStep({
 	banks,
 	access,
 	notifications,

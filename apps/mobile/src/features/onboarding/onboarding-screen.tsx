@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { DayGrid } from "@/features/cycle/day-grid";
 import { FixedSheet } from "./fixed-sheet";
-import { rangeText } from "./plan";
+import { rangeText } from "./onboarding-plan";
 import { StepHeader } from "./step-header";
 import { StepNumber } from "./step-number";
 import { StepSplit } from "./step-split";

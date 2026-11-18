@@ -2,12 +2,12 @@ import { addDays, formatDay } from "@quipu/backend/shared/dates";
 import { Text, View } from "react-native";
 import { ListRow } from "@/components/ui/list-row";
 import { SectionLabel } from "@/components/ui/section-label";
-import { cadenceLabel } from "@/features/cycle/days";
+import { cadenceLabel } from "@/features/cycle/cycle-days";
 import { DayNumber } from "@/features/home/day-number";
-import { amountParts } from "@/features/home/hero";
-import { wholeSoles } from "@/features/savings/progress";
+import { amountParts } from "@/features/home/today-spend";
+import { wholeSoles } from "@/features/savings/goal-progress";
 import type { Cadence } from "@quipu/backend/shared/plan";
-import type { firstNumber } from "./plan";
+import type { firstCyclePreview } from "./onboarding-plan";
 
 export function StepNumber({
 	cadence,
@@ -21,7 +21,7 @@ export function StepNumber({
 	todayCents: number;
 	rangeLabel: string;
 	endDate: string;
-	number: ReturnType<typeof firstNumber>;
+	number: ReturnType<typeof firstCyclePreview>;
 	onOpenFixed: () => void;
 }) {
 	const { whole, decimals } = amountParts(number.dailyCents);

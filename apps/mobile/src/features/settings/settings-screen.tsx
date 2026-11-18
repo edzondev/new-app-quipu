@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ListRow } from "@/components/ui/list-row";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { SectionLabel } from "@/components/ui/section-label";
-import { type Cycle, cycleRowValue, splitRowValue } from "@/features/cycle/days";
+import { type Cycle, cycleRowValue, splitRowValue } from "@/features/cycle/cycle-days";
 import { SAMPLE_HOME, SAMPLE_TODAY } from "@/features/home/sample";
 import { SAMPLE_HOUSEHOLD_HOME } from "@/features/household/sample";
 import { sampleStatus } from "@/features/plus/sample";
@@ -20,7 +20,7 @@ import { DetectionRow } from "./detection-row";
 import { PRIVACY_URL, TERMS_URL } from "./links";
 import { ReminderRow } from "./reminder-row";
 import { SAMPLE_CYCLE, SAMPLE_EMAIL, SAMPLE_HOUSEHOLD, SAMPLE_PROFILE } from "./sample";
-import { leaveToSignIn } from "./session";
+import { signOutAndGoToSignIn } from "./sign-out";
 import { SpaceGroup } from "./space-group";
 import { SpaceNameSheet } from "./space-name-sheet";
 
@@ -47,7 +47,7 @@ export function SettingsScreen() {
 	const close = () => setSheet(null);
 	function leave() {
 		close();
-		void leaveToSignIn();
+		void signOutAndGoToSignIn();
 	}
 	const { lines, stillPaying } = deletionLines({
 		space: SAMPLE_PROFILE.hasHousehold ? SAMPLE_HOUSEHOLD : null,

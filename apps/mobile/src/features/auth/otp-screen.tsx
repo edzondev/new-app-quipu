@@ -19,7 +19,7 @@ import { useThemeColor } from "@/lib/use-theme-color";
 
 const BOXES = Array.from({ length: CODE_LENGTH }, (_, index) => index);
 
-export default function CodeScreen() {
+export function OtpScreen() {
 	const insets = useSafeAreaInsets();
 	const { email } = useLocalSearchParams<{ email: string }>();
 	const [code, setCode] = useState("");
@@ -46,7 +46,7 @@ export default function CodeScreen() {
 		}
 	}
 
-	function change(text: string) {
+	function onCodeChange(text: string) {
 		const next = otpDigits(text);
 		// Android re-emits the same text when the keyboard closes; that must not verify again.
 		if (next === code) return;
@@ -76,7 +76,7 @@ export default function CodeScreen() {
 		}
 	}
 
-	function boxLine(index: number) {
+	function otpBoxClass(index: number) {
 		if (wrong) return "border-b-2 border-warning";
 		return index === code.length ? "border-b-2 border-foreground" : "border-b border-input";
 	}
@@ -117,7 +117,7 @@ export default function CodeScreen() {
 						{BOXES.map((index) => (
 							<View
 								key={index}
-								className={`h-[60px] flex-1 items-center justify-center ${boxLine(index)}`}
+								className={`h-[60px] flex-1 items-center justify-center ${otpBoxClass(index)}`}
 							>
 								<Text maxFontSizeMultiplier={1.4} className="font-mono text-[28px] text-foreground">
 									{code[index] ?? ""}
@@ -132,7 +132,7 @@ export default function CodeScreen() {
 						autoComplete="one-time-code"
 						textContentType="oneTimeCode"
 						value={code}
-						onChangeText={change}
+						onChangeText={onCodeChange}
 						accessibilityLabel="Código de 6 dígitos"
 					/>
 				</View>

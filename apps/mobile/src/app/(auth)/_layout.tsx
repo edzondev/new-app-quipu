@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-// Without this, Expo Router opens the first route alphabetically (code) instead of sign-in.
+// Ancla en sign-in: es la primera pantalla cuando no hay sesión.
 export const unstable_settings = { anchor: "sign-in" };
 
 export default function AuthLayout() {
