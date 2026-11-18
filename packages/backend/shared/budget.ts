@@ -59,6 +59,12 @@ export function formatCents(cents: number): string {
 	return moneyFormat.format(cents / 100);
 }
 
+/** "1,240" for exact soles, "1,240.50" when there are cents. The caller adds "S/". */
+export function wholeSoles(cents: number) {
+	const text = formatCents(cents);
+	return text.endsWith(".00") ? text.slice(0, -3) : text;
+}
+
 export function sumAmounts(amounts: EnvelopeAmounts): number {
 	return amounts.needsCents + amounts.wantsCents + amounts.savingsCents;
 }

@@ -3,7 +3,8 @@ import type { FunctionReturnType } from "convex/server";
 import { Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { amountParts } from "@/features/home/today-spend";
-import { goalPercent, monthsCovered, wholeSoles } from "./goal-progress";
+import { goalPercent, monthsCovered } from "./goal-progress";
+import { wholeSoles } from "@quipu/backend/shared/budget";
 import { ProgressBar } from "./progress-bar";
 
 type Fund = FunctionReturnType<typeof api.goals.fund>;

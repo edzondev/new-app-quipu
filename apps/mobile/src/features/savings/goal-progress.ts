@@ -1,4 +1,3 @@
-import { formatCents } from "@quipu/backend/shared/budget";
 import { monthName } from "@quipu/backend/shared/dates";
 import { FUND_GOAL_MONTHS } from "@quipu/backend/shared/plan";
 
@@ -9,12 +8,6 @@ export function goalPercent(savedCents: number, targetCents: number) {
 
 export function missingCents(savedCents: number, targetCents: number) {
 	return Math.max(0, targetCents - savedCents);
-}
-
-/** "1,240" for exact soles, "1,240.50" when there are cents. The caller adds "S/". */
-export function wholeSoles(cents: number) {
-	const text = formatCents(cents);
-	return text.endsWith(".00") ? text.slice(0, -3) : text;
 }
 
 export function monthsCovered(fundCents: number, suggestedFundGoalCents: number | null) {

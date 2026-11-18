@@ -9,7 +9,7 @@ import { CommitmentRow } from "@/features/commitments/commitment-row";
 import { dueLine, paidBeforeLine, paymentFrequency } from "@/features/commitments/commitment-text";
 import { SAMPLE_COMMITMENTS, SAMPLE_TODAY } from "@/features/home/sample";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
-import { wholeSoles } from "@/features/savings/goal-progress";
+import { wholeSoles } from "@quipu/backend/shared/budget";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 function Title() {
