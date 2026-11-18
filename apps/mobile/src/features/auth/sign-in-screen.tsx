@@ -1,5 +1,5 @@
 import * as Linking from "expo-linking";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
 	KeyboardAvoidingView,
@@ -21,6 +21,7 @@ import { useThemeColor } from "@/lib/use-theme-color";
 
 export function SignInScreen() {
 	const insets = useSafeAreaInsets();
+	const { redirect } = useLocalSearchParams<{ redirect?: string }>();
 	const [email, setEmail] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [sending, setSending] = useState(false);
@@ -36,7 +37,7 @@ export function SignInScreen() {
 		try {
 			const { error: sendError } = await sendSignInCode(email.trim());
 			if (sendError) setError(getAuthErrorMessage(sendError));
-			else router.push({ pathname: "/verify-code", params: { email: email.trim() } });
+			else router.push({ pathname: "/verify-code", params: { email: email.trim(), redirect } });
 		} catch {
 			setError(getAuthErrorMessage(null));
 		} finally {

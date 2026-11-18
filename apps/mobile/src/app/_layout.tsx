@@ -1,9 +1,10 @@
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { useConvexAuth } from "convex/react";
-import { Stack } from "expo-router";
+import { Stack, useGlobalSearchParams, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "@/global.css";
+import { afterSignInHref } from "@/features/auth/after-sign-in-href";
 import { authClient } from "@/lib/auth-client";
 import { convex } from "@/lib/convex";
 import { ensureReminder } from "../../modules/quipu-detection";
@@ -22,6 +23,9 @@ const sheet = {
 
 function Screens() {
 	const { isLoading, isAuthenticated } = useConvexAuth();
+	const pathname = usePathname();
+	// sign-in and verify-code carry the ?redirect= the guard below put there.
+	const { redirect } = useGlobalSearchParams<{ redirect?: string }>();
 
 	useEffect(() => {
 		if (!isLoading) void SplashScreen.hideAsync();
@@ -31,11 +35,15 @@ function Screens() {
 
 	return (
 		<Stack screenOptions={{ headerShown: false }}>
-			<Stack.Protected guard={!isAuthenticated}>
+			{/* After a good code the session flips and this guard sends the person back to where they came from. */}
+			<Stack.Protected guard={!isAuthenticated} redirectTo={afterSignInHref(redirect)}>
 				<Stack.Screen name="(auth)" />
 			</Stack.Protected>
 			{/* (auth) has no index, so the default fallback would point at "/", which is (tabs). */}
-			<Stack.Protected guard={isAuthenticated} redirectTo="/sign-in">
+			<Stack.Protected
+				guard={isAuthenticated}
+				redirectTo={{ pathname: "/sign-in", params: { redirect: pathname } }}
+			>
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
 				<Stack.Screen name="register" options={sheet} />
