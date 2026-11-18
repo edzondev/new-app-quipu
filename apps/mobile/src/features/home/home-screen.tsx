@@ -10,10 +10,23 @@ import { ReadOnlyHome } from "@/features/household/readonly-home";
 import { useSpace } from "@/features/household/space-context";
 import { EmptyPersonal } from "@/features/home/empty-states";
 import { HomeHeader } from "@/features/home/home-header";
+import { HomeLoadBoundary } from "@/features/home/home-load-boundary";
+import { HomeLoading, HomeSkeleton } from "@/features/home/home-skeleton";
 import { PersonalHome } from "@/features/home/personal-home";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { WelcomeModal } from "@/features/onboarding/welcome-modal";
 import { PlusSheet } from "@/features/plus/plus-sheet";
+
+/** Inicio's personal content. Opening the cycle and its queries live here, so a failure remounts only this part. */
+function PersonalBody({ today }: { today: string }) {
+	const opened = useOpenCycle(today);
+	const args = opened ? ({ space: "personal", today } as const) : "skip";
+	const home = useQuery(api.balances.getHome, args);
+	const commitments = useQuery(api.commitments.list, args);
+
+	if (!home || !commitments) return <HomeSkeleton />;
+	return <PersonalHome home={home} items={commitments.items} today={today} />;
+}
 
 export function HomeScreen() {
 	const insets = useSafeAreaInsets();
@@ -22,14 +35,9 @@ export function HomeScreen() {
 	const profile = useQuery(api.profiles.myProfile);
 	const markWelcomeSeen = useMutation(api.profiles.markWelcomeSeen);
 	const [plansOpen, setPlansOpen] = useState(false);
-	const hasPersonalPlan = space === "personal" && !!profile?.plan;
-	const opened = useOpenCycle(today, hasPersonalPlan);
-	const args = opened ? ({ space: "personal", today } as const) : "skip";
-	const home = useQuery(api.balances.getHome, args);
-	const commitments = useQuery(api.commitments.list, args);
 	const closeWelcome = () => void markWelcomeSeen();
 
-	if (!profile) return null;
+	if (!profile) return <HomeLoading />;
 
 	return (
 		<View className="flex-1 bg-background">
@@ -49,9 +57,11 @@ export function HomeScreen() {
 					</View>
 				) : !profile.plan ? (
 					<EmptyPersonal />
-				) : home && commitments ? (
-					<PersonalHome home={home} items={commitments.items} today={today} />
-				) : null}
+				) : (
+					<HomeLoadBoundary>
+						<PersonalBody today={today} />
+					</HomeLoadBoundary>
+				)}
 
 				{/* TEMPORAL: enlace de prueba; se quita al conectar el informe del ciclo. */}
 				<Pressable

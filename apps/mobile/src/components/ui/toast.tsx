@@ -17,7 +17,7 @@ function ToastView({ text, warning }: Toast) {
 		>
 			<View
 				accessibilityRole="alert"
-				accessibilityLiveRegion="polite"
+				accessibilityLiveRegion={warning ? "assertive" : "polite"}
 				className={`rounded-full px-4 py-3 ${warning ? "border border-warning bg-popover" : "bg-foreground"}`}
 			>
 				<Text

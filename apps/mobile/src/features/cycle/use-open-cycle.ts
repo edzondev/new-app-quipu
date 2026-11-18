@@ -2,25 +2,32 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 
-/** True once today's personal cycle exists; the queries that need it wait for this. Runs again when the Lima day changes. */
-export function useOpenCycle(today: string, enabled: boolean) {
+type Settled = { day: string; failed: false } | { day: string; failed: true; error: unknown };
+
+/**
+ * True once today's personal cycle exists; the queries that need it wait for this. Runs again when the Lima day changes.
+ * A failed opening throws during render, so the nearest error boundary shows the retry.
+ */
+export function useOpenCycle(today: string) {
 	const ensureOpen = useMutation(api.cycles.ensureOpen);
-	const [openedOn, setOpenedOn] = useState<string | null>(null);
+	const [settled, setSettled] = useState<Settled | null>(null);
 
 	useEffect(() => {
-		if (!enabled) return;
 		let cancelled = false;
 		ensureOpen({ space: "personal" }).then(
 			() => {
-				if (!cancelled) setOpenedOn(today);
+				if (!cancelled) setSettled({ day: today, failed: false });
 			},
-			// Luego: P3 (error al cargar, con Reintentar). Hasta entonces las queries siguen saltadas.
-			() => {},
+			(error: unknown) => {
+				if (!cancelled) setSettled({ day: today, failed: true, error });
+			},
 		);
 		return () => {
 			cancelled = true;
 		};
-	}, [enabled, ensureOpen, today]);
+	}, [ensureOpen, today]);
 
-	return enabled && openedOn === today;
+	if (settled?.day !== today) return false;
+	if (settled.failed) throw settled.error;
+	return true;
 }

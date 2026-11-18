@@ -12,12 +12,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AngleLeft from "reicon-react-native/icons/AngleLeft";
 import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
+import { useToast } from "@/components/ui/toast";
 import { useResendClock } from "@/features/auth/use-resend-clock";
 import { CODE_LENGTH, formatClock, otpDigits, RESEND_SECONDS } from "@/features/auth/validation";
 import { authClient, sendSignInCode } from "@/lib/auth-client";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 const BOXES = Array.from({ length: CODE_LENGTH }, (_, index) => index);
+const OFFLINE_TEXT = "Sin conexión. Revisa tu señal.";
 
 export function OtpScreen() {
 	const insets = useSafeAreaInsets();
@@ -29,6 +31,7 @@ export function OtpScreen() {
 	const [resending, setResending] = useState(false);
 	const resend = useResendClock(RESEND_SECONDS);
 	const foreground = useThemeColor("--color-foreground");
+	const toast = useToast();
 
 	// A good code changes the session and the guard moves to the next screen by itself.
 	async function verify(otp: string) {
@@ -40,9 +43,9 @@ export function OtpScreen() {
 			setWrong(true);
 			setMessage(getAuthErrorMessage(error));
 		} catch {
+			// The call rejected instead of answering: no server response, almost always no network.
 			setVerifying(false);
-			setWrong(true);
-			setMessage(getAuthErrorMessage(null));
+			toast.show(OFFLINE_TEXT, true);
 		}
 	}
 
@@ -70,7 +73,7 @@ export function OtpScreen() {
 			setMessage(null);
 			resend.restart();
 		} catch {
-			setMessage(getAuthErrorMessage(null));
+			toast.show(OFFLINE_TEXT, true);
 		} finally {
 			setResending(false);
 		}
@@ -172,6 +175,7 @@ export function OtpScreen() {
 					</Pressable>
 				</View>
 			</ScrollView>
+			{toast.view}
 		</KeyboardAvoidingView>
 	);
 }
