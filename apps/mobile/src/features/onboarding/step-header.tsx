@@ -1,14 +1,14 @@
 import { Pressable, Text, View } from "react-native";
 
-const STEPS = [1, 2, 3] as const;
+const STEPS = [1, 2, 3, 4] as const;
 
-export function StepHeader({ step, onBack }: { step: 1 | 2 | 3; onBack: () => void }) {
+export function StepHeader({ step, onBack }: { step: 1 | 2 | 3 | 4; onBack: () => void }) {
 	return (
 		<View className="px-6 pt-3">
 			<View
 				className="flex-row gap-2"
 				accessibilityRole="progressbar"
-				accessibilityLabel={`Paso ${step} de 3`}
+				accessibilityLabel={`Paso ${step} de 4`}
 			>
 				{STEPS.map((index) => (
 					<View
@@ -18,7 +18,7 @@ export function StepHeader({ step, onBack }: { step: 1 | 2 | 3; onBack: () => vo
 				))}
 			</View>
 			<View className="min-h-11 flex-row items-center justify-between">
-				<Text className="text-[13px] text-muted-foreground">{step} de 3</Text>
+				<Text className="text-[13px] text-muted-foreground">{step} de 4</Text>
 				{step > 1 ? (
 					<Pressable
 						accessibilityRole="button"

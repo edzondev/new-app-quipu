@@ -6,16 +6,20 @@ export function MoneyField({
 	onChange,
 	label,
 	large = false,
+	invalid = false,
 }: {
 	value: string;
 	onChange: (text: string) => void;
 	label: string;
 	large?: boolean;
+	invalid?: boolean;
 }) {
 	const muted = useThemeColor("--color-muted-foreground");
 
 	return (
-		<View className="flex-row items-baseline gap-2 border-b border-input">
+		<View
+			className={`flex-row items-baseline gap-2 ${invalid ? "border-b-2 border-warning" : "border-b border-input"}`}
+		>
 			<Text className={`text-muted-foreground ${large ? "text-2xl" : "text-lg"}`}>S/</Text>
 			<TextInput
 				className={`min-w-0 flex-1 py-1 font-mono text-foreground ${large ? "text-5xl" : "text-[28px]"}`}

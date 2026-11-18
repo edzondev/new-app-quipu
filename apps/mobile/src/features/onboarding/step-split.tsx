@@ -36,10 +36,12 @@ export function StepSplit({
 	split,
 	amounts,
 	onChange,
+	error,
 }: {
 	split: Split;
 	amounts: EnvelopeAmounts;
 	onChange: (split: Split) => void;
+	error: string | null;
 }) {
 	const foreground = useThemeColor("--color-foreground");
 
@@ -82,6 +84,11 @@ export function StepSplit({
 			<Text className="mt-3 text-[13px] text-muted-foreground">
 				Puedes cambiarlo cuando quieras en tus sobres.
 			</Text>
+			{error ? (
+				<Text accessibilityRole="alert" className="mt-2 text-[13px] text-warning-foreground">
+					{error}
+				</Text>
+			) : null}
 		</View>
 	);
 }
