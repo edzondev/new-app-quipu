@@ -19,12 +19,7 @@ import { useOnboarding } from "./use-onboarding";
 
 export function OnboardingScreen() {
 	const insets = useSafeAreaInsets();
-	const toast = useToast();
 	const profile = useQuery(api.profiles.myProfile);
-	const flow = useOnboarding((text) => toast.show(text, true), profile?.name ?? "");
-	const [sheet, setSheet] = useState<"day" | "fixed" | null>(null);
-	const rangeLabel = rangeText(flow.range);
-	const last = flow.step === 3;
 
 	// The form waits for the profile: with a plan, Primeros pasos is closed and the form must not flash.
 	if (profile === undefined) {
@@ -38,6 +33,18 @@ export function OnboardingScreen() {
 	}
 	// Primeros pasos can't be reopened once there is a personal plan.
 	if (profile?.plan) return <Redirect href="/" />;
+
+	// The form starts its name from the profile, so it mounts only once the profile is here.
+	return <OnboardingForm name={profile?.name ?? ""} />;
+}
+
+function OnboardingForm({ name }: { name: string }) {
+	const insets = useSafeAreaInsets();
+	const toast = useToast();
+	const flow = useOnboarding((text) => toast.show(text, true), name);
+	const [sheet, setSheet] = useState<"day" | "fixed" | null>(null);
+	const rangeLabel = rangeText(flow.range);
+	const last = flow.step === 3;
 
 	return (
 		<KeyboardAvoidingView
