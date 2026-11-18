@@ -1,24 +1,15 @@
-import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { Button } from "#/components/ui/button";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
+import { withForm } from "#/hooks/use-app-form";
 import { StepHeader } from "#/modules/onboarding/components/step-header";
-import { type NameStepValues, nameStepSchema } from "#/modules/onboarding/schemas";
+import { emptyValues } from "#/modules/onboarding/default-values";
+import { firstErrorMessage } from "#/modules/onboarding/first-error-message";
 
-type Props = {
-	defaultValues: NameStepValues;
-	onNext: (value: NameStepValues) => void;
-};
-
-export function NameStep({ defaultValues, onNext }: Props) {
-	const form = useForm({
-		defaultValues,
-		validationLogic: revalidateLogic(),
-		validators: { onDynamic: nameStepSchema },
-		onSubmit: ({ value }) => onNext({ name: value.name.trim() }),
-	});
-
-	return (
+export const NameStep = withForm({
+	defaultValues: emptyValues,
+	props: { onSubmit: () => {} },
+	render: ({ form, onSubmit }) => (
 		<>
 			<StepHeader title="¿Cómo te llamas?" />
 			<form
@@ -26,13 +17,13 @@ export function NameStep({ defaultValues, onNext }: Props) {
 				className="mt-8"
 				onSubmit={(e) => {
 					e.preventDefault();
-					void form.handleSubmit();
+					onSubmit();
 				}}
 			>
-				<form.Field name="name">
+				<form.Field name="nameStep.name">
 					{(field) => {
 						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-						const errorMessage = field.state.meta.errors[0]?.message;
+						const errorMessage = firstErrorMessage(field.state.meta.errors);
 						return (
 							<Field name={field.name} invalid={isInvalid}>
 								<FieldLabel className="text-sm font-normal text-muted-foreground">
@@ -62,5 +53,5 @@ export function NameStep({ defaultValues, onNext }: Props) {
 				</Button>
 			</form>
 		</>
-	);
-}
+	),
+});

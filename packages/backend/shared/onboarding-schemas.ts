@@ -39,8 +39,6 @@ export const splitStepSchema = z.object({
 	split: splitSchema,
 });
 
-export type Cadence = z.infer<typeof cadenceSchema>;
-export type Split = z.infer<typeof splitSchema>;
 export type NameStepValues = z.infer<typeof nameStepSchema>;
 export type CycleStepValues = z.infer<typeof cycleStepSchema>;
 export type SplitStepValues = z.infer<typeof splitStepSchema>;
