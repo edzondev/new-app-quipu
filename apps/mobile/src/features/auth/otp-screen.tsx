@@ -14,6 +14,7 @@ import { useThemeColor } from "@/lib/use-theme-color";
 
 const BOXES = Array.from({ length: CODE_LENGTH }, (_, index) => index);
 const OFFLINE_TEXT = "Sin conexión. Revisa tu señal.";
+const WRONG_CODE_ERRORS = ["INVALID_OTP", "OTP_EXPIRED", "TOO_MANY_ATTEMPTS"];
 
 export function OtpScreen() {
 	const insets = useSafeAreaInsets();
@@ -37,7 +38,9 @@ export function OtpScreen() {
 			setWrong(true);
 			setMessage(getAuthErrorMessage(error));
 			// A3 of the design: a warning vibration for a wrong or expired code. No shake, no red.
-			void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+			if (error.code && WRONG_CODE_ERRORS.includes(error.code)) {
+				void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+			}
 		} catch {
 			// The call rejected instead of answering: no server response, almost always no network.
 			setVerifying(false);
