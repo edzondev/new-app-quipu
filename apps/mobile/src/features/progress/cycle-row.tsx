@@ -8,10 +8,11 @@ import {
 import type { FunctionReturnType } from "convex/server";
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
-import AngleDown from "reicon-react-native/icons/AngleDown";
+import Animated from "react-native-reanimated";
+import { ExpandChevron } from "@/components/ui/expand-chevron";
 import { SAMPLE_TODAY } from "@/features/home/sample";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
-import { useThemeColor } from "@/lib/use-theme-color";
+import { enter, exit, layout } from "@/lib/motion";
 import { cycleTitle, leftText, marginText, type MarginTone } from "./cycle-text";
 
 type Cycle = FunctionReturnType<typeof api.progress.list>["cycles"][number];
@@ -81,39 +82,31 @@ function Line({
 
 export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: boolean }) {
 	const [open, setOpen] = useState(defaultOpen);
-	const muted = useThemeColor("--color-muted-foreground");
 	const { detail } = cycle;
 
 	if (detail.kind === "unavailable") {
 		return (
-			<View className="border-b border-border">
+			<Animated.View layout={layout} className="border-b border-border">
 				<Summary cycle={cycle} icon={null} />
 				<Text className="pb-3 pl-5 text-[13px] text-muted-foreground">
 					Detalle no disponible para este ciclo
 				</Text>
-			</View>
+			</Animated.View>
 		);
 	}
 
 	return (
-		<View className="border-b border-border">
+		<Animated.View layout={layout} className="border-b border-border">
 			<Pressable
 				accessibilityRole="button"
 				accessibilityState={{ expanded: open }}
 				onPress={() => setOpen(!open)}
 				className="active:opacity-60"
 			>
-				<Summary
-					cycle={cycle}
-					icon={
-						<View className={open ? "" : "-rotate-90"}>
-							<AngleDown size={16} color={muted} />
-						</View>
-					}
-				/>
+				<Summary cycle={cycle} icon={<ExpandChevron open={open} />} />
 			</Pressable>
 			{open ? (
-				<View className="pb-3 pl-5">
+				<Animated.View entering={enter} exiting={exit} className="pb-3 pl-5">
 					{SPENDABLE.map((envelope) => {
 						const key = AMOUNT_KEYS[envelope];
 						const left = leftText(cycle.left[key]);
@@ -135,8 +128,8 @@ export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: bo
 							over={false}
 						/>
 					) : null}
-				</View>
+				</Animated.View>
 			) : null}
-		</View>
+		</Animated.View>
 	);
 }

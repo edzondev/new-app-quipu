@@ -1,4 +1,5 @@
 import { ScrollView, Text, View } from "react-native";
+import { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { CycleRow } from "@/features/progress/cycle-row";
@@ -73,9 +74,12 @@ export function ProgressScreen() {
 			<Text className="mt-[22px] text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
 				Ciclos
 			</Text>
-			{cycles.map((cycle) => (
-				<CycleRow key={cycle.id} cycle={cycle} defaultOpen={cycle.id === openId} />
-			))}
+			{/* The cycle open by default is there from the start: only opening and closing animate. */}
+			<LayoutAnimationConfig skipEntering>
+				{cycles.map((cycle) => (
+					<CycleRow key={cycle.id} cycle={cycle} defaultOpen={cycle.id === openId} />
+				))}
+			</LayoutAnimationConfig>
 		</ScrollView>
 	);
 }
