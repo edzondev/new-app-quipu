@@ -28,7 +28,7 @@ export function FundCard({ fund }: { fund: Fund }) {
 						hitSlop={8}
 						// Luego: hoja G6
 						onPress={() => {}}
-						className="min-h-8 shrink-0 justify-center"
+						className="min-h-8 shrink-0 justify-center active:opacity-60"
 					>
 						<Text className="text-xs text-muted-foreground underline">
 							Meta: S/ {wholeSoles(goalCents)}

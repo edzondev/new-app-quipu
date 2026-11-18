@@ -58,7 +58,7 @@ export function CommitmentRow({
 					accessibilityRole="button"
 					// Luego: hoja F3
 					onPress={() => {}}
-					className="min-h-11 justify-center self-start"
+					className="min-h-11 justify-center self-start active:opacity-60"
 				>
 					<Text
 						className={`text-[13px] font-semibold underline ${status === "overdue" ? "text-warning-foreground" : "text-foreground"}`}

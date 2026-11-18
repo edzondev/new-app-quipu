@@ -101,6 +101,7 @@ export function CycleRow({ cycle, defaultOpen }: { cycle: Cycle; defaultOpen: bo
 				accessibilityRole="button"
 				accessibilityState={{ expanded: open }}
 				onPress={() => setOpen(!open)}
+				className="active:opacity-60"
 			>
 				<Summary
 					cycle={cycle}

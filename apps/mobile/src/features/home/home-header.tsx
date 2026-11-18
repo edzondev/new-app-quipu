@@ -15,7 +15,7 @@ export function HomeHeader({ name, hasHousehold }: { name: string; hasHousehold:
 				accessibilityRole="button"
 				accessibilityLabel="Abrir Ajustes"
 				onPress={() => router.push("/settings")}
-				className="max-w-[35%] min-w-0 shrink flex-row items-center gap-2.5"
+				className="max-w-[35%] min-w-0 shrink flex-row items-center gap-2.5 active:opacity-60"
 			>
 				<Avatar name={name} />
 				<Text className="shrink text-[17px] font-semibold text-foreground" numberOfLines={1}>

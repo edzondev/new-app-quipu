@@ -1,7 +1,8 @@
 import { router } from "expo-router";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Plus from "reicon-react-native/icons/Plus";
+import { PressableScale } from "@/components/ui/pressable-scale";
 import { useSpace } from "@/features/household/space-context";
 import { FLOATING_ACTIONS_OFFSET } from "@/features/navigation/tab-bar";
 import { useThemeColor } from "@/lib/use-theme-color";
@@ -19,7 +20,7 @@ export function FloatingActions() {
 			className="absolute right-4"
 			style={{ bottom: insets.bottom + FLOATING_ACTIONS_OFFSET }}
 		>
-			<Pressable
+			<PressableScale
 				accessibilityRole="button"
 				accessibilityLabel="Escribir gasto"
 				accessibilityState={{ disabled: readOnly }}
@@ -37,7 +38,7 @@ export function FloatingActions() {
 				}}
 			>
 				<Plus size={20} color={foreground} />
-			</Pressable>
+			</PressableScale>
 		</View>
 	);
 }

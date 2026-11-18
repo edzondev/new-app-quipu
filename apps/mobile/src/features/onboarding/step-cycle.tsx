@@ -7,8 +7,10 @@ import {
 	getStartDayLabel,
 	getStartDayTitle,
 } from "@quipu/backend/shared/start-day";
-import { Pressable, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import { Text, View } from "react-native";
 import Check from "reicon-react-native/icons/Check";
+import { PressableScale } from "@/components/ui/pressable-scale";
 import { DayRow } from "@/features/cycle/day-row";
 import { useThemeColor } from "@/lib/use-theme-color";
 import { MoneyField } from "./money-field";
@@ -45,11 +47,16 @@ export function StepCycle({
 				{FREQUENCIES.map((value) => {
 					const checked = frequency === value;
 					return (
-						<Pressable
+						<PressableScale
 							key={value}
+							scale={0.985}
 							accessibilityRole="radio"
 							accessibilityState={{ checked }}
-							onPress={() => onFrequency(value)}
+							onPress={() => {
+								if (checked) return;
+								void Haptics.selectionAsync();
+								onFrequency(value);
+							}}
 							className={`min-h-[52px] w-[48.5%] flex-row items-center gap-2 rounded-[14px] ${checked ? "border-2 border-foreground bg-muted px-2.5" : "border border-input px-[11px]"}`}
 						>
 							<View
@@ -60,7 +67,7 @@ export function StepCycle({
 							<Text className="min-w-0 shrink text-sm leading-[17px] font-semibold text-foreground">
 								{FREQUENCY_LABELS[value]}
 							</Text>
-						</Pressable>
+						</PressableScale>
 					);
 				})}
 			</View>

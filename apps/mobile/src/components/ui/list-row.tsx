@@ -42,7 +42,11 @@ export function ListRow({
 	);
 
 	return onPress ? (
-		<Pressable accessibilityRole="button" onPress={onPress} className={className}>
+		<Pressable
+			accessibilityRole="button"
+			onPress={onPress}
+			className={`${className} active:opacity-60`}
+		>
 			{body}
 		</Pressable>
 	) : (

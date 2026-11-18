@@ -5,9 +5,11 @@ import {
 	planPrices,
 } from "@quipu/backend/shared/billing";
 import { formatCents } from "@quipu/backend/shared/budget";
+import * as Haptics from "expo-haptics";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
+import { PressableScale } from "@/components/ui/pressable-scale";
 import { FeatureTable } from "./feature-table";
 import type { PlusFeature } from "./features";
 import { usePlus } from "./use-plus";
@@ -33,10 +35,15 @@ function PlanOption({
 	onPress: () => void;
 }) {
 	return (
-		<Pressable
+		<PressableScale
+			scale={0.985}
 			accessibilityRole="radio"
 			accessibilityState={{ selected }}
-			onPress={onPress}
+			onPress={() => {
+				if (selected) return;
+				void Haptics.selectionAsync();
+				onPress();
+			}}
 			className={`min-h-16 flex-row items-center justify-between gap-3 rounded-2xl px-4 py-3 ${selected ? "border-2 border-foreground" : "border border-input"}`}
 		>
 			<View className="min-w-0 flex-1">
@@ -57,7 +64,7 @@ function PlanOption({
 			<Text className="shrink-0 font-mono text-[15px] text-foreground">
 				{cents === null ? "Precio por confirmar" : `S/ ${formatCents(cents)} ${PER[interval]}`}
 			</Text>
-		</Pressable>
+		</PressableScale>
 	);
 }
 

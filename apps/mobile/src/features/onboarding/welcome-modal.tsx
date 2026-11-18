@@ -59,7 +59,7 @@ function Content({
 					accessibilityRole="button"
 					accessibilityLabel="Cerrar"
 					onPress={onClose}
-					className="absolute top-2.5 left-2.5 size-11 items-center justify-center rounded-full border border-border bg-background"
+					className="absolute top-2.5 left-2.5 size-11 items-center justify-center rounded-full border border-border bg-background active:opacity-60"
 				>
 					<Svg
 						width={20}
@@ -77,7 +77,7 @@ function Content({
 					<Pressable
 						accessibilityRole="button"
 						onPress={() => setStep(1)}
-						className="absolute top-2.5 right-2.5 min-h-11 justify-center rounded-full bg-background px-4"
+						className="absolute top-2.5 right-2.5 min-h-11 justify-center rounded-full bg-background px-4 active:opacity-60"
 					>
 						<Text className="text-[13px] font-semibold text-foreground">Atrás</Text>
 					</Pressable>

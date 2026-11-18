@@ -35,7 +35,7 @@ export function ReminderRow() {
 				<Pressable
 					accessibilityRole="button"
 					onPress={() => void Linking.openSettings()}
-					className="min-h-11 justify-center"
+					className="min-h-11 justify-center active:opacity-60"
 				>
 					<Text className="text-[13px] text-warning-foreground underline">
 						Activa las notificaciones en Ajustes

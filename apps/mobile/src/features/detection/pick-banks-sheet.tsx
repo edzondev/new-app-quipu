@@ -42,7 +42,7 @@ function PickBanks({
 							accessibilityRole="checkbox"
 							accessibilityState={{ checked: selected }}
 							onPress={() => toggle(bank.packageName)}
-							className="min-h-12 flex-row items-center border-b border-border"
+							className="min-h-12 flex-row items-center border-b border-border active:opacity-60"
 						>
 							<View className="flex-1 py-2">
 								<Text className="text-base text-foreground">{bank.name}</Text>

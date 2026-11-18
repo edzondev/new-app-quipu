@@ -74,7 +74,7 @@ export function CommitmentsScreen() {
 					accessibilityLabel="Añadir compromiso"
 					// Luego: hoja F2
 					onPress={() => {}}
-					className="size-11 shrink-0 items-center justify-center rounded-full bg-secondary"
+					className="size-11 shrink-0 items-center justify-center rounded-full bg-secondary active:opacity-60"
 				>
 					<Plus size={18} color={foreground} />
 				</Pressable>
@@ -129,7 +129,7 @@ export function CommitmentsScreen() {
 						accessibilityRole="button"
 						accessibilityState={{ expanded: paidBeforeOpen }}
 						onPress={() => setPaidBeforeOpen(!paidBeforeOpen)}
-						className="min-h-11 flex-row items-center justify-between gap-2.5"
+						className="min-h-11 flex-row items-center justify-between gap-2.5 active:opacity-60"
 					>
 						<Eyebrow>Pagados antes</Eyebrow>
 						<View className={paidBeforeOpen ? "" : "-rotate-90"}>
