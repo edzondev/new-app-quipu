@@ -7,8 +7,9 @@ import {
 	cycleStepSchema,
 	nameStepSchema,
 	splitStepSchema,
+	todayStepSchema,
 } from "@quipu/backend/shared/onboarding-schemas";
-import { parseStartDay } from "@quipu/backend/shared/plan";
+import { isFrequency, resolveCycle } from "@quipu/backend/shared/start-day";
 import { revalidateLogic } from "@tanstack/react-form";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { cn } from "cn";
@@ -19,6 +20,7 @@ import { useAppForm } from "#/hooks/use-app-form";
 import { CycleStep } from "#/modules/onboarding/components/cycle-step";
 import { NameStep } from "#/modules/onboarding/components/name-step";
 import { SplitStep } from "#/modules/onboarding/components/split-step";
+import { TodayStep } from "#/modules/onboarding/components/today-step";
 import { emptyValues } from "#/modules/onboarding/default-values";
 
 export const Route = createFileRoute("/onboarding")({
@@ -44,7 +46,7 @@ export const Route = createFileRoute("/onboarding")({
 	component: OnboardingPage,
 });
 
-const STEPS = ["name", "cycle", "split"] as const;
+const STEPS = ["name", "cycle", "today", "split"] as const;
 type Step = (typeof STEPS)[number];
 
 const validationLogic = revalidateLogic();
@@ -61,16 +63,17 @@ function OnboardingPage() {
 
 	const form = useAppForm({
 		defaultValues: { ...emptyValues, nameStep: { name: profileName } },
-		onSubmit: async ({ value: { nameStep, cycleStep, splitStep } }) => {
+		onSubmit: async ({ value: { nameStep, cycleStep, todayStep, splitStep } }) => {
+			// The cycle group does not let an unpicked frequency through; this narrows the type.
+			if (!isFrequency(cycleStep.frequency)) return;
 			setSaveError(null);
 			try {
 				await completeOnboarding({
 					name: nameStep.name,
-					cadence: cycleStep.cadence,
-					cycleStartDay: parseStartDay(cycleStep.startDay),
+					...resolveCycle(cycleStep.frequency, cycleStep.startDay),
 					// Left empty, the usual income is omitted from the plan instead of saved as 0.
 					incomeCents: toCents(cycleStep.cycleIncome) || undefined,
-					todayCents: toCents(cycleStep.todayAmount),
+					todayCents: toCents(todayStep.todayAmount),
 					split: splitStep.split,
 				});
 				await navigate({ to: redirect, replace: true });
@@ -131,13 +134,29 @@ function OnboardingPage() {
 						name="cycleStep"
 						validationLogic={validationLogic}
 						validators={{ onDynamic: cycleStepSchema }}
-						onGroupSubmit={() => setStep("split")}
+						onGroupSubmit={() => setStep("today")}
 					>
 						{(group) => (
 							<CycleStep
 								form={form}
 								today={today}
 								onBack={() => setStep("name")}
+								onSubmit={() => void group.handleSubmit()}
+							/>
+						)}
+					</form.FormGroup>
+				)}
+				{step === "today" && (
+					<form.FormGroup
+						name="todayStep"
+						validationLogic={validationLogic}
+						validators={{ onDynamic: todayStepSchema }}
+						onGroupSubmit={() => setStep("split")}
+					>
+						{(group) => (
+							<TodayStep
+								form={form}
+								onBack={() => setStep("cycle")}
 								onSubmit={() => void group.handleSubmit()}
 							/>
 						)}
@@ -155,7 +174,10 @@ function OnboardingPage() {
 							<SplitStep
 								form={form}
 								saveError={saveError}
-								onBack={() => setStep("cycle")}
+								onBack={() => {
+									setSaveError(null);
+									setStep("today");
+								}}
 								onSubmit={() => void group.handleSubmit()}
 							/>
 						)}

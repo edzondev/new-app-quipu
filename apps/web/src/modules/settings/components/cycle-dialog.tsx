@@ -2,6 +2,7 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatDay } from "@quipu/backend/shared/dates";
 import { type Cadence, isSamePlan, type Plan, parseStartDay } from "@quipu/backend/shared/plan";
+import { DEFAULT_START_DAY } from "@quipu/backend/shared/start-day";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -76,7 +77,7 @@ function CycleEditor({
 					value={cadence}
 					onChange={(next) => {
 						setCadence(next);
-						setStartDay("1");
+						setStartDay(DEFAULT_START_DAY[next]);
 					}}
 				/>
 				<StartDaySelect cadence={cadence} name="startDay" value={startDay} onChange={setStartDay} />

@@ -11,7 +11,7 @@ export const SplitStep = withForm({
 	defaultValues: emptyValues,
 	props: { saveError: null as string | null, onBack: () => {}, onSubmit: () => {} },
 	render: function Render({ form, saveError, onBack, onSubmit }) {
-		const todayAmount = useSelector(form.store, (state) => state.values.cycleStep.todayAmount);
+		const todayAmount = useSelector(form.store, (state) => state.values.todayStep.todayAmount);
 		const isSubmitting = useSelector(form.store, (state) => state.isSubmitting);
 		const todayCents = toCents(todayAmount);
 

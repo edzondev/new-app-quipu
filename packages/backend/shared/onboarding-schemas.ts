@@ -1,9 +1,8 @@
 import { toCents } from "@quipu/backend/shared/budget";
 import { nameSchema } from "@quipu/backend/shared/name";
-import { isValidSplit } from "@quipu/backend/shared/plan";
+import { isValidSplit, isValidStartDay, parseStartDay } from "@quipu/backend/shared/plan";
+import { FREQUENCIES, isFrequency } from "@quipu/backend/shared/start-day";
 import * as z from "zod/mini";
-
-export const cadenceSchema = z.enum(["monthly", "biweekly", "weekly"]);
 
 // Optional: empty is fine, anything typed must be a positive amount.
 const optionalPositiveMoney = (message: string) =>
@@ -20,11 +19,25 @@ const nonNegativeMoney = (message: string) =>
 
 export const nameStepSchema = z.object({ name: nameSchema });
 
-export const cycleStepSchema = z.object({
-	cadence: cadenceSchema,
-	startDay: z.string(),
+// "" is the frequency nobody has picked yet: the step does not advance until there is one.
+export const cycleStepSchema = z
+	.object({
+		frequency: z.enum(["", ...FREQUENCIES]).check(z.refine(isFrequency)),
+		startDay: z.string(),
+		cycleIncome: optionalPositiveMoney("Escribe cuánto te pagan normalmente o déjalo vacío."),
+	})
+	.check(
+		z.refine(
+			({ frequency, startDay }) =>
+				!isFrequency(frequency) ||
+				frequency === "variable" ||
+				isValidStartDay(frequency, parseStartDay(startDay)),
+			{ path: ["startDay"] },
+		),
+	);
+
+export const todayStepSchema = z.object({
 	todayAmount: nonNegativeMoney("Escribe cuánto tienes hoy."),
-	cycleIncome: optionalPositiveMoney("Escribe cuánto te pagan normalmente o déjalo vacío."),
 });
 
 export const splitSchema = z
@@ -41,9 +54,11 @@ export const splitStepSchema = z.object({
 
 export type NameStepValues = z.infer<typeof nameStepSchema>;
 export type CycleStepValues = z.infer<typeof cycleStepSchema>;
+export type TodayStepValues = z.infer<typeof todayStepSchema>;
 export type SplitStepValues = z.infer<typeof splitStepSchema>;
 export type OnboardingValues = {
 	nameStep: NameStepValues;
 	cycleStep: CycleStepValues;
+	todayStep: TodayStepValues;
 	splitStep: SplitStepValues;
 };
