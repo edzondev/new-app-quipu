@@ -1,17 +1,11 @@
+import * as Haptics from "expo-haptics";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import {
-	KeyboardAvoidingView,
-	Platform,
-	Pressable,
-	ScrollView,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AngleLeft from "reicon-react-native/icons/AngleLeft";
 import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
+import { KeyboardAvoidingView } from "@/components/ui/keyboard-avoiding-view";
 import { useToast } from "@/components/ui/toast";
 import { useResendClock } from "@/features/auth/use-resend-clock";
 import { CODE_LENGTH, formatClock, otpDigits, RESEND_SECONDS } from "@/features/auth/validation";
@@ -20,6 +14,7 @@ import { useThemeColor } from "@/lib/use-theme-color";
 
 const BOXES = Array.from({ length: CODE_LENGTH }, (_, index) => index);
 const OFFLINE_TEXT = "Sin conexión. Revisa tu señal.";
+const WRONG_CODE_ERRORS = ["INVALID_OTP", "OTP_EXPIRED", "TOO_MANY_ATTEMPTS"];
 
 export function OtpScreen() {
 	const insets = useSafeAreaInsets();
@@ -42,6 +37,10 @@ export function OtpScreen() {
 			setVerifying(false);
 			setWrong(true);
 			setMessage(getAuthErrorMessage(error));
+			// A3 of the design: a warning vibration for a wrong or expired code. No shake, no red.
+			if (error.code && WRONG_CODE_ERRORS.includes(error.code)) {
+				void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+			}
 		} catch {
 			// The call rejected instead of answering: no server response, almost always no network.
 			setVerifying(false);
@@ -88,10 +87,7 @@ export function OtpScreen() {
 	if (!email) return <Redirect href="/sign-in" />;
 
 	return (
-		<KeyboardAvoidingView
-			className="flex-1 bg-background"
-			behavior={Platform.OS === "ios" ? "padding" : undefined}
-		>
+		<KeyboardAvoidingView className="flex-1 bg-background" behavior="padding">
 			<ScrollView
 				contentContainerClassName="px-6"
 				contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 12 }}

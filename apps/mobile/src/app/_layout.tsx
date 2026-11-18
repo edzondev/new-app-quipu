@@ -3,6 +3,7 @@ import { useConvexAuth } from "convex/react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import "@/global.css";
 import { authClient } from "@/lib/auth-client";
 import { convex } from "@/lib/convex";
@@ -55,8 +56,10 @@ export default function RootLayout() {
 	}, []);
 
 	return (
-		<ConvexBetterAuthProvider client={convex} authClient={authClient}>
-			<Screens />
-		</ConvexBetterAuthProvider>
+		<KeyboardProvider>
+			<ConvexBetterAuthProvider client={convex} authClient={authClient}>
+				<Screens />
+			</ConvexBetterAuthProvider>
+		</KeyboardProvider>
 	);
 }
