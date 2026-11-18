@@ -58,10 +58,15 @@ const CADENCE_LABELS: Record<Cadence, string> = {
 	biweekly: "Cada quincena",
 	weekly: "Cada semana",
 };
-const WEEKDAY_NAMES = "domingo lunes martes miércoles jueves viernes sábado".split(" ");
+export const WEEKDAY_NAMES = "domingo lunes martes miércoles jueves viernes sábado".split(" ");
+/** Biweekly "last": pays on the 15th and at the end of the month. */
+export const BIWEEKLY_LAST_LABEL = "15 y fin de mes";
 
 /** "Cada mes · empieza el día 15". Weekly names the weekday, never a day number. */
 export function cycleLabel({ cadence, cycleStartDay }: Pick<Plan, "cadence" | "cycleStartDay">) {
+	if (cadence === "biweekly" && cycleStartDay === "last") {
+		return `${CADENCE_LABELS[cadence]} · ${BIWEEKLY_LAST_LABEL}`;
+	}
 	const start =
 		cadence === "weekly"
 			? `el ${WEEKDAY_NAMES[Number(cycleStartDay)]}`

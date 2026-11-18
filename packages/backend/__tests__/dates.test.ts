@@ -63,6 +63,25 @@ describe("getCycleRange", () => {
 		});
 	});
 
+	test("biweekly from the end of the month pays on the 15th in 28, 30 and 31-day months", () => {
+		expect(getCycleRange("biweekly", "last", "2026-11-10")).toEqual({
+			startDate: "2026-10-31",
+			endDate: "2026-11-14",
+		});
+		expect(getCycleRange("biweekly", "last", "2026-11-20")).toEqual({
+			startDate: "2026-11-15",
+			endDate: "2026-11-29",
+		});
+		expect(getCycleRange("biweekly", "last", "2027-02-20")).toEqual({
+			startDate: "2027-02-15",
+			endDate: "2027-02-27",
+		});
+		expect(getCycleRange("biweekly", "last", "2027-03-05")).toEqual({
+			startDate: "2027-02-28",
+			endDate: "2027-03-14",
+		});
+	});
+
 	test("weekly Sunday start", () => {
 		expect(getCycleRange("weekly", 0, "2026-10-29")).toEqual({
 			startDate: "2026-10-25",

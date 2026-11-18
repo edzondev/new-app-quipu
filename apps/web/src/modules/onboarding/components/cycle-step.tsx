@@ -1,98 +1,112 @@
 import { formatRange, getFirstCycleRange } from "@quipu/backend/shared/dates";
-import { parseStartDay } from "@quipu/backend/shared/plan";
-import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
-import { Button } from "#/components/ui/button";
 import {
-	CadenceToggle,
+	DEFAULT_START_DAY,
+	type Frequency,
+	describePayday,
+	getStartDayHelp,
+	getStartDayTitle,
+	isFrequency,
+	resolveCycle,
+} from "@quipu/backend/shared/start-day";
+import { useSelector } from "@tanstack/react-form";
+import { Button } from "#/components/ui/button";
+import { withForm } from "#/hooks/use-app-form";
+import {
+	FrequencyToggle,
 	MoneyField,
 	StartDaySelect,
 } from "#/modules/onboarding/components/cycle-fields";
 import { StepHeader } from "#/modules/onboarding/components/step-header";
-import { type CycleStepValues, cycleStepSchema } from "#/modules/onboarding/schemas";
+import { emptyValues } from "#/modules/onboarding/default-values";
 
-type Props = {
-	defaultValues: CycleStepValues;
-	today: string;
-	onBack: (value: CycleStepValues) => void;
-	onNext: (value: CycleStepValues) => void;
-};
-
-export function CycleStep({ defaultValues, today, onBack, onNext }: Props) {
-	const form = useForm({
-		defaultValues,
-		validationLogic: revalidateLogic(),
-		validators: { onDynamic: cycleStepSchema },
-		onSubmit: ({ value }) => onNext(value),
-	});
-	const cadence = useSelector(form.store, (state) => state.values.cadence);
-	const startDay = useSelector(form.store, (state) => state.values.startDay);
-	const cycle = getFirstCycleRange(cadence, parseStartDay(startDay), today);
-
-	return (
-		<>
-			<StepHeader title="¿Cada cuánto quieres planear?" onBack={() => onBack(form.state.values)} />
-			<form
-				noValidate
-				className="mt-8"
-				onSubmit={(e) => {
-					e.preventDefault();
-					void form.handleSubmit();
-				}}
-			>
-				<form.Field name="todayAmount">
-					{(field) => (
-						<MoneyField
-							field={field}
-							label="¿Cuánto tienes hoy?"
-							ariaLabel="Cuánto tienes hoy"
-							size="lg"
-							className="mt-12"
-						/>
-					)}
-				</form.Field>
-
-				<div className="mt-6">
-					<form.Field
-						name="cadence"
-						listeners={{ onChange: () => form.setFieldValue("startDay", "1") }}
-					>
-						{(field) => <CadenceToggle value={field.state.value} onChange={field.handleChange} />}
-					</form.Field>
-				</div>
-
-				<form.Field name="startDay">
-					{(field) => (
-						<StartDaySelect
-							cadence={cadence}
-							name={field.name}
-							value={field.state.value}
-							onChange={field.handleChange}
-							onBlur={field.handleBlur}
-							label="¿Qué día te pagan?"
-							className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-						/>
-					)}
-				</form.Field>
-				<p className="mt-3 text-xs text-muted-foreground">
-					Tu ciclo: {formatRange(cycle.startDate, cycle.endDate)}
-				</p>
-
-				<form.Field name="cycleIncome">
-					{(field) => (
-						<MoneyField
-							field={field}
-							label="¿Cuánto te pagan normalmente? · opcional"
-							ariaLabel="Cuánto te pagan normalmente"
-							size="md"
-							className="mt-10"
-						/>
-					)}
-				</form.Field>
-
-				<Button type="submit" variant="default" size="xl" className="mt-10 rounded-full px-8">
-					Continuar
-				</Button>
-			</form>
-		</>
-	);
+/** What the picked frequency and day save as, and the first cycle they give. */
+function getPlan(frequency: Frequency, startDay: string, today: string) {
+	const cycle = resolveCycle(frequency, startDay);
+	const { startDate, endDate } = getFirstCycleRange(cycle.cadence, cycle.cycleStartDay, today);
+	return { frequency, ...cycle, firstCycle: formatRange(startDate, endDate) };
 }
+
+export const CycleStep = withForm({
+	defaultValues: emptyValues,
+	props: { today: "", onBack: () => {}, onSubmit: () => {} },
+	render: function Render({ form, today, onBack, onSubmit }) {
+		const frequency = useSelector(form.store, (state) => state.values.cycleStep.frequency);
+		const startDay = useSelector(form.store, (state) => state.values.cycleStep.startDay);
+		const plan = isFrequency(frequency) ? getPlan(frequency, startDay, today) : null;
+
+		return (
+			<>
+				<StepHeader title="¿Cada cuánto te pagan?" onBack={onBack} />
+				<form
+					noValidate
+					className="mt-8"
+					onSubmit={(e) => {
+						e.preventDefault();
+						onSubmit();
+					}}
+				>
+					<form.Field name="cycleStep.frequency">
+						{(field) => (
+							<FrequencyToggle
+								value={field.state.value}
+								onChange={(next) => {
+									field.handleChange(next);
+									form.setFieldValue("cycleStep.startDay", DEFAULT_START_DAY[next]);
+									// The income field is hidden without a fixed pay: nothing typed there may block the step.
+									if (next === "variable") form.setFieldValue("cycleStep.cycleIncome", "");
+								}}
+							/>
+						)}
+					</form.Field>
+
+					{plan ? (
+						<>
+							{plan.frequency === "variable" ? null : (
+								<form.Field name="cycleStep.startDay">
+									{(field) => (
+										<StartDaySelect
+											cadence={plan.cadence}
+											name={field.name}
+											value={field.state.value}
+											onChange={field.handleChange}
+											onBlur={field.handleBlur}
+											label={getStartDayTitle(plan.cadence)}
+											help={getStartDayHelp(plan.cadence)}
+											className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+										/>
+									)}
+								</form.Field>
+							)}
+							<p className="mt-6 text-sm">{describePayday(plan.frequency, plan.cycleStartDay)}</p>
+							<p className="mt-6 text-xs text-muted-foreground">Tu primer ciclo</p>
+							<p className="mt-1 text-sm">{plan.firstCycle}</p>
+
+							{plan.frequency === "variable" ? (
+								<p className="mt-3 text-xs text-muted-foreground">Lo cambias en Ajustes.</p>
+							) : (
+								<>
+									<form.Field name="cycleStep.cycleIncome">
+										{(field) => (
+											<MoneyField
+												field={field}
+												label="¿Cuánto te pagan? · opcional"
+												ariaLabel="Cuánto te pagan"
+												size="md"
+												className="mt-10"
+											/>
+										)}
+									</form.Field>
+									<p className="mt-3 text-xs text-muted-foreground">Si varía, déjalo vacío.</p>
+								</>
+							)}
+						</>
+					) : null}
+
+					<Button type="submit" variant="default" size="xl" className="mt-10 rounded-full px-8">
+						Continuar
+					</Button>
+				</form>
+			</>
+		);
+	},
+});

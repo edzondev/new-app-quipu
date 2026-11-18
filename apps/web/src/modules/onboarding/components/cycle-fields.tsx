@@ -1,10 +1,11 @@
 import type { Cadence } from "@quipu/backend/shared/plan";
+import { type Frequency, getStartDayOptions } from "@quipu/backend/shared/start-day";
 import { cn } from "cn";
 import { Field, FieldError, FieldLabel } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
-import { CADENCE_OPTIONS, getStartDayOptions } from "#/modules/onboarding/cycle-options";
+import { CADENCE_OPTIONS, FREQUENCY_OPTIONS } from "#/modules/onboarding/cycle-options";
 
 export function CadenceToggle({
 	value,
@@ -36,6 +37,38 @@ export function CadenceToggle({
 	);
 }
 
+/** One choice among the frequencies, with none picked until the person picks. */
+export function FrequencyToggle({
+	value,
+	onChange,
+}: {
+	value: Frequency | "";
+	onChange: (frequency: Frequency) => void;
+}) {
+	return (
+		<ToggleGroup
+			aria-label="Cada cuánto te pagan"
+			orientation="vertical"
+			value={value ? [value] : []}
+			onValueChange={(next) => {
+				const option = FREQUENCY_OPTIONS.find((item) => item.value === next[0]);
+				if (option) onChange(option.value);
+			}}
+			className="mt-8 w-full flex-col gap-2"
+		>
+			{FREQUENCY_OPTIONS.map((option) => (
+				<ToggleGroupItem
+					key={option.value}
+					value={option.value}
+					className="min-h-11 w-full justify-start rounded-full bg-muted px-5 text-base before:rounded-full hover:bg-muted data-pressed:bg-foreground data-pressed:text-background data-pressed:hover:bg-foreground sm:text-base"
+				>
+					{option.label}
+				</ToggleGroupItem>
+			))}
+		</ToggleGroup>
+	);
+}
+
 export function StartDaySelect({
 	cadence,
 	name,
@@ -43,6 +76,7 @@ export function StartDaySelect({
 	onChange,
 	onBlur,
 	label = "Empieza el",
+	help,
 	className,
 }: {
 	cadence: Cadence;
@@ -51,30 +85,34 @@ export function StartDaySelect({
 	onChange: (startDay: string) => void;
 	onBlur?: () => void;
 	label?: string;
+	help?: string;
 	className?: string;
 }) {
 	return (
-		<Label
-			className={cn(
-				"mt-6 flex items-center gap-3 text-sm sm:text-sm font-normal text-muted-foreground",
-				className,
-			)}
-		>
-			{label}
-			<select
-				name={name}
-				value={value}
-				onBlur={onBlur}
-				onChange={(e) => onChange(e.target.value)}
-				className="rounded-full bg-muted px-4 py-2 min-h-11 text-base sm:text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+		<>
+			<Label
+				className={cn(
+					"mt-6 flex items-center gap-3 text-sm sm:text-sm font-normal text-muted-foreground",
+					className,
+				)}
 			>
-				{getStartDayOptions(cadence).map((option) => (
-					<option key={option.value} value={option.value}>
-						{option.label}
-					</option>
-				))}
-			</select>
-		</Label>
+				{label}
+				<select
+					name={name}
+					value={value}
+					onBlur={onBlur}
+					onChange={(e) => onChange(e.target.value)}
+					className="rounded-full bg-muted px-4 py-2 min-h-11 text-base sm:text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				>
+					{getStartDayOptions(cadence, value).map((option) => (
+						<option key={option.value} value={option.value}>
+							{option.label}
+						</option>
+					))}
+				</select>
+			</Label>
+			{help ? <p className="mt-2 text-xs text-muted-foreground">{help}</p> : null}
+		</>
 	);
 }
 
@@ -112,7 +150,8 @@ export function MoneyField({
 	className,
 }: {
 	field: MoneyFieldApi;
-	label: string;
+	/** Left out when a heading already asks the question. */
+	label?: string;
 	ariaLabel: string;
 	size: keyof typeof MONEY_SIZES;
 	className: string;
@@ -121,7 +160,9 @@ export function MoneyField({
 	const message = field.state.meta.errors[0]?.message;
 	return (
 		<Field name={field.name} invalid={invalid} className={className}>
-			<FieldLabel className="text-sm font-normal text-muted-foreground">{label}</FieldLabel>
+			{label ? (
+				<FieldLabel className="text-sm font-normal text-muted-foreground">{label}</FieldLabel>
+			) : null}
 			<div className="mt-3 flex w-full items-baseline gap-3 border-b border-input pb-3 has-focus-visible:border-foreground has-aria-invalid:border-warning">
 				<span className={`${MONEY_SIZES[size].prefix} text-muted-foreground`}>S/</span>
 				<Input

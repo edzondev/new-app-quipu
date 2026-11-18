@@ -17,6 +17,12 @@ describe("cycleLabel", () => {
 		);
 	});
 
+	test("biweekly from the end of the month says 15 y fin de mes", () => {
+		expect(cycleLabel({ cadence: "biweekly", cycleStartDay: "last" })).toBe(
+			"Cada quincena · 15 y fin de mes",
+		);
+	});
+
 	test("weekly names the weekday, not a day number", () => {
 		expect(cycleLabel({ cadence: "weekly", cycleStartDay: 1 })).toBe(
 			"Cada semana · empieza el lunes",

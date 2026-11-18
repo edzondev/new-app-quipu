@@ -1,15 +1,27 @@
-import { convexQuery } from "@convex-dev/react-query";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
+import { toCents } from "@quipu/backend/shared/budget";
 import { getLimaDate } from "@quipu/backend/shared/dates";
 import { safeRedirect } from "@quipu/backend/shared/household";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+	cycleStepSchema,
+	nameStepSchema,
+	splitStepSchema,
+	todayStepSchema,
+} from "@quipu/backend/shared/onboarding-schemas";
+import { isFrequency, resolveCycle } from "@quipu/backend/shared/start-day";
+import { revalidateLogic } from "@tanstack/react-form";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { cn } from "cn";
+import { ConvexError } from "convex/values";
 import { useState } from "react";
 import { QuipuHeader } from "#/components/quipu-header";
-import { NameStep } from "#/modules/onboarding/components/name-step";
+import { useAppForm } from "#/hooks/use-app-form";
 import { CycleStep } from "#/modules/onboarding/components/cycle-step";
+import { NameStep } from "#/modules/onboarding/components/name-step";
 import { SplitStep } from "#/modules/onboarding/components/split-step";
-import type { OnboardingValues } from "#/modules/onboarding/schemas";
+import { TodayStep } from "#/modules/onboarding/components/today-step";
+import { emptyValues } from "#/modules/onboarding/default-values";
 
 export const Route = createFileRoute("/onboarding")({
 	validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
@@ -34,27 +46,46 @@ export const Route = createFileRoute("/onboarding")({
 	component: OnboardingPage,
 });
 
-const STEPS = ["name", "cycle", "split"] as const;
+const STEPS = ["name", "cycle", "today", "split"] as const;
 type Step = (typeof STEPS)[number];
 
-const emptyValues: OnboardingValues = {
-	nameStep: { name: "" },
-	cycleStep: { cadence: "monthly", startDay: "1", todayAmount: "", cycleIncome: "" },
-	splitStep: { split: { needs: 50, wants: 30, savings: 20 } },
-};
+const validationLogic = revalidateLogic();
 
 function OnboardingPage() {
 	const { redirect = "/home" } = Route.useSearch();
 	const { profileName } = Route.useRouteContext();
+	const navigate = useNavigate();
+	const completeOnboarding = useConvexMutation(api.profiles.completeOnboarding);
 	const [step, setStep] = useState<Step>("name");
-	const [values, setValues] = useState({ ...emptyValues, nameStep: { name: profileName } });
+	const [saveError, setSaveError] = useState<string | null>(null);
 	const [today] = useState(() => getLimaDate());
 	const stepNumber = STEPS.indexOf(step) + 1;
 
-	function goTo(next: Step, patch: Partial<OnboardingValues>) {
-		setValues((current) => ({ ...current, ...patch }));
-		setStep(next);
-	}
+	const form = useAppForm({
+		defaultValues: { ...emptyValues, nameStep: { name: profileName } },
+		onSubmit: async ({ value: { nameStep, cycleStep, todayStep, splitStep } }) => {
+			// The cycle group does not let an unpicked frequency through; this narrows the type.
+			if (!isFrequency(cycleStep.frequency)) return;
+			setSaveError(null);
+			try {
+				await completeOnboarding({
+					name: nameStep.name,
+					...resolveCycle(cycleStep.frequency, cycleStep.startDay),
+					// Left empty, the usual income is omitted from the plan instead of saved as 0.
+					incomeCents: toCents(cycleStep.cycleIncome) || undefined,
+					todayCents: toCents(todayStep.todayAmount),
+					split: splitStep.split,
+				});
+				await navigate({ to: redirect, replace: true });
+			} catch (error) {
+				setSaveError(
+					error instanceof ConvexError
+						? String(error.data)
+						: "No pudimos guardar. Inténtalo otra vez.",
+				);
+			}
+		},
+	});
 
 	return (
 		<div className="min-h-svh bg-background text-foreground">
@@ -86,27 +117,71 @@ function OnboardingPage() {
 				</div>
 
 				{step === "name" && (
-					<NameStep
-						defaultValues={values.nameStep}
-						onNext={(nameStep) => goTo("cycle", { nameStep })}
-					/>
+					<form.FormGroup
+						name="nameStep"
+						validationLogic={validationLogic}
+						validators={{ onDynamic: nameStepSchema }}
+						onGroupSubmit={() => {
+							form.setFieldValue("nameStep.name", (name) => name.trim());
+							setStep("cycle");
+						}}
+					>
+						{(group) => <NameStep form={form} onSubmit={() => void group.handleSubmit()} />}
+					</form.FormGroup>
 				)}
 				{step === "cycle" && (
-					<CycleStep
-						defaultValues={values.cycleStep}
-						today={today}
-						onBack={(cycleStep) => goTo("name", { cycleStep })}
-						onNext={(cycleStep) => goTo("split", { cycleStep })}
-					/>
+					<form.FormGroup
+						name="cycleStep"
+						validationLogic={validationLogic}
+						validators={{ onDynamic: cycleStepSchema }}
+						onGroupSubmit={() => setStep("today")}
+					>
+						{(group) => (
+							<CycleStep
+								form={form}
+								today={today}
+								onBack={() => setStep("name")}
+								onSubmit={() => void group.handleSubmit()}
+							/>
+						)}
+					</form.FormGroup>
+				)}
+				{step === "today" && (
+					<form.FormGroup
+						name="todayStep"
+						validationLogic={validationLogic}
+						validators={{ onDynamic: todayStepSchema }}
+						onGroupSubmit={() => setStep("split")}
+					>
+						{(group) => (
+							<TodayStep
+								form={form}
+								onBack={() => setStep("cycle")}
+								onSubmit={() => void group.handleSubmit()}
+							/>
+						)}
+					</form.FormGroup>
 				)}
 				{step === "split" && (
-					<SplitStep
-						defaultValues={values.splitStep}
-						name={values.nameStep.name}
-						cycleStep={values.cycleStep}
-						redirect={redirect}
-						onBack={(splitStep) => goTo("cycle", { splitStep })}
-					/>
+					// form.handleSubmit doesn't run group validators: the group passes first.
+					<form.FormGroup
+						name="splitStep"
+						validationLogic={validationLogic}
+						validators={{ onDynamic: splitStepSchema }}
+						onGroupSubmit={() => form.handleSubmit()}
+					>
+						{(group) => (
+							<SplitStep
+								form={form}
+								saveError={saveError}
+								onBack={() => {
+									setSaveError(null);
+									setStep("today");
+								}}
+								onSubmit={() => void group.handleSubmit()}
+							/>
+						)}
+					</form.FormGroup>
 				)}
 			</main>
 		</div>
