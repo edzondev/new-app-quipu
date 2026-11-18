@@ -20,7 +20,7 @@ import { DetectionRow } from "./detection-row";
 import { PRIVACY_URL, TERMS_URL } from "./links";
 import { ReminderRow } from "./reminder-row";
 import { SAMPLE_CYCLE, SAMPLE_EMAIL, SAMPLE_HOUSEHOLD, SAMPLE_PROFILE } from "./sample";
-import { signOutAndGoToSignIn } from "./sign-out";
+import { signOut } from "./sign-out";
 import { SpaceGroup } from "./space-group";
 import { SpaceNameSheet } from "./space-name-sheet";
 
@@ -47,7 +47,7 @@ export function SettingsScreen() {
 	const close = () => setSheet(null);
 	function leave() {
 		close();
-		void signOutAndGoToSignIn();
+		void signOut();
 	}
 	const { lines, stillPaying } = deletionLines({
 		space: SAMPLE_PROFILE.hasHousehold ? SAMPLE_HOUSEHOLD : null,
