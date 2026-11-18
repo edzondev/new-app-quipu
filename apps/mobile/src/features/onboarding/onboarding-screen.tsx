@@ -25,8 +25,8 @@ export function OnboardingScreen() {
 	const rangeLabel = rangeText(flow.range);
 	const last = flow.step === 3;
 
-	// Primeros pasos can't be reopened once there is a plan or a household.
-	if (profile && (profile.plan || profile.hasHousehold)) return <Redirect href="/" />;
+	// Primeros pasos can't be reopened once there is a personal plan.
+	if (profile?.plan) return <Redirect href="/" />;
 
 	return (
 		<KeyboardAvoidingView
