@@ -1,16 +1,13 @@
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { useConvexAuth } from "convex/react";
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import "@/global.css";
 import { authClient } from "@/lib/auth-client";
 import { convex } from "@/lib/convex";
 import { ensureReminder } from "../../modules/quipu-detection";
-
-// The splash stays until the session says which screens exist.
-void SplashScreen.preventAutoHideAsync();
 
 // (tabs) siempre queda debajo: un enlace directo a /register o /detection tiene a dónde volver.
 export const unstable_settings = { anchor: "(tabs)" };
@@ -23,16 +20,15 @@ const sheet = {
 
 function Screens() {
 	const { isLoading, isAuthenticated } = useConvexAuth();
-	// Convex reports isLoading again on every session change (sign in, sign out) until the server confirms
-	// the token. Only the first load blanks the app; later ones keep the current screen instead of a gray one.
-	const [loaded, setLoaded] = useState(false);
-	if (!isLoading && !loaded) setLoaded(true);
 
-	useEffect(() => {
-		if (loaded) void SplashScreen.hideAsync();
-	}, [loaded]);
-
-	if (!loaded) return null;
+	// Convex reports isLoading at start and again on every session change, until the server confirms the token.
+	if (isLoading) {
+		return (
+			<View className="flex-1 items-center justify-center bg-background">
+				<ActivityIndicator size="large" colorClassName="accent-foreground" />
+			</View>
+		);
+	}
 
 	return (
 		<Stack screenOptions={{ headerShown: false }}>
