@@ -2,6 +2,7 @@ import { planRowLine } from "@quipu/backend/shared/billing";
 import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
 import { Linking, Platform, ScrollView, Text, View } from "react-native";
+import ArrowUpRightSquare from "reicon-react-native/icons/ArrowUpRightSquare";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/ui/avatar";
 import { ListRow } from "@/components/ui/list-row";
@@ -11,6 +12,7 @@ import { type Cycle, cycleRowValue, splitRowValue } from "@/features/cycle/cycle
 import { SAMPLE_HOME, SAMPLE_TODAY } from "@/features/home/sample";
 import { SAMPLE_HOUSEHOLD_HOME } from "@/features/household/sample";
 import { sampleStatus } from "@/features/plus/sample";
+import { useThemeColor } from "@/lib/use-theme-color";
 import { Appearance } from "./appearance";
 import { ConfirmSheet } from "./confirm-sheet";
 import { CycleSheet } from "./cycle-sheet";
@@ -29,7 +31,7 @@ type Sheet = "cycle" | "spaceCycle" | "spaceName" | "signOut" | "delete";
 function Group({ title, children }: { title: string; children: ReactNode }) {
 	return (
 		<View>
-			<View className="mt-5">
+			<View className="mt-8">
 				<SectionLabel>{title}</SectionLabel>
 			</View>
 			{children}
@@ -43,6 +45,8 @@ export function SettingsScreen() {
 	const [cycle, setCycle] = useState<Cycle>(SAMPLE_CYCLE);
 	const [spaceCycle, setSpaceCycle] = useState<Cycle>(SAMPLE_HOUSEHOLD.cycle);
 	const [spaceName, setSpaceName] = useState(SAMPLE_HOUSEHOLD.name);
+	const muted = useThemeColor("--color-muted-foreground");
+	const external = <ArrowUpRightSquare size={18} color={muted} />;
 	const status = sampleStatus(undefined);
 	const close = () => setSheet(null);
 	function leave() {
@@ -76,7 +80,7 @@ export function SettingsScreen() {
 					</View>
 				</View>
 
-				<View className="mt-5">
+				<View className="mt-8">
 					<SectionLabel>Apariencia</SectionLabel>
 				</View>
 				<View className="mt-2">
@@ -129,12 +133,17 @@ export function SettingsScreen() {
 				<Group title="Legal">
 					<ListRow
 						label="Política de privacidad"
+						right={external}
 						onPress={() => void Linking.openURL(PRIVACY_URL)}
 					/>
-					<ListRow label="Términos y condiciones" onPress={() => void Linking.openURL(TERMS_URL)} />
+					<ListRow
+						label="Términos y condiciones"
+						right={external}
+						onPress={() => void Linking.openURL(TERMS_URL)}
+					/>
 				</Group>
 
-				<View className="mt-5">
+				<View className="mt-8">
 					<ListRow label="Eliminar cuenta" warning onPress={() => setSheet("delete")} />
 				</View>
 			</ScrollView>

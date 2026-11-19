@@ -6,7 +6,8 @@ import { useThemeColor } from "@/lib/use-theme-color";
 import { isAccessEnabled } from "../../../modules/quipu-detection";
 
 export function DetectionRow({ onOpen }: { onOpen: () => void }) {
-	const primary = useThemeColor("--color-primary");
+	const foreground = useThemeColor("--color-foreground");
+	const background = useThemeColor("--color-background");
 	const [access, setAccess] = useState(false);
 
 	useFocusEffect(() => {
@@ -22,7 +23,8 @@ export function DetectionRow({ onOpen }: { onOpen: () => void }) {
 				<Switch
 					value={access}
 					onValueChange={onOpen}
-					trackColor={{ true: primary }}
+					trackColor={{ true: foreground }}
+					thumbColor={background}
 					accessibilityLabel="Detección de gastos"
 				/>
 			}

@@ -10,7 +10,7 @@ export function HomeHeader({ name, hasHousehold }: { name: string; hasHousehold:
 	const { space, setSpace } = useSpace();
 
 	return (
-		<View className="flex-row items-center gap-3">
+		<View className="min-h-12 flex-row items-center justify-between gap-3">
 			<Pressable
 				accessibilityRole="button"
 				accessibilityLabel="Abrir Ajustes"
@@ -18,13 +18,14 @@ export function HomeHeader({ name, hasHousehold }: { name: string; hasHousehold:
 				className="max-w-[35%] min-w-0 shrink flex-row items-center gap-2.5 active:opacity-60"
 			>
 				<Avatar name={name} />
-				<Text className="shrink text-[17px] font-semibold text-foreground" numberOfLines={1}>
+				<Text className="shrink text-[15px] font-semibold text-foreground" numberOfLines={1}>
 					{name}
 				</Text>
 			</Pressable>
 			{hasHousehold ? (
-				<View className="min-w-0 flex-1">
+				<View className="min-w-0 shrink">
 					<Segmented
+						size="sm"
 						options={["Personal", "Nuestro espacio"]}
 						selectedIndex={SPACES.indexOf(space)}
 						onChange={(index) => setSpace(SPACES[index])}

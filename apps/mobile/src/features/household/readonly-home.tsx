@@ -2,6 +2,7 @@ import { formatDaysLeft, formatRange } from "@quipu/backend/shared/dates";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { PressableScale } from "@/components/ui/pressable-scale";
+import { SectionLabel } from "@/components/ui/section-label";
 import { DayNumber } from "@/features/home/day-number";
 import { Envelopes } from "@/features/home/envelopes";
 import { amountParts } from "@/features/home/today-spend";
@@ -25,9 +26,9 @@ export function ReadOnlyHome() {
 				</Text>
 			</PressableScale>
 
-			<Text className="mt-6 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
-				Pueden gastar hoy juntos
-			</Text>
+			<View className="mt-[22px]">
+				<SectionLabel>Pueden gastar hoy juntos</SectionLabel>
+			</View>
 			<View className="mt-2">
 				<DayNumber whole={whole} decimals={decimals} />
 			</View>
