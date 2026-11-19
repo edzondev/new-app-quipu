@@ -2,11 +2,12 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
-import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { BackHandler, ScrollView, View } from "react-native";
 import Animated, { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { KeyboardAvoidingView } from "@/components/ui/keyboard-avoiding-view";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DayList } from "@/features/cycle/day-list";
 import { enter } from "@/lib/motion";
@@ -57,10 +58,7 @@ function OnboardingForm({ name }: { name: string }) {
 	}, [step, back]);
 
 	return (
-		<KeyboardAvoidingView
-			className="flex-1 bg-background"
-			behavior={Platform.OS === "ios" ? "padding" : undefined}
-		>
+		<KeyboardAvoidingView className="flex-1 bg-background" behavior="padding">
 			<View style={{ paddingTop: insets.top }}>
 				<StepHeader step={flow.step} onBack={flow.back} />
 			</View>
