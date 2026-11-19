@@ -72,7 +72,7 @@ function Row({ bank, selected, onPress }: { bank: Bank; selected: boolean; onPre
 			accessibilityState={{ selected, disabled: !installed }}
 			disabled={!installed}
 			onPress={onPress}
-			className="min-h-12 flex-row items-center border-b border-border"
+			className="min-h-12 flex-row items-center border-b border-border active:opacity-60"
 		>
 			<View className="flex-1 py-2">
 				<Text

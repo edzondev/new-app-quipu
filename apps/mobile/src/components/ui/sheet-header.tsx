@@ -26,7 +26,7 @@ export function SheetHeader({
 				accessibilityRole="button"
 				accessibilityLabel="Cerrar"
 				onPress={onClose}
-				className="size-11 items-end justify-center"
+				className="size-11 items-end justify-center active:opacity-60"
 			>
 				<Svg
 					width={20}

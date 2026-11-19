@@ -1,3 +1,4 @@
+import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
 export function Chips({
@@ -18,7 +19,11 @@ export function Chips({
 						key={label}
 						accessibilityRole="button"
 						accessibilityState={{ selected }}
-						onPress={() => onChange(index)}
+						onPress={() => {
+							if (selected) return;
+							void Haptics.selectionAsync();
+							onChange(index);
+						}}
 						className={`min-h-11 items-center justify-center rounded-full px-4 ${selected ? "bg-foreground" : "bg-secondary"}`}
 					>
 						<Text

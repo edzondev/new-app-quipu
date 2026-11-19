@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLimaDate } from "@/features/cycle/use-lima-date";
 import { useOpenCycle } from "@/features/cycle/use-open-cycle";
@@ -16,6 +17,7 @@ import { PersonalHome } from "@/features/home/personal-home";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { WelcomeModal } from "@/features/onboarding/welcome-modal";
 import { PlusSheet } from "@/features/plus/plus-sheet";
+import { enter } from "@/lib/motion";
 
 /** Inicio's personal content. Opening the cycle and its queries live here, so a failure remounts only this part. */
 function PersonalBody({ today }: { today: string }) {
@@ -25,7 +27,12 @@ function PersonalBody({ today }: { today: string }) {
 	const commitments = useQuery(api.commitments.list, args);
 
 	if (!home || !commitments) return <HomeSkeleton />;
-	return <PersonalHome home={home} items={commitments.items} today={today} />;
+	// The skeleton leaves at once: fading it out would keep both in the layout for a moment.
+	return (
+		<Animated.View entering={enter}>
+			<PersonalHome home={home} items={commitments.items} today={today} />
+		</Animated.View>
+	);
 }
 
 export function HomeScreen() {
@@ -66,7 +73,7 @@ export function HomeScreen() {
 				{/* TEMPORAL: enlace de prueba; se quita al conectar el informe del ciclo. */}
 				<Pressable
 					accessibilityRole="link"
-					className="mt-6 min-h-11 justify-center"
+					className="mt-6 min-h-11 justify-center active:opacity-60"
 					onPress={() => router.push("/report")}
 				>
 					<Text className="text-[13px] text-muted-foreground underline">

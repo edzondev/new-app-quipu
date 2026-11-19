@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AngleLeft from "reicon-react-native/icons/AngleLeft";
 import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
@@ -10,6 +11,7 @@ import { useToast } from "@/components/ui/toast";
 import { useResendClock } from "@/features/auth/use-resend-clock";
 import { CODE_LENGTH, formatClock, otpDigits, RESEND_SECONDS } from "@/features/auth/validation";
 import { authClient, sendSignInCode } from "@/lib/auth-client";
+import { enter, exit } from "@/lib/motion";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 const BOXES = Array.from({ length: CODE_LENGTH }, (_, index) => index);
@@ -98,7 +100,7 @@ export function OtpScreen() {
 						accessibilityRole="button"
 						accessibilityLabel="Volver"
 						onPress={() => router.back()}
-						className="size-11 justify-center"
+						className="size-11 justify-center active:opacity-60"
 					>
 						<AngleLeft size={22} color={foreground} />
 					</Pressable>
@@ -138,9 +140,14 @@ export function OtpScreen() {
 				</View>
 
 				{message ? (
-					<Text accessibilityRole="alert" className="mt-3 text-[13px] text-warning-foreground">
+					<Animated.Text
+						entering={enter}
+						exiting={exit}
+						accessibilityRole="alert"
+						className="mt-3 text-[13px] text-warning-foreground"
+					>
 						{message}
-					</Text>
+					</Animated.Text>
 				) : null}
 
 				<Text className="mt-4 text-[13px] text-muted-foreground">Vence en 5 minutos.</Text>
@@ -152,7 +159,7 @@ export function OtpScreen() {
 							accessibilityState={{ disabled: resending }}
 							disabled={resending}
 							onPress={() => void resendCode()}
-							className={`min-h-11 justify-center ${resending ? "opacity-50" : ""}`}
+							className={`min-h-11 justify-center ${resending ? "opacity-50" : ""} active:opacity-60`}
 						>
 							<Text className="text-[13px] font-semibold text-foreground underline">
 								Reenviar código
@@ -166,7 +173,7 @@ export function OtpScreen() {
 					<Pressable
 						accessibilityRole="button"
 						onPress={() => router.back()}
-						className="min-h-11 justify-center"
+						className="min-h-11 justify-center active:opacity-60"
 					>
 						<Text className="text-[13px] font-semibold text-foreground underline">Cambiar</Text>
 					</Pressable>

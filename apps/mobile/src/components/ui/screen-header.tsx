@@ -12,7 +12,7 @@ export function ScreenHeader({ title }: { title: string }) {
 				accessibilityRole="button"
 				accessibilityLabel="Volver"
 				onPress={() => router.back()}
-				className="size-11 items-center justify-center"
+				className="size-11 items-center justify-center active:opacity-60"
 			>
 				<AngleLeft size={22} color={foreground} />
 			</Pressable>

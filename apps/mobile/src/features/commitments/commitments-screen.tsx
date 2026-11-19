@@ -1,15 +1,17 @@
 import { groupCommitments } from "@quipu/backend/shared/commitments";
 import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import AngleDown from "reicon-react-native/icons/AngleDown";
+import Animated from "react-native-reanimated";
 import Plus from "reicon-react-native/icons/Plus";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
+import { ExpandChevron } from "@/components/ui/expand-chevron";
 import { CommitmentRow } from "@/features/commitments/commitment-row";
 import { dueLine, paidBeforeLine, paymentFrequency } from "@/features/commitments/commitment-text";
 import { SAMPLE_COMMITMENTS, SAMPLE_TODAY } from "@/features/home/sample";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
 import { wholeSoles } from "@quipu/backend/shared/budget";
+import { enter, exit } from "@/lib/motion";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 function Title() {
@@ -27,7 +29,6 @@ function Eyebrow({ children }: { children: ReactNode }) {
 export function CommitmentsScreen() {
 	const insets = useSafeAreaInsets();
 	const foreground = useThemeColor("--color-foreground");
-	const muted = useThemeColor("--color-muted-foreground");
 	const [paidBeforeOpen, setPaidBeforeOpen] = useState(false);
 	const paddingTop = insets.top + 22;
 	const { items, payments, payableCents, paidCents } = SAMPLE_COMMITMENTS;
@@ -74,7 +75,7 @@ export function CommitmentsScreen() {
 					accessibilityLabel="Añadir compromiso"
 					// Luego: hoja F2
 					onPress={() => {}}
-					className="size-11 shrink-0 items-center justify-center rounded-full bg-secondary"
+					className="size-11 shrink-0 items-center justify-center rounded-full bg-secondary active:opacity-60"
 				>
 					<Plus size={18} color={foreground} />
 				</Pressable>
@@ -129,15 +130,14 @@ export function CommitmentsScreen() {
 						accessibilityRole="button"
 						accessibilityState={{ expanded: paidBeforeOpen }}
 						onPress={() => setPaidBeforeOpen(!paidBeforeOpen)}
-						className="min-h-11 flex-row items-center justify-between gap-2.5"
+						className="min-h-11 flex-row items-center justify-between gap-2.5 active:opacity-60"
 					>
 						<Eyebrow>Pagados antes</Eyebrow>
-						<View className={paidBeforeOpen ? "" : "-rotate-90"}>
-							<AngleDown size={16} color={muted} />
-						</View>
+						<ExpandChevron open={paidBeforeOpen} />
 					</Pressable>
-					{paidBeforeOpen
-						? groups.paidBefore.map((item) =>
+					{paidBeforeOpen ? (
+						<Animated.View entering={enter} exiting={exit}>
+							{groups.paidBefore.map((item) =>
 								item.status === "paid" ? (
 									<CommitmentRow
 										key={item.id}
@@ -147,8 +147,9 @@ export function CommitmentsScreen() {
 										status="paid"
 									/>
 								) : null,
-							)
-						: null}
+							)}
+						</Animated.View>
+					) : null}
 				</View>
 			) : null}
 		</ScrollView>

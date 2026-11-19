@@ -3,11 +3,13 @@ import { useQuery } from "convex/react";
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import Animated, { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DayList } from "@/features/cycle/day-list";
+import { enter } from "@/lib/motion";
 import { StepCycle } from "./step-cycle";
 import { StepHeader } from "./step-header";
 import { StepName } from "./step-name";
@@ -67,32 +69,37 @@ function OnboardingForm({ name }: { name: string }) {
 				contentContainerClassName="px-6 pt-4 pb-6"
 				keyboardShouldPersistTaps="handled"
 			>
-				{flow.step === 1 ? (
-					<StepName name={flow.name} nameError={flow.nameError} onName={flow.setName} />
-				) : flow.step === 2 ? (
-					<StepCycle
-						frequency={flow.frequency}
-						onFrequency={flow.setFrequency}
-						plan={flow.plan}
-						onOpenDay={() => setDayOpen(true)}
-						incomeText={flow.incomeText}
-						incomeError={flow.incomeError}
-						onIncome={flow.setIncomeText}
-					/>
-				) : flow.step === 3 ? (
-					<StepToday
-						todayText={flow.todayText}
-						todayError={flow.todayError}
-						onToday={flow.setTodayText}
-					/>
-				) : (
-					<StepSplit
-						split={flow.split}
-						amounts={flow.envelopes}
-						onChange={flow.setSplit}
-						error={flow.splitError ?? flow.saveError}
-					/>
-				)}
+				{/* The first step arrives with the screen; only moving between steps animates. */}
+				<LayoutAnimationConfig skipEntering>
+					<Animated.View key={flow.step} entering={enter}>
+						{flow.step === 1 ? (
+							<StepName name={flow.name} nameError={flow.nameError} onName={flow.setName} />
+						) : flow.step === 2 ? (
+							<StepCycle
+								frequency={flow.frequency}
+								onFrequency={flow.setFrequency}
+								plan={flow.plan}
+								onOpenDay={() => setDayOpen(true)}
+								incomeText={flow.incomeText}
+								incomeError={flow.incomeError}
+								onIncome={flow.setIncomeText}
+							/>
+						) : flow.step === 3 ? (
+							<StepToday
+								todayText={flow.todayText}
+								todayError={flow.todayError}
+								onToday={flow.setTodayText}
+							/>
+						) : (
+							<StepSplit
+								split={flow.split}
+								amounts={flow.envelopes}
+								onChange={flow.setSplit}
+								error={flow.splitError ?? flow.saveError}
+							/>
+						)}
+					</Animated.View>
+				</LayoutAnimationConfig>
 			</ScrollView>
 			<View className="px-6 pt-3" style={{ paddingBottom: insets.bottom + 12 }}>
 				<Button

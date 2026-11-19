@@ -44,7 +44,7 @@ export function DayList({
 								accessibilityRole="button"
 								accessibilityState={{ selected }}
 								onPress={() => onPick(parseStartDay(option.value))}
-								className="min-h-12 flex-row items-center justify-between border-b border-border"
+								className="min-h-12 flex-row items-center justify-between border-b border-border active:opacity-60"
 							>
 								<Text
 									className={`text-base text-foreground ${selected ? "font-bold" : "font-medium"}`}

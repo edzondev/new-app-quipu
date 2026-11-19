@@ -28,7 +28,11 @@ export function DetectionStatusStep({
 		<View>
 			<View className="mb-2 flex-row items-center justify-between">
 				<Text className="text-2xl font-semibold text-foreground">Detección de gastos</Text>
-				<Pressable accessibilityRole="button" onPress={onClose} className="px-2 py-2">
+				<Pressable
+					accessibilityRole="button"
+					onPress={onClose}
+					className="px-2 py-2 active:opacity-60"
+				>
 					<Text className="text-[15px] text-muted-foreground">Cerrar</Text>
 				</Pressable>
 			</View>
@@ -37,7 +41,7 @@ export function DetectionStatusStep({
 				<Pressable
 					accessibilityRole="button"
 					onPress={() => void Linking.openSettings()}
-					className="mt-4"
+					className="mt-4 active:opacity-60"
 				>
 					<Text className="text-[15px] text-warning-foreground underline">
 						Activa las notificaciones en Ajustes

@@ -1,4 +1,5 @@
 import { formatCents, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Text, TextInput, View } from "react-native";
@@ -99,7 +100,8 @@ export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
 						label="Guardar"
 						disabled={!canSave}
 						onPress={() => {
-							// Later: api.transactions.addExpense
+							// Later: api.transactions.addExpense, and the vibration once it succeeds.
+							void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 							router.back();
 						}}
 					/>

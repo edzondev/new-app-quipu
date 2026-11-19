@@ -28,7 +28,7 @@ function DeviceRow({ device, onRemove }: { device: Device; onRemove?: () => void
 					accessibilityRole="button"
 					accessibilityLabel={`Quitar ${device.name}`}
 					onPress={onRemove}
-					className="size-11 items-center justify-center"
+					className="size-11 items-center justify-center active:opacity-60"
 				>
 					<Trash size={18} color={muted} />
 				</Pressable>

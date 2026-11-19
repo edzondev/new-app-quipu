@@ -2,14 +2,17 @@ import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Fingerprint from "reicon-react-native/icons/Fingerprint";
 import { KeyboardAvoidingView } from "@/components/ui/keyboard-avoiding-view";
 import { QuipuLogo } from "@/components/quipu-logo";
 import { Button } from "@/components/ui/button";
+import { PressableScale } from "@/components/ui/pressable-scale";
 import { getAuthErrorMessage } from "@quipu/backend/shared/auth-errors";
 import { emailError } from "@/features/auth/validation";
 import { sendSignInCode } from "@/lib/auth-client";
+import { enter, exit } from "@/lib/motion";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 export function SignInScreen() {
@@ -73,13 +76,18 @@ export function SignInScreen() {
 					accessibilityLabel="Correo"
 				/>
 				{error ? (
-					<Text accessibilityRole="alert" className="mt-1.5 text-xs text-warning-foreground">
+					<Animated.Text
+						entering={enter}
+						exiting={exit}
+						accessibilityRole="alert"
+						className="mt-1.5 text-xs text-warning-foreground"
+					>
 						{error}
-					</Text>
+					</Animated.Text>
 				) : null}
 
 				<View className="mt-5">
-					<Button label="Enviar código" disabled={sending} onPress={() => void submit()} />
+					<Button label="Enviar código" loading={sending} onPress={() => void submit()} />
 				</View>
 
 				<View className="my-4 flex-row items-center gap-3">
@@ -88,7 +96,7 @@ export function SignInScreen() {
 					<View className="h-px flex-1 bg-input" />
 				</View>
 
-				<Pressable
+				<PressableScale
 					accessibilityRole="button"
 					// Luego: diálogo del sistema (passkey) al conectar Convex.
 					className="flex-row items-center justify-center gap-2 rounded-full border border-input px-4 py-3.5"
@@ -97,7 +105,7 @@ export function SignInScreen() {
 					<Text className="text-[15px] font-semibold text-foreground">
 						Entrar con huella o rostro
 					</Text>
-				</Pressable>
+				</PressableScale>
 				<Text className="mt-2 text-center text-xs text-muted-foreground">
 					Usa el desbloqueo de tu celular.
 				</Text>
@@ -105,14 +113,14 @@ export function SignInScreen() {
 				<View className="mt-6 flex-row justify-center gap-7">
 					<Pressable
 						accessibilityRole="link"
-						className="min-h-11 justify-center"
+						className="min-h-11 justify-center active:opacity-60"
 						onPress={() => void Linking.openURL("https://quipu-finance.app/terminos")}
 					>
 						<Text className="text-xs text-muted-foreground">Términos</Text>
 					</Pressable>
 					<Pressable
 						accessibilityRole="link"
-						className="min-h-11 justify-center"
+						className="min-h-11 justify-center active:opacity-60"
 						onPress={() => void Linking.openURL("https://quipu-finance.app/privacidad")}
 					>
 						<Text className="text-xs text-muted-foreground">Privacidad</Text>

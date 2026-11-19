@@ -29,7 +29,7 @@ function StepButton({
 			accessibilityRole="button"
 			accessibilityLabel={label}
 			onPress={onPress}
-			className="size-11 items-center justify-center rounded-full bg-muted"
+			className="size-11 items-center justify-center rounded-full bg-muted active:opacity-60"
 		>
 			{children}
 		</Pressable>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { exit, fadeIn } from "@/lib/motion";
 
 const TOAST_MS = 3000;
 
@@ -10,7 +12,9 @@ function ToastView({ text, warning }: Toast) {
 	const insets = useSafeAreaInsets();
 
 	return (
-		<View
+		<Animated.View
+			entering={fadeIn}
+			exiting={exit}
 			pointerEvents="none"
 			className="absolute right-6 left-6 items-center"
 			style={{ top: insets.top + 8 }}
@@ -26,7 +30,7 @@ function ToastView({ text, warning }: Toast) {
 					{text}
 				</Text>
 			</View>
-		</View>
+		</Animated.View>
 	);
 }
 

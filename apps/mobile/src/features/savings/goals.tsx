@@ -59,7 +59,7 @@ function GoalCard({ goal, index, locked }: { goal: Goal; index: number; locked: 
 						accessibilityLabel={`Aportar a ${goal.name}`}
 						// Luego: hoja G2
 						onPress={() => {}}
-						className="min-h-11 shrink-0 flex-row items-center gap-1"
+						className="min-h-11 shrink-0 flex-row items-center gap-1 active:opacity-60"
 					>
 						<Plus size={14} color={foreground} />
 						<Text className="text-[13px] font-semibold text-foreground">Aportar</Text>

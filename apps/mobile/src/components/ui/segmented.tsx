@@ -1,3 +1,4 @@
+import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
 export function Segmented({
@@ -19,7 +20,11 @@ export function Segmented({
 						accessibilityRole="button"
 						accessibilityState={{ selected }}
 						accessibilityLabel={label}
-						onPress={() => onChange(index)}
+						onPress={() => {
+							if (selected) return;
+							void Haptics.selectionAsync();
+							onChange(index);
+						}}
 						className={`min-h-11 flex-1 items-center justify-center rounded-full px-2 ${selected ? "bg-background" : ""}`}
 					>
 						<Text

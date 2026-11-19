@@ -27,7 +27,7 @@ export function StepHeader({ step, onBack }: { step: 1 | 2 | 3 | 4; onBack: () =
 					<Pressable
 						accessibilityRole="button"
 						onPress={onBack}
-						className="min-h-11 flex-row items-center gap-1"
+						className="min-h-11 flex-row items-center gap-1 active:opacity-60"
 					>
 						<AngleLeft size={16} color={muted} />
 						<Text className="text-xs text-muted-foreground">Volver</Text>
