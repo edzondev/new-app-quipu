@@ -19,7 +19,7 @@ export const EXPENSE_ENVELOPE_LABELS = EXPENSE_ENVELOPES.map(
 	(envelope) => ENVELOPE_LABELS[envelope],
 );
 
-export function canSaveExpense(amountCents: number): boolean {
+export function canSaveAmount(amountCents: number): boolean {
 	return amountCents > 0 && amountCents <= MAX_MOVEMENT_CENTS;
 }
 
@@ -30,18 +30,25 @@ export function envelopeBalanceCents(
 	return Math.max(0, home[AMOUNT_KEYS[envelope]]);
 }
 
+export function todayLine(
+	home: Pick<Home, "leftCents" | "daysLeft">,
+	freeCents: number,
+	spentTodayCents: number,
+): string {
+	const after = getDailyBudget({ freeCents, spentTodayCents, daysLeft: home.daysLeft });
+	return `Hoy: S/ ${formatCents(home.leftCents)} → S/ ${formatCents(after.leftCents)}`;
+}
+
 type TodayHome = Pick<
 	Home,
 	"leftCents" | "needsCents" | "wantsCents" | "pendingCents" | "daysLeft" | "spentTodayCents"
 >;
 
-/** «Hoy: S/ antes → S/ después». Null while the amount is empty or zero. */
 export function expenseTodayLine(home: TodayHome, amountCents: number): string | null {
 	if (amountCents <= 0) return null;
-	const after = getDailyBudget({
-		freeCents: home.needsCents + home.wantsCents - home.pendingCents - amountCents,
-		spentTodayCents: home.spentTodayCents + amountCents,
-		daysLeft: home.daysLeft,
-	});
-	return `Hoy: S/ ${formatCents(home.leftCents)} → S/ ${formatCents(after.leftCents)}`;
+	return todayLine(
+		home,
+		home.needsCents + home.wantsCents - home.pendingCents - amountCents,
+		home.spentTodayCents + amountCents,
+	);
 }

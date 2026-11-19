@@ -2,7 +2,6 @@ import { Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColor } from "@/lib/use-theme-color";
 
-/** The top of a sheet in the design: title, an optional line under it and the close button. */
 export function SheetHeader({
 	title,
 	sub,
@@ -10,7 +9,7 @@ export function SheetHeader({
 }: {
 	title: string;
 	sub?: string;
-	onClose: () => void;
+	onClose?: () => void;
 }) {
 	const foreground = useThemeColor("--color-foreground");
 
@@ -22,24 +21,26 @@ export function SheetHeader({
 					<Text className="mt-1 text-[13px] leading-[19px] text-muted-foreground">{sub}</Text>
 				) : null}
 			</View>
-			<Pressable
-				accessibilityRole="button"
-				accessibilityLabel="Cerrar"
-				onPress={onClose}
-				className="size-11 items-end justify-center active:opacity-60"
-			>
-				<Svg
-					width={20}
-					height={20}
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke={foreground}
-					strokeWidth={1.6}
-					strokeLinecap="round"
+			{onClose ? (
+				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel="Cerrar"
+					onPress={onClose}
+					className="size-11 items-end justify-center active:opacity-60"
 				>
-					<Path d="M18 6 6 18M6 6l12 12" />
-				</Svg>
-			</Pressable>
+					<Svg
+						width={20}
+						height={20}
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke={foreground}
+						strokeWidth={1.6}
+						strokeLinecap="round"
+					>
+						<Path d="M18 6 6 18M6 6l12 12" />
+					</Svg>
+				</Pressable>
+			) : null}
 		</View>
 	);
 }

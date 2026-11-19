@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import "@/global.css";
+import { StatusBar } from "expo-status-bar";
+import { useUniwind } from "uniwind";
 import { authClient } from "@/lib/auth-client";
 import { convex } from "@/lib/convex";
 import { ensureReminder } from "../../modules/quipu-detection";
@@ -12,10 +14,9 @@ import { ensureReminder } from "../../modules/quipu-detection";
 // (tabs) siempre queda debajo: un enlace directo a /register o /detection tiene a dónde volver.
 export const unstable_settings = { anchor: "(tabs)" };
 
-const sheet = {
-	presentation: "formSheet",
-	sheetAllowedDetents: "fitToContents",
-	sheetGrabberVisible: true,
+const registerOptions = {
+	presentation: "transparentModal",
+	animation: "none",
 } as const;
 
 function Screens() {
@@ -39,7 +40,7 @@ function Screens() {
 			<Stack.Protected guard={isAuthenticated} redirectTo="/sign-in">
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-				<Stack.Screen name="register" options={sheet} />
+				<Stack.Screen name="register" options={registerOptions} />
 				<Stack.Screen name="detection" />
 				<Stack.Screen name="settings/index" />
 				<Stack.Screen name="settings/security" />
@@ -51,6 +52,7 @@ function Screens() {
 }
 
 export default function RootLayout() {
+	const { theme } = useUniwind();
 	useEffect(() => {
 		void ensureReminder();
 	}, []);
@@ -58,6 +60,7 @@ export default function RootLayout() {
 	return (
 		<KeyboardProvider>
 			<ConvexBetterAuthProvider client={convex} authClient={authClient}>
+				<StatusBar style={theme === "dark" ? "light" : "dark"} />
 				<Screens />
 			</ConvexBetterAuthProvider>
 		</KeyboardProvider>
