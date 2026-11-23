@@ -1,4 +1,4 @@
-import { formatCents, NOTE_MAX_LENGTH, toCents, wholeSoles } from "@quipu/backend/shared/budget";
+import { formatCents, toCents, wholeSoles } from "@quipu/backend/shared/budget";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/section-label";
 import { Segmented } from "@/components/ui/segmented";
 import { SheetHeader } from "@/components/ui/sheet-header";
-import { TextField } from "@/components/ui/text-field";
 import type { DetectedDraft } from "@/features/detection/params";
 import { SAMPLE_HOME } from "@/features/home/sample";
 import type { Row } from "@/features/movements/movement-rows";
@@ -20,6 +19,7 @@ import {
 	expenseTodayLine,
 } from "@/features/register/expense";
 import { IncomeFields } from "@/features/register/income-fields";
+import { NoteField } from "@/features/register/note-field";
 import {
 	cycleChoices,
 	INITIAL_INCOME,
@@ -54,7 +54,7 @@ export function RegisterForm({
 		(editing?.kind ?? detected?.kind) === "income" ? "income" : "expense",
 	);
 	const [amount, setAmount] = useState(
-		editing ? formatCents(editing.amountCents) : detected ? formatCents(detected.cents) : "",
+		editing ? formatCents(editing.amountCents) : detected?.cents ? formatCents(detected.cents) : "",
 	);
 	const [note, setNote] = useState(editing?.note ?? detected?.merchant ?? "");
 	const [envelope, setEnvelope] = useState<ExpenseEnvelope>(
@@ -70,26 +70,29 @@ export function RegisterForm({
 		return <DeleteFlow row={editing} onCancel={() => setDeleting(false)} onDeleted={onClose} />;
 	}
 
+	const isNewIncome = kind === "income" && !editing;
 	const cycles =
-		kind === "income" && !income.extra && home.earlyWindow ? cycleChoices(home.endDate) : null;
+		isNewIncome && !income.extra && home.earlyWindow ? cycleChoices(home.endDate) : null;
 
 	return (
 		<View>
-			<SheetHeader title={sheetTitle(detected, editing)} sub={detected?.bank} />
-			<View className="mt-2.5">
-				<Segmented
-					options={KIND_LABELS}
-					selectedIndex={KINDS.indexOf(kind)}
-					onChange={(index) => setKind(KINDS[index])}
-				/>
-			</View>
+			<SheetHeader title={sheetTitle(detected, editing)} sub={detected?.bank} onClose={onClose} />
+			{editing ? null : (
+				<View className="mt-2.5">
+					<Segmented
+						options={KIND_LABELS}
+						selectedIndex={KINDS.indexOf(kind)}
+						onChange={(index) => setKind(KINDS[index])}
+					/>
+				</View>
+			)}
 
 			<View className="mt-5 flex-row items-baseline gap-2 border-b border-input pb-2">
 				<Text className="font-mono text-[22px] text-muted-foreground">S/</Text>
 				<TextInput
 					className="min-w-0 flex-1 font-mono text-[46px] leading-none text-foreground"
 					keyboardType="decimal-pad"
-					autoFocus={!detected && !editing}
+					autoFocus={!amount}
 					value={amount}
 					onChangeText={setAmount}
 					placeholder="0.00"
@@ -98,24 +101,8 @@ export function RegisterForm({
 				/>
 			</View>
 
-			{kind === "income" ? (
-				<IncomeFields
-					home={home}
-					amountCents={amountCents}
-					income={income}
-					cycles={cycles}
-					onChange={(patch) => setIncome((current) => ({ ...current, ...patch }))}
-				/>
-			) : (
+			{kind === "expense" ? (
 				<>
-					<Text className="mt-4 text-[13px] text-muted-foreground">Concepto · opcional</Text>
-					<TextField
-						value={note}
-						onChangeText={setNote}
-						placeholder="Ej. almuerzo"
-						maxLength={NOTE_MAX_LENGTH}
-						accessibilityLabel="Concepto"
-					/>
 					<View className="mt-[18px]">
 						<SectionLabel>Elige un sobre</SectionLabel>
 					</View>
@@ -161,7 +148,23 @@ export function RegisterForm({
 						</Text>
 					) : null}
 				</>
-			)}
+			) : null}
+
+			{isNewIncome ? (
+				<IncomeFields
+					home={home}
+					amountCents={amountCents}
+					income={income}
+					cycles={cycles}
+					onChange={(patch) => setIncome((current) => ({ ...current, ...patch }))}
+				/>
+			) : null}
+
+			<NoteField
+				value={note}
+				onChange={setNote}
+				placeholder={kind === "expense" ? "Ej. almuerzo" : "Ej. pago de cliente"}
+			/>
 
 			{editing ? (
 				<Pressable
@@ -180,8 +183,7 @@ export function RegisterForm({
 					label={editing ? "Guardar cambios" : saveLabel(cycles, income)}
 					disabled={!canSaveAmount(amountCents)}
 					onPress={() => {
-						// Later: api.transactions.addExpense / addIncome / updateExpense / updateIncome, and the vibration once it succeeds.
-						void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+						// Later: api.transactions.addExpense / addIncome / updateExpense / updateIncome, and the success vibration once it saves.
 						onClose();
 					}}
 				/>

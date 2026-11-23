@@ -1,6 +1,7 @@
+import { formatCents } from "@quipu/backend/shared/budget";
 import { formatRange } from "@quipu/backend/shared/dates";
 import { router } from "expo-router";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 
 /** J8: someone who joined Nuestro espacio without Primeros pasos has no Personal yet. */
@@ -18,7 +19,15 @@ export function EmptyPersonal() {
 }
 
 /** C2: the cycle exists but has no money yet. */
-export function EmptyCycle({ startDate, endDate }: { startDate: string; endDate: string }) {
+export function EmptyCycle({
+	startDate,
+	endDate,
+	planIncomeCents,
+}: {
+	startDate: string;
+	endDate: string;
+	planIncomeCents: number | null;
+}) {
 	return (
 		<View className="mt-6">
 			<Text className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
@@ -30,9 +39,36 @@ export function EmptyCycle({ startDate, endDate }: { startDate: string; endDate:
 			<Text className="mt-3 text-sm text-muted-foreground">
 				Registra con cuánto cuentas y Quipu lo reparte en tus sobres.
 			</Text>
-			<View className="mt-6">
-				<Button label="Registrar ingreso" onPress={() => router.push("/register")} />
-			</View>
+			{planIncomeCents === null ? (
+				<View className="mt-6">
+					<Button label="Registrar ingreso" onPress={() => router.push("/register?kind=income")} />
+				</View>
+			) : (
+				<>
+					<Text className="mt-6 text-sm text-muted-foreground">
+						¿Ya te pagaron{" "}
+						<Text className="font-mono font-semibold text-foreground">
+							S/ {formatCents(planIncomeCents)}
+						</Text>
+						?
+					</Text>
+					<View className="mt-3">
+						<Button
+							label="Sí, ya me pagaron"
+							onPress={() => router.push(`/register?kind=income&cents=${planIncomeCents}`)}
+						/>
+					</View>
+					<Pressable
+						accessibilityRole="button"
+						onPress={() => router.push("/register?kind=income")}
+						className="mt-1 min-h-11 items-center justify-center active:opacity-60"
+					>
+						<Text className="text-[13.5px] font-medium text-muted-foreground underline">
+							Registrar otro monto
+						</Text>
+					</Pressable>
+				</>
+			)}
 		</View>
 	);
 }

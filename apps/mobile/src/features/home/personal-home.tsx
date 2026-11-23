@@ -21,7 +21,14 @@ export function PersonalHome({
 	items: CommitmentList["items"];
 	today: string;
 }) {
-	if (home.empty) return <EmptyCycle startDate={home.startDate} endDate={home.endDate} />;
+	if (home.empty)
+		return (
+			<EmptyCycle
+				startDate={home.startDate}
+				endDate={home.endDate}
+				planIncomeCents={home.planIncomeCents}
+			/>
+		);
 
 	const hero = todaySpendSummary(home);
 	const daysLeft = formatDaysLeft(home.daysLeft);

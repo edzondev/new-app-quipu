@@ -27,14 +27,11 @@ export const EXTRA_TYPE_OPTIONS = EXTRA_TYPES.map((type) => EXTRA_TYPE_LABELS[ty
 export type IncomeDraft = {
 	extra: Extra | null;
 	forNextCycle: boolean;
-	startNow: boolean;
 };
 
-export const INITIAL_INCOME: IncomeDraft = { extra: null, forNextCycle: true, startNow: false };
+export const INITIAL_INCOME: IncomeDraft = { extra: null, forNextCycle: true };
 
-export const NEW_EXTRA: Extra = { type: "gratification", toSavings: false };
-
-export const START_NOW_NOTE = "Tu ciclo actual se cierra hoy. Lo que sobra pasa al nuevo.";
+export const NEW_EXTRA: Extra = { type: "other", toSavings: false };
 
 export function cycleChoices(endDate: string) {
 	const names = cycleNames(endDate);
@@ -45,7 +42,6 @@ export function cycleChoices(endDate: string) {
 			`Para ${names.next}, desde el ${formatDay(names.nextStart)}`,
 		],
 		next: names.next,
-		startsOn: `Empieza el ${formatDay(names.nextStart)}.`,
 	};
 }
 
@@ -53,7 +49,7 @@ export type CycleChoices = ReturnType<typeof cycleChoices>;
 
 export function saveLabel(cycles: CycleChoices | null, income: IncomeDraft): string {
 	if (!cycles || !income.forNextCycle) return "Guardar";
-	return income.startNow ? "Guardar y empezar ciclo" : `Guardar para ${cycles.next}`;
+	return `Guardar para ${cycles.next}`;
 }
 
 export const incomeSplitLine = (split: Home["split"]) =>

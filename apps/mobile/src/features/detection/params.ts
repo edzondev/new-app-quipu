@@ -4,7 +4,8 @@ export type DetectedKind = "expense" | "income";
 
 export type DetectedDraft = {
 	kind: DetectedKind;
-	cents: number;
+	/** Only an income can come without an amount: it opens the form empty. */
+	cents: number | null;
 	merchant: string;
 	bank: string;
 };
@@ -26,9 +27,12 @@ export function parseDetected(params: {
 	const kind = first(params.kind);
 	if (kind !== "expense" && kind !== "income") return null;
 	const rawCents = first(params.cents);
-	if (!/^\d+$/.test(rawCents)) return null;
-	const cents = Number(rawCents);
-	if (cents <= 0 || cents > MAX_MOVEMENT_CENTS) return null;
+	let cents: number | null = null;
+	if (rawCents || kind === "expense") {
+		if (!/^\d+$/.test(rawCents)) return null;
+		cents = Number(rawCents);
+		if (cents <= 0 || cents > MAX_MOVEMENT_CENTS) return null;
+	}
 	return {
 		kind,
 		cents,

@@ -1,7 +1,7 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import * as Haptics from "expo-haptics";
-import { Pressable, Switch, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Chips } from "@/components/ui/chips";
 import { Notice } from "@/components/ui/notice";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -16,10 +16,8 @@ import {
 	incomeTodayLine,
 	NEW_EXTRA,
 	savingsLine,
-	START_NOW_NOTE,
 } from "@/features/register/income";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
-import { useThemeColor } from "@/lib/use-theme-color";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
 
@@ -68,7 +66,6 @@ export function IncomeFields({
 	cycles: CycleChoices | null;
 	onChange: (patch: Partial<IncomeDraft>) => void;
 }) {
-	const primary = useThemeColor("--color-primary");
 	const { extra } = income;
 	const line = extra?.toSavings
 		? savingsLine(home, amountCents)
@@ -125,22 +122,6 @@ export function IncomeFields({
 							/>
 						))}
 					</View>
-					{income.forNextCycle ? (
-						<View className="mt-1 min-h-14 flex-row items-center gap-3 py-2">
-							<View className="min-w-0 flex-1">
-								<Text className="text-[15px] font-semibold text-foreground">Empezar ciclo hoy</Text>
-								<Text className="mt-0.5 text-[12.5px] leading-[18px] text-muted-foreground">
-									{income.startNow ? START_NOW_NOTE : cycles.startsOn}
-								</Text>
-							</View>
-							<Switch
-								value={income.startNow}
-								onValueChange={(startNow) => onChange({ startNow })}
-								trackColor={{ true: primary }}
-								accessibilityLabel="Empezar ciclo hoy"
-							/>
-						</View>
-					) : null}
 				</>
 			) : (
 				<>
