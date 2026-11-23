@@ -26,6 +26,9 @@
 			--color-envelope-needs: oklch(0.479 0.06 245.1);
 			--color-envelope-wants: oklch(0.6 0.129 45.2);
 			--color-envelope-savings: oklch(0.5 0.07 168.7);
+			--color-primary-soft: #fde2d0;
+			--color-logo-leaf: #332014;
+			--color-logo-accent: #c4582b;
 		}
 
 		@variant dark {
@@ -51,6 +54,9 @@
 			--color-envelope-needs: oklch(0.713 0.097 247.1);
 			--color-envelope-wants: oklch(0.763 0.121 48.9);
 			--color-envelope-savings: oklch(0.73 0.116 168.3);
+			--color-primary-soft: rgba(232, 135, 95, 0.16);
+			--color-logo-leaf: #fbf0e2;
+			--color-logo-accent: #c4582b;
 		}
 	}
 }

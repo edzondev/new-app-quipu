@@ -33,7 +33,7 @@ export function SpaceGroup({
 
 	return (
 		<View>
-			<View className="mt-5">
+			<View className="mt-8">
 				<SectionLabel>Nuestro espacio</SectionLabel>
 			</View>
 			<ListRow label="Nombre" value={name ?? "Nuestro espacio"} onPress={onName} />
@@ -53,7 +53,7 @@ export function SpaceGroup({
 					</View>
 				</>
 			)}
-			<View className="mt-5">
+			<View className="mt-8">
 				<SectionLabel>Ciclo del espacio</SectionLabel>
 			</View>
 			<ListRow label="Ciclo" value={cycleRowValue(cycle)} onPress={onCycle} />

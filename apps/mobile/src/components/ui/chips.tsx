@@ -5,10 +5,12 @@ export function Chips({
 	options,
 	selectedIndex,
 	onChange,
+	dots,
 }: {
 	options: readonly string[];
 	selectedIndex: number;
 	onChange: (index: number) => void;
+	dots?: readonly (string | undefined)[];
 }) {
 	return (
 		<View className="flex-row flex-wrap gap-2">
@@ -24,8 +26,9 @@ export function Chips({
 							void Haptics.selectionAsync();
 							onChange(index);
 						}}
-						className={`min-h-11 items-center justify-center rounded-full px-4 ${selected ? "bg-foreground" : "bg-secondary"}`}
+						className={`min-h-11 flex-row items-center justify-center gap-2 rounded-full px-4 ${selected ? "bg-foreground" : "bg-secondary"}`}
 					>
+						{dots?.[index] ? <View className={`size-2 rounded-full ${dots[index]}`} /> : null}
 						<Text
 							className={`text-[13.5px] font-semibold ${selected ? "text-background" : "text-foreground"}`}
 							numberOfLines={1}

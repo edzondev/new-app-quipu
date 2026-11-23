@@ -24,5 +24,5 @@ export function todaySpendSummary({
 	const cents = over ? overCents : spent ? leftCents : dailyCents;
 	const { whole, decimals } = amountParts(cents);
 	const label = over ? "Hoy te pasaste" : spent ? "Te queda hoy" : "Puedes gastar hoy";
-	return { whole, decimals, label, over };
+	return { whole, decimals, label, over, daily: !over && !spent };
 }

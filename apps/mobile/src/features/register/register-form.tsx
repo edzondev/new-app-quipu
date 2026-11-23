@@ -1,112 +1,193 @@
-import { formatCents, NOTE_MAX_LENGTH, toCents } from "@quipu/backend/shared/budget";
+import { formatCents, toCents, wholeSoles } from "@quipu/backend/shared/budget";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
 import { useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { Button } from "@/components/ui/button";
-import { KeyboardAvoidingView } from "@/components/ui/keyboard-avoiding-view";
+import { SectionLabel } from "@/components/ui/section-label";
 import { Segmented } from "@/components/ui/segmented";
-import { TextField } from "@/components/ui/text-field";
+import { SheetHeader } from "@/components/ui/sheet-header";
 import type { DetectedDraft } from "@/features/detection/params";
 import { SAMPLE_HOME } from "@/features/home/sample";
+import type { Row } from "@/features/movements/movement-rows";
+import { DeleteFlow } from "@/features/register/delete-flow";
 import {
-	canSaveExpense,
+	canSaveAmount,
 	EXPENSE_ENVELOPE_LABELS,
 	EXPENSE_ENVELOPES,
 	type ExpenseEnvelope,
 	envelopeBalanceCents,
 	expenseTodayLine,
 } from "@/features/register/expense";
+import { IncomeFields } from "@/features/register/income-fields";
+import { NoteField } from "@/features/register/note-field";
+import {
+	cycleChoices,
+	INITIAL_INCOME,
+	type IncomeDraft,
+	saveLabel,
+} from "@/features/register/income";
+import { ENVELOPE_DOT } from "@/lib/envelope-dot";
 import { useThemeColor } from "@/lib/use-theme-color";
 
-export function RegisterForm({ detected }: { detected: DetectedDraft | null }) {
-	const income = detected?.kind === "income";
-	const [amount, setAmount] = useState(detected ? formatCents(detected.cents) : "");
-	const [note, setNote] = useState(detected?.merchant ?? "");
-	const [envelopeIndex, setEnvelopeIndex] = useState(0);
+const KINDS = ["expense", "income"] as const;
+const KIND_LABELS = ["Gasto", "Ingreso"];
+
+function sheetTitle(detected: DetectedDraft | null, editing: Row | null) {
+	if (editing) return editing.kind === "income" ? "Editar ingreso" : "Editar gasto";
+	if (detected?.kind === "income") return "Registrar ingreso";
+	return detected?.kind === "expense" ? "Gasto detectado" : "Registrar";
+}
+
+const soles = (cents: number) => wholeSoles(Math.floor(cents / 100) * 100);
+
+export function RegisterForm({
+	detected,
+	editing,
+	onClose,
+}: {
+	detected: DetectedDraft | null;
+	editing: Row | null;
+	onClose: () => void;
+}) {
+	const home = SAMPLE_HOME;
+	const [kind, setKind] = useState<(typeof KINDS)[number]>(
+		(editing?.kind ?? detected?.kind) === "income" ? "income" : "expense",
+	);
+	const [amount, setAmount] = useState(
+		editing ? formatCents(editing.amountCents) : detected?.cents ? formatCents(detected.cents) : "",
+	);
+	const [note, setNote] = useState(editing?.note ?? detected?.merchant ?? "");
+	const [envelope, setEnvelope] = useState<ExpenseEnvelope>(
+		EXPENSE_ENVELOPES.find((name) => name === editing?.envelope) ?? "needs",
+	);
+	const [income, setIncome] = useState<IncomeDraft>(INITIAL_INCOME);
+	const [deleting, setDeleting] = useState(false);
 	const muted = useThemeColor("--color-muted-foreground");
 	const amountCents = toCents(amount);
-	const envelope: ExpenseEnvelope = EXPENSE_ENVELOPES[envelopeIndex] ?? "needs";
-	const canSave = canSaveExpense(amountCents);
-	const todayLine = income ? null : expenseTodayLine(SAMPLE_HOME, amountCents);
-	const balanceCents = envelopeBalanceCents(SAMPLE_HOME, envelope);
-	const title =
-		detected?.kind === "income"
-			? "Registrar ingreso"
-			: detected?.kind === "expense"
-				? "Gasto detectado"
-				: "Registrar";
+	const expenseLine = expenseTodayLine(home, amountCents);
+
+	if (editing && deleting) {
+		return <DeleteFlow row={editing} onCancel={() => setDeleting(false)} onDeleted={onClose} />;
+	}
+
+	const isNewIncome = kind === "income" && !editing;
+	const cycles =
+		isNewIncome && !income.extra && home.earlyWindow ? cycleChoices(home.endDate) : null;
 
 	return (
-		<KeyboardAvoidingView behavior="padding" className="bg-background">
-			<View className="px-6 pt-3 pb-6">
-				<Text className="text-2xl font-semibold text-foreground">{title}</Text>
-				{detected?.bank ? (
-					<Text className="mt-1 text-[13px] text-muted-foreground">{detected.bank}</Text>
-				) : null}
-
-				<View className="mt-5 flex-row items-baseline gap-2 border-b border-input pb-2">
-					<Text className="font-mono text-[22px] text-muted-foreground">S/</Text>
-					<TextInput
-						className="min-w-0 flex-1 font-mono text-[46px] leading-none text-foreground"
-						keyboardType="decimal-pad"
-						autoFocus={!detected}
-						value={amount}
-						onChangeText={setAmount}
-						placeholder="0.00"
-						placeholderTextColor={muted}
-						accessibilityLabel="Monto"
+		<View>
+			<SheetHeader title={sheetTitle(detected, editing)} sub={detected?.bank} onClose={onClose} />
+			{editing ? null : (
+				<View className="mt-2.5">
+					<Segmented
+						options={KIND_LABELS}
+						selectedIndex={KINDS.indexOf(kind)}
+						onChange={(index) => setKind(KINDS[index])}
 					/>
 				</View>
+			)}
 
-				<Text className="mt-4 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
-					Concepto · opcional
-				</Text>
-				<View className="mt-1">
-					<TextField
-						value={note}
-						onChangeText={setNote}
-						placeholder="Ej. almuerzo"
-						maxLength={NOTE_MAX_LENGTH}
-						accessibilityLabel="Concepto"
-					/>
-				</View>
-
-				{income ? (
-					<Text className="mt-[18px] text-base text-foreground">Para este ciclo</Text>
-				) : (
-					<>
-						<Text className="mt-[18px] text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
-							Elige un sobre
-						</Text>
-						<View className="mt-2.5">
-							<Segmented
-								options={EXPENSE_ENVELOPE_LABELS}
-								selectedIndex={envelopeIndex}
-								onChange={setEnvelopeIndex}
-							/>
-						</View>
-						<Text className="mt-2 font-mono text-[13px] text-muted-foreground">
-							S/ {formatCents(balanceCents)}
-						</Text>
-						{todayLine ? (
-							<Text className="mt-3.5 text-[13px] text-muted-foreground">{todayLine}</Text>
-						) : null}
-					</>
-				)}
-
-				<View className="mt-[18px]">
-					<Button
-						label="Guardar"
-						disabled={!canSave}
-						onPress={() => {
-							// Later: api.transactions.addExpense, and the vibration once it succeeds.
-							void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-							router.back();
-						}}
-					/>
-				</View>
+			<View className="mt-5 flex-row items-baseline gap-2 border-b border-input pb-2">
+				<Text className="font-mono text-[22px] text-muted-foreground">S/</Text>
+				<TextInput
+					className="min-w-0 flex-1 font-mono text-[46px] leading-none text-foreground"
+					keyboardType="decimal-pad"
+					autoFocus={!amount}
+					value={amount}
+					onChangeText={setAmount}
+					placeholder="0.00"
+					placeholderTextColor={muted}
+					accessibilityLabel="Monto"
+				/>
 			</View>
-		</KeyboardAvoidingView>
+
+			{kind === "expense" ? (
+				<>
+					<View className="mt-[18px]">
+						<SectionLabel>Elige un sobre</SectionLabel>
+					</View>
+					<View className="mt-2.5 flex-row gap-2">
+						{EXPENSE_ENVELOPES.map((name, index) => {
+							const selected = name === envelope;
+							const balance = soles(envelopeBalanceCents(home, name));
+							return (
+								<Pressable
+									key={name}
+									accessibilityRole="button"
+									accessibilityState={{ selected }}
+									accessibilityLabel={`${EXPENSE_ENVELOPE_LABELS[index]}, S/ ${balance}`}
+									onPress={() => {
+										if (selected) return;
+										void Haptics.selectionAsync();
+										setEnvelope(name);
+									}}
+									className={`min-h-[52px] min-w-0 flex-1 justify-center rounded-full px-4 ${selected ? "bg-foreground" : "bg-secondary"}`}
+								>
+									<View className="flex-row items-center gap-2">
+										<View className={`size-2 shrink-0 rounded-full ${ENVELOPE_DOT[name]}`} />
+										<Text
+											numberOfLines={1}
+											className={`min-w-0 shrink text-[13.5px] font-semibold ${selected ? "text-background" : "text-foreground"}`}
+										>
+											{EXPENSE_ENVELOPE_LABELS[index]}
+										</Text>
+									</View>
+									<Text
+										numberOfLines={1}
+										className={`ml-4 font-mono text-[11.5px] opacity-75 ${selected ? "text-background" : "text-foreground"}`}
+									>
+										S/ {balance}
+									</Text>
+								</Pressable>
+							);
+						})}
+					</View>
+					{expenseLine ? (
+						<Text className="mt-3.5 text-[13px] leading-[19px] text-muted-foreground">
+							{expenseLine}
+						</Text>
+					) : null}
+				</>
+			) : null}
+
+			{isNewIncome ? (
+				<IncomeFields
+					home={home}
+					amountCents={amountCents}
+					income={income}
+					cycles={cycles}
+					onChange={(patch) => setIncome((current) => ({ ...current, ...patch }))}
+				/>
+			) : null}
+
+			<NoteField
+				value={note}
+				onChange={setNote}
+				placeholder={kind === "expense" ? "Ej. almuerzo" : "Ej. pago de cliente"}
+			/>
+
+			{editing ? (
+				<Pressable
+					accessibilityRole="button"
+					onPress={() => setDeleting(true)}
+					className="mt-3.5 min-h-11 items-center justify-center active:opacity-60"
+				>
+					<Text className="text-[13.5px] font-medium text-warning-foreground underline">
+						{editing.kind === "income" ? "Eliminar ingreso" : "Eliminar gasto"}
+					</Text>
+				</Pressable>
+			) : null}
+
+			<View className="mt-[18px] mb-2">
+				<Button
+					label={editing ? "Guardar cambios" : saveLabel(cycles, income)}
+					disabled={!canSaveAmount(amountCents)}
+					onPress={() => {
+						// Later: api.transactions.addExpense / addIncome / updateExpense / updateIncome, and the success vibration once it saves.
+						onClose();
+					}}
+				/>
+			</View>
+		</View>
 	);
 }

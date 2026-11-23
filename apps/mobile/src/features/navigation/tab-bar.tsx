@@ -56,11 +56,11 @@ export function TabBar({ state, descriptors, navigateToTab }: BottomTabBarProps)
 									navigateToTab(route.key);
 								}
 							}}
-							className={`h-[54px] w-[68px] items-center justify-center rounded-full ${selected ? "bg-primary/10" : ""}`}
+							className={`h-[54px] w-[68px] items-center justify-center rounded-full ${selected ? "bg-foreground/6 dark:bg-foreground/8" : ""}`}
 						>
 							{icon}
 							<Text
-								className={`mt-0.5 text-[10px] font-semibold ${selected ? "text-primary" : "text-foreground"}`}
+								className={`mt-[3px] text-[10px] font-semibold ${selected ? "text-primary" : "text-foreground"}`}
 								numberOfLines={1}
 							>
 								{label}

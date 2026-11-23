@@ -22,7 +22,6 @@ export function StepHeader({ step, onBack }: { step: 1 | 2 | 3 | 4; onBack: () =
 				))}
 			</View>
 			<View className="mt-1 min-h-11 flex-row items-center justify-between">
-				<Text className="text-xs text-muted-foreground">{step} de 4</Text>
 				{step > 1 ? (
 					<Pressable
 						accessibilityRole="button"
@@ -33,6 +32,7 @@ export function StepHeader({ step, onBack }: { step: 1 | 2 | 3 | 4; onBack: () =
 						<Text className="text-xs text-muted-foreground">Volver</Text>
 					</Pressable>
 				) : null}
+				<Text className="text-xs text-muted-foreground">{step} de 4</Text>
 			</View>
 		</View>
 	);

@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/ui/notice";
 import { SheetHeader } from "@/components/ui/sheet-header";
 import { CadenceChips } from "@/features/cycle/cadence-chips";
 import { type Cycle, currentCycleText } from "@/features/cycle/cycle-days";
@@ -70,11 +71,8 @@ function CycleForm({
 					onPress={() => setPicking(true)}
 				/>
 			</View>
-			<View className="mt-3.5 flex-row items-start gap-2.5 rounded-[18px] bg-muted px-3.5 py-3">
-				<View className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
-				<Text className="min-w-0 flex-1 text-[13px] leading-[19.5px] font-medium text-foreground">
-					{describeCycleChange(next, currentEndDate)}
-				</Text>
+			<View className="mt-3.5">
+				<Notice>{describeCycleChange(next, currentEndDate)}</Notice>
 			</View>
 			<View className="mt-[18px] mb-2">
 				<Button

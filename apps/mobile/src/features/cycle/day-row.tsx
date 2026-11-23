@@ -21,7 +21,7 @@ export function DayRow({
 			accessibilityRole="button"
 			accessibilityLabel={accessibilityLabel}
 			onPress={onPress}
-			className="min-h-14 flex-row items-center justify-between gap-3 border-y border-border py-3 active:opacity-60"
+			className="min-h-14 flex-row items-center justify-between gap-3 py-3 active:opacity-60"
 		>
 			<Text
 				numberOfLines={1}

@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, Text, useWindowDimensions, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { QuipuLogo } from "@/components/quipu-logo";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,13 @@ function Content({
 }) {
 	const foreground = useThemeColor("--color-foreground");
 	const [step, setStep] = useState<1 | 2>(1);
+	const { height } = useWindowDimensions();
 
 	return (
-		<View className="mx-4 overflow-hidden rounded-[28px] bg-popover">
+		<View
+			className="mx-4 overflow-hidden rounded-[28px] bg-popover"
+			style={{ minHeight: height * 0.7 }}
+		>
 			<View className="h-[104px] items-center justify-center bg-secondary">
 				<CordsBand />
 				<View className="size-16 items-center justify-center rounded-full bg-background">
@@ -84,7 +88,7 @@ function Content({
 				) : null}
 			</View>
 
-			<View className="px-6 pt-6 pb-5">
+			<View className="flex-1 px-6 pt-6 pb-5">
 				{step === 1 ? (
 					<>
 						<Text className="text-3xl leading-9 font-semibold text-foreground">Hola, {name}</Text>
@@ -108,14 +112,13 @@ function Content({
 								detail="Mira cuánto puedes gastar hoy."
 							/>
 						</View>
-						<View className="mt-6">
-							<Button label="Siguiente" onPress={() => setStep(2)} />
-						</View>
+						<View className="min-h-6 flex-1" />
+						<Button label="Siguiente" onPress={() => setStep(2)} />
 					</>
 				) : (
 					<>
-						<View className="self-start rounded-full bg-muted px-2.5 py-1">
-							<Text className="text-xs font-semibold text-muted-foreground">Plan Gratis</Text>
+						<View className="self-start rounded-full bg-primary-soft px-2.5 py-1">
+							<Text className="text-xs font-semibold text-primary">Plan Gratis</Text>
 						</View>
 						<Text className="mt-3 text-3xl leading-9 font-semibold text-foreground">
 							Tu plan es Gratis
@@ -131,7 +134,8 @@ function Content({
 							</Text>{" "}
 							Pruébalo gratis 14 días cuando lo necesites.
 						</Text>
-						<View className="mt-6 gap-2">
+						<View className="min-h-6 flex-1" />
+						<View className="gap-2">
 							<Button label="Empezar" onPress={onClose} />
 							<Button label="Ver Plus" variant="secondary" onPress={onSeePlus} />
 						</View>

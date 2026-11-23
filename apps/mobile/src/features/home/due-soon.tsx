@@ -3,6 +3,7 @@ import { formatCents } from "@quipu/backend/shared/budget";
 import { daysBetween } from "@quipu/backend/shared/dates";
 import type { FunctionReturnType } from "convex/server";
 import { Text, View } from "react-native";
+import { SectionLabel } from "@/components/ui/section-label";
 
 type CommitmentList = FunctionReturnType<typeof api.commitments.list>;
 type Item = CommitmentList["items"][number];
@@ -25,19 +26,17 @@ export function DueSoon({ items, today }: { items: Item[]; today: string }) {
 
 	return (
 		<View className="mt-[18px]">
-			<Text className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
-				Por pagar
-			</Text>
-			{dueSoon.map((item) => (
+			<SectionLabel>Por pagar</SectionLabel>
+			{dueSoon.map((item, index) => (
 				<View
 					key={item.id}
-					className="flex-row items-center justify-between gap-2 border-b border-border py-3"
+					className={`min-h-14 flex-row items-center justify-between gap-3 py-3 ${index < dueSoon.length - 1 ? "border-b border-border" : ""}`}
 				>
 					<View className="min-w-0 flex-1">
 						<Text className="text-[15px] font-semibold text-foreground" numberOfLines={1}>
 							{item.name}
 						</Text>
-						<Text className="mt-0.5 text-[13px] text-muted-foreground">
+						<Text className="mt-0.5 text-[12.5px] text-muted-foreground">
 							{dueLabel(item.dueDate, today)}
 						</Text>
 					</View>

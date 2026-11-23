@@ -25,11 +25,11 @@ export function ListRow({
 			<View className="min-w-0 flex-1 py-3">
 				<Text
 					numberOfLines={1}
-					className={`text-[15px] font-semibold ${warning ? "text-warning-foreground" : "text-foreground"}`}
+					className={`text-[15px] font-medium ${warning ? "text-warning-foreground" : "text-foreground"}`}
 				>
 					{label}
 				</Text>
-				{sub ? <Text className="text-[13px] text-muted-foreground">{sub}</Text> : null}
+				{sub ? <Text className="text-[12.5px] text-muted-foreground">{sub}</Text> : null}
 			</View>
 			{value ? (
 				<Text numberOfLines={1} className="max-w-[55%] shrink text-[13px] text-muted-foreground">
