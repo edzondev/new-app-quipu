@@ -10,9 +10,9 @@ paths:
    - Bueno: `register-form.tsx:9-18` usa `Button`, `Dialog*` e `Input` de `ui`.
 2. **Tailwind con tokens, nunca rojo.** Colores de `styles.css` (`bg-muted`, `warning`). El riesgo va en ámbar (inventario §0.2.13).
    - Bueno: `home-page.tsx:103-110` (`bg-warning/16 text-warning-foreground`).
-3. **Textos literales del diseño.** Cópialos de `node .claude/skills/quipu-pantalla/leer-w.mjs W-Inicio`. No los parafrasees.
+3. **Textos literales del diseño.** Cópialos del inventario (`docs/diseno/inventario-pantallas-web.md`, sección de la pantalla). No los parafrasees.
    - Bueno: `home-page.tsx:89-91` («Puedes gastar hoy» y «Pueden gastar hoy juntos»).
-   - Malo: `home-page.tsx:114` dice «Sobres» y W-Inicio dice «Tus sobres» con «Editar reparto». `register-form.tsx:136` dice «Queda en el ciclo de hoy.» y W-Registrar dice «En Personal».
+   - Malo: `home-page.tsx:114` dice «Sobres» y el inventario dice «Tus sobres» con «Editar reparto». `register-form.tsx:136` dice «Queda en el ciclo de hoy.» y el inventario dice «En Personal».
 4. **Toques de 44 px.** Chips, segmentos, botón de cerrar y enlaces de la barra (inventario §0.5).
    - Bueno: `movements-page.tsx:109` y `register-form.tsx:55` (`min-h-11`).
    - Malo: `app-bar.tsx:15` (pastillas de 30 px) y `:59` (enlaces de 36 px).
