@@ -14,11 +14,6 @@ overrides:
   better-auth: 1.7.18
   "@better-auth/core": 1.7.18
   "@better-auth/passkey": 1.7.18
-permissions:
-  "@tanstack/devtools-vite":
-    skills: true
-  "@tanstack/react-start":
-    skills: true
 minimumReleaseAgeExclude:
   - "@expo/cli@58.1.20"
   - "@expo/config-plugins@58.0.13"

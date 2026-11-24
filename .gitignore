@@ -40,15 +40,8 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-.agents
-
 # Claude Code: se versiona lo compartido; el resto de .claude/ es local
 .claude/*
 !.claude/settings.json
 !.claude/rules/
 !.claude/skills/
-# Lo que pnpm crea en .claude/skills (enlaces a node_modules y su .gitignore)
-/.claude/skills/devtools-vite-plugin
-/.claude/skills/migrate-from-nextjs
-/.claude/skills/react-start
-.claude/skills/.gitignore
