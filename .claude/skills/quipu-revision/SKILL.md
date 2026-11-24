@@ -6,8 +6,8 @@ description: Revisa un diff de Quipu (móvil o web) contra el diseño y los caso
 # Revisión
 
 1. Saca el diff: `git diff master...HEAD` (o `gh pr diff <n>`). Lista los archivos.
-2. Alcance. Compara con la unidad en `docs/estado.md`. Marca todo lo que esté fuera de su «Terminado» o dentro de su «Fuera». Marca también dependencias nuevas, `docs/`, el HTML y cambios en `pnpm-lock.yaml`.
-3. Diseño. Por cada pantalla tocada, `node .claude/skills/quipu-pantalla/leer-w.mjs <id>` (móvil: `E1`, `G1`...; web: `W-Inicio`...; los ids están en `/quipu-pantalla`). Compara textos letra por letra, orden de elementos y toques de 44 px.
+2. Alcance. Compara con la unidad en `docs/estado.md`. Marca todo lo que esté fuera de su «Terminado» o dentro de su «Fuera». Marca también dependencias nuevas, `docs/`, los HTML de diseño y cambios en `pnpm-lock.yaml`.
+3. Diseño. Por cada pantalla tocada, `node .claude/skills/quipu-pantalla/leer-w.mjs <id>` (móvil: `E1`, `G1`...; Android por defecto, `<id> ios` solo si la unidad lo pide; los ids están en `/quipu-pantalla`). En web no hay HTML: compara contra la sección del inventario. Compara textos letra por letra, orden de elementos y toques de 44 px.
 4. Casos límite. Para cada uno, nombra la línea que lo cubre o di que no hay:
    - Doble clic o toque: el botón queda apagado mientras guarda (web: `register-form.tsx:202-204`).
    - Cambio de día con la pantalla abierta (en móvil, también con la app en segundo plano): web `key={today}` (`home-page.tsx:28-32`); móvil, el día se recalcula al volver y no vive en un estado.
@@ -18,7 +18,7 @@ description: Revisa un diff de Quipu (móvil o web) contra el diseño y los caso
    - Permisos: solo el autor edita o borra; el espacio sale de la sesión.
    - Dinero en céntimos enteros y fechas en Lima.
 5. Tests. Por cada test nuevo, pregunta: si rompo la línea que arregla esto, ¿falla? Si pasa con el código roto, no prueba nada.
-6. Código. Funciones de una sola llamada, efectos sin razón, lógica repetida, abstracciones sin caso que las pida. Móvil: clases armadas con variables, `StyleSheet` o colores sueltos, `useMemo`/`useCallback` sin medición (el React Compiler está activo) y dependencias nuevas. Rendimiento: `/performance-optimization` solo si hay una lista larga o algo lento. Para bugs genéricos carga `/ponytail-review` (cada hallazgo con un caso concreto; nada de gustos de estilo). Si hay un bug real, carga `diagnosing-bugs` (reproduce primero, arregla la causa raíz).
+6. Código. Funciones de una sola llamada, efectos sin razón, lógica repetida, abstracciones sin caso que las pida. Móvil: clases armadas con variables, `StyleSheet` o colores sueltos, `useMemo`/`useCallback` sin medición (el React Compiler está activo) y dependencias nuevas. Rendimiento: mide antes de optimizar; si hay una lista larga o algo lento, la medición manda. Comentarios: solo los que explican un porqué; quita los que repiten el código. Para bugs genéricos carga `/ponytail-review` (cada hallazgo con un caso concreto; nada de gustos de estilo). Si hay un bug real, carga `diagnosing-bugs` (reproduce primero, arregla la causa raíz).
 7. Veredicto, en este formato:
    - `PASA`, con una línea de por qué.
    - `ARREGLA ESTO`, con una lista: `archivo:línea`, qué falla, arreglo mínimo.

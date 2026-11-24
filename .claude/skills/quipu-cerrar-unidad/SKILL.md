@@ -8,7 +8,7 @@ description: Cierra una unidad de trabajo de Quipu (móvil o web). Corre los che
 Esto es lo que evita perder el estado. No te saltes el paso 5.
 
 1. Alcance: `git diff master...HEAD --stat` contra el «Terminado» y el «Fuera» de la unidad en `docs/estado.md`.
-2. Checks: la lista de `.agents/skills/verify-quipu/SKILL.md`. Guarda el código de salida de cada comando. Antes de decir que está listo, recuerda a Edzon que ejecute `/principle-prove-it-works` (solo él puede invocarla) y verifica contra el artefacto real (dispositivo, navegador o salida de los comandos), no por «compila».
+2. Checks: la lista de `.claude/skills/verify-quipu/SKILL.md`. Guarda el código de salida de cada comando y verifica contra el artefacto real (dispositivo, navegador o salida de los comandos), no por «compila».
 3. Revisión: `/quipu-revision`. Sigue solo con `PASA`.
 4. Commit: agrega archivos por nombre. Asunto en inglés, imperativo, una línea, como el historial de git.
 5. Estado, solo en `docs/estado.md`:

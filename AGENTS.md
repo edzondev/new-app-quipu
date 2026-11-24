@@ -23,12 +23,12 @@ This block is written and re-added by `turbo` before repository-scoped commands 
 - `apps/mobile`: Expo Router, Uniwind y Convex. Rutas en `src/app`, pantallas en `src/features/<pantalla>`, piezas base en `src/components/ui`, tokens en `src/global.css`. Detección de gastos en `modules/quipu-detection`.
 - `packages/backend`: Convex. Funciones en `convex/`, lógica compartida entre funciones en `convex/model/`, lógica pura (dinero, fechas, plan) en `shared/`, tests en `__tests__/`.
 - `docs/`: diseño, guías, auditoría y `estado.md`. Es local: no se versiona y no existe en un clon limpio.
-- `.claude/rules/`: reglas cortas por carpeta (`mobile.md`, `web-ui.md`, `web-rutas.md`, `backend.md`, `tests.md`). `.claude/skills/`: los skills `quipu-*`.
-- `.agents/skills/`: skills de pstack y `verify-quipu`.
+- `.claude/rules/`: reglas cortas por carpeta (`mobile.md`, `web-ui.md`, `web-rutas.md`, `backend.md`, `tests.md`).
+- `.claude/skills/`: el flujo (`start-flow`, `quipu-*`, `verify-quipu`) y las skills de Expo, Uniwind y Convex.
 
 ## Comandos
 
-Desde la raíz, con Node >= 24 y pnpm 12.14.0.
+Desde la raíz, con Node >= 24 y pnpm 12.18.0.
 
 - Instalar: `pnpm install --frozen-lockfile`
 - Desarrollo: `pnpm dev` (web en el puerto 3000 y Convex). Pide `apps/web/.env.local` con `VITE_CONVEX_URL`.
@@ -40,7 +40,7 @@ Desde la raíz, con Node >= 24 y pnpm 12.14.0.
 - Móvil: `pnpm --filter mobile android` (compila e instala el dev client), `pnpm --filter mobile start`. Bundle sin dispositivo: `pnpm --filter mobile exec expo export --platform android`. Paquetes con `pnpm expo install`, nunca `pnpm add`.
 - Build web: `pnpm --filter web build`
 
-Para dar un cambio por comprobado, corre la lista de `.agents/skills/verify-quipu/SKILL.md`.
+Para dar un cambio por comprobado, corre la lista de `.claude/skills/verify-quipu/SKILL.md`.
 
 ## Reglas duras
 
@@ -54,13 +54,13 @@ Para dar un cambio por comprobado, corre la lista de `.agents/skills/verify-quip
 - Código simple: DRY, KISS, sin capas de una sola llamada. Cada efecto y cada función tiene una razón.
 - Un PR por unidad de trabajo, en su propia rama. Nunca hagas merge sin permiso de Edzon.
 - Git: agrega archivos por nombre, nunca `git add -A` ni `git add .`. Nunca `restore`, `checkout --`, `stash` ni `clean`. Nunca borres archivos de Edzon.
-- Nunca subas `docs/`, `diseno/`, `guias-pantallas/` ni `rediseno-movil.html`.
+- Nunca subas `docs/`, `diseno/`, `guias-pantallas/`, `diseno-android.html` ni `diseno-ios.html`.
 
 ## Fuentes de diseño
 
 Manda la de más arriba. Si dos chocan, gana la primera.
 
-1. El HTML `docs/diseno/rediseno-movil.html`. Pesa 800 KB: léelo por pantalla con `node .claude/skills/quipu-pantalla/leer-w.mjs <id>`. Móvil: secciones A a P en el orden de la app, ids como `C1`, `E1` o `G1` (la tabla está en `/quipu-pantalla`). Web: pantallas `W-*`, que viven en `rediseno-web.html`.
+1. Solo móvil: los HTML `docs/diseno/diseno-android.html` (manda) y `diseno-ios.html` (solo si la unidad lo pide). Pesan 800 KB cada uno: léelos por pantalla con `node .claude/skills/quipu-pantalla/leer-w.mjs <id>` (Android) o `<id> ios`. Secciones A a O en el orden de la app, ids como `C1`, `E1` o `G1` (la tabla está en `/quipu-pantalla`).
 2. Solo web: `docs/diseno/inventario-pantallas-web.md`.
 3. Solo web: `docs/diseno/onboarding-web.md` (solo Primeros pasos).
 4. `docs/guias-pantallas/` (solo estructura, archivos y backend; describe la web).
@@ -71,12 +71,12 @@ Si algo no está definido en ninguna, no lo inventes: pregunta.
 
 ## Dónde está cada cosa
 
+- El flujo de una unidad (estado, rama, plan, backend, pantalla, checks, revisión, PR): `/start-flow`.
 - Dónde estamos y qué sigue: `/quipu-estado` (lee `docs/estado.md`).
-- Construir o terminar una pantalla (móvil o web): `/quipu-pantalla`. En móvil carga por defecto `/ponytail`, `/uniwind`, `/expo-overview`, `/expo-native-ui`, `/vercel-react-best-practices` y `/frontend-ui-engineering`, y las demás de Expo cuando toquen.
+- Construir o terminar una pantalla (móvil o web): `/quipu-pantalla`.
 - Query o mutación de Convex: `/quipu-backend`.
-- Revisar un diff: `/quipu-revision`.
-- Cerrar una unidad y abrir el PR: `/quipu-cerrar-unidad`.
-- Reglas por carpeta: `.claude/rules/` (`mobile.md`, `backend.md`, `web-rutas.md`, `web-ui.md`, `tests.md`).
+- Revisar un diff: `/quipu-revision`. Cerrar una unidad y abrir el PR: `/quipu-cerrar-unidad`.
+- Reglas por carpeta: `.claude/rules/`.
 - Reglas del dinero (ciclos, sobres, arrastre, número del día): `docs/diseno/reglas-backend.txt`.
 - Lo que falta en cada pantalla: `docs/auditoria/AUDITORIA.md` §4 (histórico; búscalo con `grep -n`, no lo leas entero).
 
