@@ -1,0 +1,33 @@
+{
+	"permissions": {
+		"deny": [
+			"Read(.env*)",
+			"Read(**/.env*)",
+			"Bash(git add -A*)",
+			"Bash(git add .*)",
+			"Bash(git stash*)",
+			"Bash(git restore*)",
+			"Bash(git clean*)",
+			"Bash(git checkout -- *)"
+		],
+		"ask": [
+			"Bash(pnpm add*)",
+			"Bash(pnpm expo install*)",
+			"Bash(*convex deploy*)",
+			"Bash(gh pr merge*)"
+		],
+		"allow": [
+			"Bash(git status*)",
+			"Bash(git diff*)",
+			"Bash(git log*)",
+			"Bash(git show*)",
+			"Bash(gh pr view*)",
+			"Bash(gh pr list*)",
+			"Bash(gh pr diff*)",
+			"Bash(gh pr checks*)",
+			"Bash(pnpm typecheck*)",
+			"Bash(pnpm lint*)",
+			"Bash(pnpm --filter @quipu/backend test*)"
+		]
+	}
+}

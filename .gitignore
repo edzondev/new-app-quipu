@@ -41,4 +41,12 @@ yarn-error.log*
 *.pem
 
 .agents
-.claude
+
+# Claude Code: se versiona lo compartido; el resto de .claude/ es local
+.claude/*
+!.claude/settings.json
+!.claude/rules/
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/quipu-*/
+!.claude/skills/start-flow/
