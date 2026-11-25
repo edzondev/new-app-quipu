@@ -1,15 +1,16 @@
 import { api } from "@quipu/backend/convex/_generated/api";
-import { useMutation, useQuery } from "convex/react";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { queryOptions, useMutation, useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LoadBoundary } from "@/components/ui/load-boundary";
 import { useLimaDate } from "@/features/cycle/use-lima-date";
-import { useOpenCycle } from "@/features/cycle/use-open-cycle";
+import { useEnsureOpen } from "@/features/cycle/use-ensure-open";
 import { EmptyPersonal } from "@/features/home/empty-states";
 import { HomeHeader } from "@/features/home/home-header";
-import { HomeLoadBoundary } from "@/features/home/home-load-boundary";
 import { HomeLoading, HomeSkeleton } from "@/features/home/home-skeleton";
 import { PersonalHome } from "@/features/home/personal-home";
 import { ReadOnlyHome } from "@/features/household/readonly-home";
@@ -19,14 +20,16 @@ import { WelcomeModal } from "@/features/onboarding/welcome-modal";
 import { PlusSheet } from "@/features/plus/plus-sheet";
 import { enter } from "@/lib/motion";
 
-/** Inicio's personal content. Opening the cycle and its queries live here, so a failure remounts only this part. */
+/** Inicio's personal content. Its data lives here, so a failure remounts only this part. */
 function PersonalBody({ today }: { today: string }) {
-	const opened = useOpenCycle(today);
-	const args = opened ? ({ space: "personal", today } as const) : "skip";
-	const home = useQuery(api.balances.getHome, args);
-	const commitments = useQuery(api.commitments.list, args);
+	useEnsureOpen("personal", today);
+	const [{ data: home }, { data: commitments }] = useSuspenseQueries({
+		queries: [
+			queryOptions(convexQuery(api.balances.getHome, { space: "personal", today })),
+			queryOptions(convexQuery(api.commitments.list, { space: "personal", today })),
+		],
+	});
 
-	if (!home || !commitments) return <HomeSkeleton />;
 	// The skeleton leaves at once: fading it out would keep both in the layout for a moment.
 	return (
 		<Animated.View entering={enter}>
@@ -39,10 +42,12 @@ export function HomeScreen() {
 	const insets = useSafeAreaInsets();
 	const { space } = useSpace();
 	const today = useLimaDate();
-	const profile = useQuery(api.profiles.myProfile);
-	const markWelcomeSeen = useMutation(api.profiles.markWelcomeSeen);
+	const { data: profile } = useQuery(convexQuery(api.profiles.myProfile, {}));
+	const markWelcomeSeen = useMutation({
+		mutationFn: useConvexMutation(api.profiles.markWelcomeSeen),
+	});
 	const [plansOpen, setPlansOpen] = useState(false);
-	const closeWelcome = () => void markWelcomeSeen();
+	const closeWelcome = () => markWelcomeSeen.mutate({});
 
 	if (!profile) return <HomeLoading />;
 
@@ -65,9 +70,9 @@ export function HomeScreen() {
 				) : !profile.plan ? (
 					<EmptyPersonal />
 				) : (
-					<HomeLoadBoundary>
+					<LoadBoundary message="No pudimos cargar tu inicio." fallback={<HomeSkeleton />}>
 						<PersonalBody today={today} />
-					</HomeLoadBoundary>
+					</LoadBoundary>
 				)}
 
 				{/* TEMPORAL: enlace de prueba; se quita al conectar el informe del ciclo. */}

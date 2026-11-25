@@ -40,7 +40,6 @@ function CycleForm({
 					setDay(picked);
 					setPicking(false);
 				}}
-				onClose={() => setPicking(false)}
 			/>
 		);
 	}
@@ -50,7 +49,7 @@ function CycleForm({
 
 	return (
 		<View>
-			<SheetHeader title="Tu ciclo" onClose={onClose} />
+			<SheetHeader title="Tu ciclo" />
 			<Text className="mt-1.5 text-sm leading-[21px] text-muted-foreground">
 				Ahora: {currentCycleText(cycle)}.
 			</Text>

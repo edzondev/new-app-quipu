@@ -12,6 +12,19 @@ export function amountParts(cents: number) {
 	return { whole, decimals: decimals ?? "00" };
 }
 
+/** The free money the day number divides: what «Cómo se calcula» shows. Same sum as the web. */
+export function freeCents({
+	needsCents,
+	wantsCents,
+	pendingCents,
+	spentTodayCents,
+}: Pick<
+	FunctionReturnType<typeof api.balances.getHome>,
+	"needsCents" | "wantsCents" | "pendingCents" | "spentTodayCents"
+>) {
+	return Math.max(0, needsCents + wantsCents - pendingCents + spentTodayCents);
+}
+
 /** Same rule as the web home page: over → left today → daily. */
 export function todaySpendSummary({
 	overCents,

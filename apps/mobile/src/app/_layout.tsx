@@ -1,4 +1,5 @@
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useConvexAuth } from "convex/react";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
@@ -9,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useUniwind } from "uniwind";
 import { authClient } from "@/lib/auth-client";
 import { convex } from "@/lib/convex";
+import { queryClient } from "@/lib/query-client";
 import { ensureReminder } from "../../modules/quipu-detection";
 
 // (tabs) siempre queda debajo: un enlace directo a /register o /detection tiene a dónde volver.
@@ -21,6 +23,11 @@ const registerOptions = {
 
 function Screens() {
 	const { isLoading, isAuthenticated } = useConvexAuth();
+
+	// The cache must not outlive the session: whoever signs in next starts with nothing from this one.
+	useEffect(() => {
+		if (!isLoading && !isAuthenticated) queryClient.clear();
+	}, [isLoading, isAuthenticated]);
 
 	// Convex reports isLoading at start and again on every session change, until the server confirms the token.
 	if (isLoading) {
@@ -41,6 +48,7 @@ function Screens() {
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
 				<Stack.Screen name="register" options={registerOptions} />
+				<Stack.Screen name="plus" options={registerOptions} />
 				<Stack.Screen name="detection" />
 				<Stack.Screen name="settings/index" />
 				<Stack.Screen name="settings/security" />
@@ -60,8 +68,10 @@ export default function RootLayout() {
 	return (
 		<KeyboardProvider>
 			<ConvexBetterAuthProvider client={convex} authClient={authClient}>
-				<StatusBar style={theme === "dark" ? "light" : "dark"} />
-				<Screens />
+				<QueryClientProvider client={queryClient}>
+					<StatusBar style={theme === "dark" ? "light" : "dark"} />
+					<Screens />
+				</QueryClientProvider>
 			</ConvexBetterAuthProvider>
 		</KeyboardProvider>
 	);

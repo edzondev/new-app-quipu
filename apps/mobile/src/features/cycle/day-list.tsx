@@ -17,23 +17,17 @@ export function DayList({
 	cadence,
 	value,
 	onPick,
-	onClose,
 }: {
 	cadence: Cadence;
 	value: CycleStartDay;
 	onPick: (day: CycleStartDay) => void;
-	onClose: () => void;
 }) {
 	const foreground = useThemeColor("--color-foreground");
 	const options = getStartDayOptions(cadence, String(value));
 
 	return (
 		<View>
-			<SheetHeader
-				title={getStartDayTitle(cadence)}
-				sub={getStartDayHelp(cadence)}
-				onClose={onClose}
-			/>
+			<SheetHeader title={getStartDayTitle(cadence)} sub={getStartDayHelp(cadence)} />
 			<View className="mt-1.5">
 				<ScrollView style={{ height: Math.min(options.length * ROW_HEIGHT, MAX_LIST_HEIGHT) }}>
 					{options.map((option) => {

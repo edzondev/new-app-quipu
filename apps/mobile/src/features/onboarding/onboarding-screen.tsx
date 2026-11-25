@@ -1,5 +1,6 @@
 import { api } from "@quipu/backend/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { BackHandler, ScrollView, View } from "react-native";
@@ -20,7 +21,7 @@ import { useOnboarding } from "./use-onboarding";
 
 export function OnboardingScreen() {
 	const insets = useSafeAreaInsets();
-	const profile = useQuery(api.profiles.myProfile);
+	const { data: profile } = useQuery(convexQuery(api.profiles.myProfile, {}));
 
 	// The form waits for the profile: with a plan, Primeros pasos is closed and the form must not flash.
 	if (profile === undefined) {
@@ -117,7 +118,6 @@ function OnboardingForm({ name }: { name: string }) {
 							flow.setStartDay(String(day));
 							setDayOpen(false);
 						}}
-						onClose={() => setDayOpen(false)}
 					/>
 				) : null}
 			</BottomSheet>

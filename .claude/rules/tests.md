@@ -6,7 +6,7 @@ paths:
 
 # Tests
 
-Backend: Vitest en `packages/backend` (`pnpm --filter @quipu/backend test`). Web: solo Playwright e2e en `apps/web/e2e` (`pnpm --filter web e2e`). **No hay Vitest en `apps/web`: no agregues uno.**
+Backend: Vitest en `packages/backend` (`pnpm --filter @quipu/backend test`). Móvil: Vitest solo para lógica pura en `apps/mobile` (`pnpm --filter mobile test`). Web: solo Playwright e2e en `apps/web/e2e` (`pnpm --filter web e2e`). **No hay Vitest en `apps/web`: no agregues uno.**
 
 ## Backend (Vitest)
 
@@ -20,6 +20,14 @@ Backend: Vitest en `packages/backend` (`pnpm --filter @quipu/backend test`). Web
    - Para llegar a diciembre sin saltar el reloj, llama al modelo con una fecha explícita (`cycles.test.ts:187-191`).
 4. **Un test por comportamiento.** El nombre dice el caso (`cycles.test.ts:168`). Dinero en céntimos redondos (`5_000`). Caso base de la auditoría: Ana entra el 20 oct con S/ 500, ciclo mensual del 1, reparto 50/30/20.
 5. **Harness.** Cada archivo define su `harness()` (`transactions.test.ts:17-23`). En un archivo nuevo, copia ese. Unificarlos es otra tarea.
+
+## Móvil (Vitest, solo lógica pura)
+
+1. **Qué se prueba.** Funciones puras de dinero y reglas (`expense.ts`, `income.ts`, `today-spend.ts`, `movement-rows.ts`). El archivo y lo que importa no usan `react-native`, `expo-*` ni componentes; Vitest corre en Node. Si una función los necesita, sácala a su propio `.ts`.
+2. **Junto al archivo** (`expense.test.ts` al lado de `expense.ts`). Config en `apps/mobile/vitest.config.mts`; el alias `@/` apunta a `src`.
+3. **Sin casts ni ids inventados.** Las funciones piden solo los campos que leen (`Pick<Row, ...>`), así que una fila de prueba no necesita `id`.
+4. **Casos límite de plata.** Un centavo antes y después del borde, 0, montos con decimales, miles. La regla 2 de backend vale igual: rompe la línea y míralo fallar.
+5. **Sin tests de componentes, sin mocks de Convex y sin jest.** Lo que se ve lo prueba Edzon en el dispositivo.
 
 ## e2e web (Playwright)
 

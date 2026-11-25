@@ -13,15 +13,16 @@ import {
 	getCyclePlan,
 	isFrequency,
 } from "@quipu/backend/shared/start-day";
-import { useMutation } from "convex/react";
-import { ConvexError } from "convex/values";
+import { useConvexMutation } from "@convex-dev/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { readError } from "@/lib/read-error";
 import { DEFAULT_SPLIT } from "./onboarding-plan";
 
 type Step = 1 | 2 | 3 | 4;
 
 export function useOnboarding(profileName: string) {
-	const completeOnboarding = useMutation(api.profiles.completeOnboarding);
+	const complete = useMutation({ mutationFn: useConvexMutation(api.profiles.completeOnboarding) });
 	const [step, setStep] = useState<Step>(1);
 	const [name, setName] = useState(profileName);
 	const [nameError, setNameError] = useState<string | null>(null);
@@ -33,8 +34,10 @@ export function useOnboarding(profileName: string) {
 	const [todayError, setTodayError] = useState<string | null>(null);
 	const [split, setSplit] = useState(DEFAULT_SPLIT);
 	const [splitError, setSplitError] = useState<string | null>(null);
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [saving, setSaving] = useState(false);
+	const saving = complete.isPending;
+	const saveError = complete.error
+		? readError(complete.error, "No pudimos guardar. Inténtalo otra vez.")
+		: null;
 
 	// The day is read on every render: with the app in the background it can change.
 	const plan = isFrequency(frequency) ? getCyclePlan(frequency, startDay, getLimaDate()) : null;
@@ -58,39 +61,27 @@ export function useOnboarding(profileName: string) {
 		}
 	}
 
-	async function finish() {
+	function finish() {
 		if (saving) return;
 		const parsed = splitStepSchema.safeParse({ split });
 		setSplitError(parsed.success ? null : parsed.error.issues[0].message);
 		// The cycle step does not let an unpicked frequency through; `plan` narrows the type.
 		if (!parsed.success || !plan) return;
-		setSaving(true);
-		setSaveError(null);
-		try {
-			await completeOnboarding({
-				name,
-				cadence: plan.cadence,
-				cycleStartDay: plan.cycleStartDay,
-				incomeCents: toCents(incomeText) || undefined,
-				todayCents: toCents(todayText),
-				split,
-			});
-		} catch (error) {
-			setSaveError(
-				error instanceof ConvexError
-					? String(error.data)
-					: "No pudimos guardar. Inténtalo otra vez.",
-			);
-		} finally {
-			setSaving(false);
-		}
+		complete.mutate({
+			name,
+			cadence: plan.cadence,
+			cycleStartDay: plan.cycleStartDay,
+			incomeCents: toCents(incomeText) || undefined,
+			todayCents: toCents(todayText),
+			split,
+		});
 	}
 
 	return {
 		step,
 		next,
 		back: () => {
-			setSaveError(null);
+			complete.reset();
 			setStep((current) => (current === 4 ? 3 : current === 3 ? 2 : 1));
 		},
 		finish,
