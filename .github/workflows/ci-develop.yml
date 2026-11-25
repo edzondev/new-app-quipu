@@ -25,6 +25,7 @@ jobs:
       - run: pnpm --filter web run generate-routes
       - run: pnpm run typecheck
       - run: pnpm --filter @quipu/backend test
+      - run: pnpm --filter mobile test
 
   deploy-develop:
     needs: checks

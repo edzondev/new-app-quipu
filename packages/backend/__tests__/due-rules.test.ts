@@ -10,6 +10,8 @@ import {
 	choiceOfRule,
 	dayExistsIn,
 	dueDateFor,
+	dueMonthText,
+	dueMonthTitle,
 	getMonthlyDueDates,
 	getNextDueDate,
 	isValidRule,
@@ -138,6 +140,49 @@ describe("date texts", () => {
 		for (const date of ["2026-11-16", "2026-03-01", "2028-02-29", "2026-12-31"]) {
 			expect(formatLocalDate(parseLocalDate(date))).toBe(date);
 		}
+	});
+});
+
+describe("dueMonthTitle", () => {
+	test("the month of today says «Este mes»", () => {
+		expect(dueMonthTitle("2026-11", "2026-11-25")).toBe("Este mes vence…");
+	});
+
+	test("another month says its name, before or after today", () => {
+		expect(dueMonthTitle("2026-12", "2026-11-25")).toBe("Diciembre vence…");
+		expect(dueMonthTitle("2026-10", "2026-11-01")).toBe("Octubre vence…");
+	});
+
+	test("the same month of another year is not this month", () => {
+		expect(dueMonthTitle("2026-11", "2025-11-25")).toBe("Noviembre vence…");
+	});
+});
+
+describe("dueMonthText", () => {
+	test("the change stays in its month and the next one goes back to the rule", () => {
+		expect(dueMonthText("2026-11", day(28))).toBe(
+			"Solo cambia noviembre. En diciembre vuelve al 28.",
+		);
+	});
+
+	test("from december it goes back in january", () => {
+		expect(dueMonthText("2026-12", day(31))).toBe("Solo cambia diciembre. En enero vuelve al 31.");
+	});
+
+	test("a day 31 goes back to the last day of a short month", () => {
+		expect(dueMonthText("2026-01", day(31))).toBe("Solo cambia enero. En febrero vuelve al 28.");
+		expect(dueMonthText("2028-01", day(31))).toBe("Solo cambia enero. En febrero vuelve al 29.");
+		expect(dueMonthText("2026-03", day(31))).toBe("Solo cambia marzo. En abril vuelve al 30.");
+	});
+
+	test("a day 28 goes back to the 28 in february too", () => {
+		expect(dueMonthText("2026-01", day(28))).toBe("Solo cambia enero. En febrero vuelve al 28.");
+	});
+
+	test("the rules tied to the end of the month go back to the next month's day", () => {
+		expect(dueMonthText("2026-01", last)).toBe("Solo cambia enero. En febrero vuelve al 28.");
+		expect(dueMonthText("2026-01", before(3))).toBe("Solo cambia enero. En febrero vuelve al 25.");
+		expect(dueMonthText("2026-01", mid)).toBe("Solo cambia enero. En febrero vuelve al 15.");
 	});
 });
 
