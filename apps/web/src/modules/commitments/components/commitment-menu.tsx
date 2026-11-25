@@ -1,13 +1,13 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { es } from "@daypicker/react/locale";
 import { api } from "@quipu/backend/convex/_generated/api";
-import { dueDateFor, type DueRule } from "@quipu/backend/shared/commitments";
 import {
-	formatLocalDate,
-	monthName,
-	parseLocalDate,
-	shiftMonth,
-} from "@quipu/backend/shared/dates";
+	type DueRule,
+	dueMonthText,
+	dueMonthTitle,
+	ruleDay,
+} from "@quipu/backend/shared/commitments";
+import { formatLocalDate, parseLocalDate } from "@quipu/backend/shared/dates";
 import { useMutation } from "@tanstack/react-query";
 import { MoreHorizontalIcon } from "lucide-react";
 import { useState } from "react";
@@ -34,7 +34,7 @@ import { Menu, MenuItem, MenuPopup, MenuTrigger } from "#/components/ui/menu";
 import { toastManager } from "#/components/ui/toast";
 import { readError } from "#/lib/read-error";
 import { useIsReadOnly, useReadOnlyGate } from "#/modules/household/use-read-only-gate";
-import { type CommitmentItem, dueMonthTitle, dueMonthToast, ruleDay } from "../commitment-view";
+import { type CommitmentItem, dueMonthToast } from "../commitment-view";
 import { FieldError } from "./field-error";
 
 type Space = "personal" | "household";
@@ -45,14 +45,6 @@ type Props = {
 };
 
 const TRIGGER_CLASS = "size-11 shrink-0 rounded-full";
-
-/** "Solo cambia noviembre. En diciembre vuelve al 28." with the month and the rule of the item. */
-function dueMonthText(item: CommitmentItem, rule: DueRule) {
-	const month = item.dueDate.slice(0, 7);
-	const following = shiftMonth(month, 1);
-	const backTo = Number(dueDateFor(rule, undefined, following).slice(8));
-	return `Solo cambia ${monthName(month)}. En ${monthName(following)} vuelve al ${backTo}.`;
-}
 
 /** The calendar stays in the month of the charge and lets any day be chosen, also a past one. */
 function DueMonthDialog({
@@ -84,7 +76,7 @@ function DueMonthDialog({
 		<FormSheetPopup>
 			<FormSheetHeader>
 				<FormSheetTitle>{dueMonthTitle(item.dueDate.slice(0, 7), today)}</FormSheetTitle>
-				<FormSheetDescription>{dueMonthText(item, rule)}</FormSheetDescription>
+				<FormSheetDescription>{dueMonthText(item.dueDate.slice(0, 7), rule)}</FormSheetDescription>
 			</FormSheetHeader>
 			<FormSheetPanel className="flex flex-col items-center">
 				<Calendar

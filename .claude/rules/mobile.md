@@ -37,3 +37,4 @@ paths:
 
 - **`useEnsureOpen(space, today)`** abre el ciclo una vez por espacio y día (queda en caché). Lo llama la pantalla que lee el ciclo; **una hoja nunca lo llama**: lee el caché que la pantalla de abajo ya llenó, con las mismas claves.
 - Bueno: `movements-screen.tsx` (`useEnsureOpen` y `useSuspenseQueries`) y `register-screen.tsx` (`useQuery`, sin esperar).
+- **Doble toque: `lib/use-single-flight.ts`.** Recibe el `mutateAsync` de un `useMutation` y descarta la segunda llamada mientras la primera corre (un `ref`; `isPending` llega tarde). Se permite porque no envuelve React Query: no cambia sus opciones, su caché ni su estado. Lo usan `use-movement-actions.ts` y `use-commitment-actions.ts`.

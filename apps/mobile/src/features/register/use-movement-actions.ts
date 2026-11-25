@@ -2,11 +2,11 @@ import { api } from "@quipu/backend/convex/_generated/api";
 import type { Envelope } from "@quipu/backend/shared/budget";
 import { useMutation } from "@tanstack/react-query";
 import type { FunctionArgs } from "convex/server";
-import { useRef } from "react";
 import type { Row } from "@/features/movements/movement-rows";
 import type { MovementKind } from "@/features/register/movement-kind";
 import { convex } from "@/lib/convex";
 import { readError } from "@/lib/read-error";
+import { useSingleFlight } from "@/lib/use-single-flight";
 
 type Id = Row["id"];
 
@@ -74,26 +74,10 @@ function send(command: Command) {
 	}
 }
 
-/**
- * Saves or deletes a movement in Personal. Both resolve to whether it worked; why it did not is in `error`.
- * A second call while one is running is dropped: state alone would let two quick taps through before it paints.
- */
+/** Saves or deletes a movement in Personal. Both resolve to whether it worked; why it did not is in `error`. */
 export function useMovementActions() {
 	const mutation = useMutation({ mutationFn: send });
-	const running = useRef(false);
-
-	async function run(command: Command): Promise<boolean> {
-		if (running.current) return false;
-		running.current = true;
-		try {
-			await mutation.mutateAsync(command);
-			return true;
-		} catch {
-			return false;
-		} finally {
-			running.current = false;
-		}
-	}
+	const run = useSingleFlight(mutation.mutateAsync);
 
 	return {
 		save: (values: SaveValues) => run(values),
