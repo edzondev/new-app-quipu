@@ -38,7 +38,7 @@ const source = found.text;
 const start = source.lastIndexOf("<", source.indexOf(`id="${id}"`));
 // Una pantalla acaba en la siguiente pantalla, sección o bloque de referencia.
 const rest = source.slice(start + 1);
-const end = rest.search(/<div class="scr|<div class="dsec"|<h2 /);
+const end = rest.search(/<div class="scr"|<div class="dsec"|<h2 /);
 const block = source.slice(start, end === -1 ? undefined : start + 1 + end);
 
 const toText = (html) =>

@@ -1,7 +1,7 @@
 import { formatCents } from "@quipu/backend/shared/budget";
 import type { CommitmentStatus } from "@quipu/backend/shared/commitments";
+import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
-import { payLabel } from "./commitment-text";
 
 const PILL = {
 	overdue: { label: "Vencido", box: "bg-warning/15", text: "text-warning-foreground" },
@@ -15,23 +15,60 @@ const PILL = {
 	later: null,
 } as const satisfies Record<CommitmentStatus, { label: string; box: string; text: string } | null>;
 
+type Link = { label: string; onPress: () => void };
+
+export function RowLink({
+	label,
+	onPress,
+	warning = false,
+	disabled = false,
+}: Link & { warning?: boolean; disabled?: boolean }) {
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityState={{ disabled }}
+			disabled={disabled}
+			onPress={onPress}
+			className="min-h-11 justify-center self-start active:opacity-60"
+		>
+			<Text
+				className={`text-[13px] font-semibold underline ${warning ? "text-warning-foreground" : "text-foreground"}`}
+			>
+				{label}
+			</Text>
+		</Pressable>
+	);
+}
+
+/** `onPress` opens the commitment; `pay` is the link under it and `below` what goes after it. */
 export function CommitmentRow({
 	name,
 	amountCents,
 	line,
 	status,
+	onPress,
+	pay,
+	below,
 }: {
 	name: string;
 	amountCents: number;
 	line: string;
 	status: CommitmentStatus;
+	onPress?: () => void;
+	pay?: Link | null;
+	below?: ReactNode;
 }) {
 	const pill = PILL[status];
-	const link = payLabel(status);
 
 	return (
 		<View className="border-b border-border py-3">
-			<View className="flex-row items-center justify-between gap-2.5">
+			<Pressable
+				accessibilityRole={onPress ? "button" : undefined}
+				accessibilityHint={onPress ? "Abre el compromiso" : undefined}
+				disabled={!onPress}
+				onPress={onPress}
+				className="flex-row items-center justify-between gap-2.5 active:opacity-60"
+			>
 				<View className="min-w-0 flex-1">
 					<Text className="text-[15px] font-semibold text-foreground" numberOfLines={1}>
 						{name}
@@ -52,21 +89,9 @@ export function CommitmentRow({
 						</View>
 					)}
 				</View>
-			</View>
-			{link === null ? null : (
-				<Pressable
-					accessibilityRole="button"
-					// Luego: hoja F3
-					onPress={() => {}}
-					className="min-h-11 justify-center self-start active:opacity-60"
-				>
-					<Text
-						className={`text-[13px] font-semibold underline ${status === "overdue" ? "text-warning-foreground" : "text-foreground"}`}
-					>
-						{link}
-					</Text>
-				</Pressable>
-			)}
+			</Pressable>
+			{pay ? <RowLink {...pay} warning={status === "overdue"} /> : null}
+			{below}
 		</View>
 	);
 }

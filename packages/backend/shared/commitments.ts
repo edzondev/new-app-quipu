@@ -1,6 +1,6 @@
 import type { Infer } from "convex/values";
 import type { dueAdjustment, dueRule } from "../convex/schema";
-import { addDays, dayInMonth, shiftMonth } from "./dates";
+import { addDays, dayInMonth, monthName, shiftMonth } from "./dates";
 
 export type DueRule = Infer<typeof dueRule>;
 export type DueAdjustment = Infer<typeof dueAdjustment>;
@@ -210,4 +210,52 @@ function nextMonthlyDueDate(rule: DueRule, adjustment: DueAdjustment | undefined
 export function getNextDueDate(schedule: Schedule, date: string): string {
 	if (schedule.frequency === "once") return schedule.dueDate;
 	return nextMonthlyDueDate(schedule.rule, schedule.adjustment, date);
+}
+
+/** A monthly that is not due this cycle cannot be paid ahead; a one-off can. */
+export function canPay({
+	status,
+	frequency,
+}: {
+	status: CommitmentStatus;
+	frequency: Schedule["frequency"];
+}): boolean {
+	return status !== "paid" && (status !== "later" || frequency === "once");
+}
+
+/** The day of the month the rule gives in the month of this charge, ignoring a one-month change. */
+export function ruleDay({
+	rule,
+	dueDate,
+}: {
+	rule: DueRule | null;
+	dueDate: string;
+}): number | null {
+	if (!rule) return null;
+	return Number(dueDateFor(rule, undefined, dueDate.slice(0, 7)).slice(8));
+}
+
+/** Whether the date shown is a one-month change (the saved one belongs to the month of this charge). */
+export function isAdjusted({
+	adjustment,
+	dueDate,
+}: {
+	adjustment: DueAdjustment | null;
+	dueDate: string;
+}): boolean {
+	return adjustment?.month === dueDate.slice(0, 7);
+}
+
+const capitalize = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+
+/** The title of the one-month change: "Este mes vence…", or the real month when it is not this one. */
+export function dueMonthTitle(month: string, today: string): string {
+	return month === today.slice(0, 7) ? "Este mes vence…" : `${capitalize(monthName(month))} vence…`;
+}
+
+/** "Solo cambia noviembre. En diciembre vuelve al 28." for the month of the charge and its rule. */
+export function dueMonthText(month: string, rule: DueRule): string {
+	const following = shiftMonth(month, 1);
+	const backTo = Number(dueDateFor(rule, undefined, following).slice(8));
+	return `Solo cambia ${monthName(month)}. En ${monthName(following)} vuelve al ${backTo}.`;
 }
