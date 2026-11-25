@@ -1,7 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { formatDay, formatDayHeading } from "@quipu/backend/shared/dates";
-import { queryOptions, useSuspenseQueries } from "@tanstack/react-query";
+import { queryOptions, useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { SectionList, Text, View } from "react-native";
@@ -12,6 +12,7 @@ import { LoadBoundary } from "@/components/ui/load-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEnsureOpen } from "@/features/cycle/use-ensure-open";
 import { useLimaDate } from "@/features/cycle/use-lima-date";
+import { EmptyPersonal } from "@/features/home/empty-states";
 import { useSpace } from "@/features/household/space-context";
 import { MovementRow } from "@/features/movements/movement-row";
 import {
@@ -45,15 +46,7 @@ function MovementsSkeleton() {
 	);
 }
 
-function MovementsList({
-	space,
-	readOnly,
-	today,
-}: {
-	space: "personal" | "household";
-	readOnly: boolean;
-	today: string;
-}) {
+function MovementsList({ space, today }: { space: "personal" | "household"; today: string }) {
 	const insets = useSafeAreaInsets();
 	const [filterIndex, setFilterIndex] = useState(0);
 	useEnsureOpen(space, today);
@@ -66,6 +59,8 @@ function MovementsList({
 		],
 	});
 	const filter = FILTERS[filterIndex];
+	// Registrar writes to Personal only, so the list offers it only there.
+	const canRegister = space === "personal";
 
 	const header = (
 		<View>
@@ -91,7 +86,7 @@ function MovementsList({
 					<Text className="mt-[22px] text-sm text-muted-foreground">
 						Aún no hay {filter === "Todos" ? "movimientos" : filter.toLowerCase()} en este ciclo.
 					</Text>
-					{filter === "Todos" && !readOnly ? (
+					{filter === "Todos" && canRegister ? (
 						<View className="mt-4">
 							<Button label="Registrar gasto" onPress={() => router.push("/register")} />
 						</View>
@@ -109,7 +104,7 @@ function MovementsList({
 				</View>
 			)}
 			renderItem={({ item }) => {
-				const action = rowAction(item, { space, readOnly, household });
+				const action = rowAction(item, { space, household });
 				return (
 					<MovementRow
 						row={item}
@@ -124,15 +119,21 @@ function MovementsList({
 
 export function MovementsScreen() {
 	const insets = useSafeAreaInsets();
-	const { space, readOnly } = useSpace();
+	const { space } = useSpace();
 	const today = useLimaDate();
+	const { data: profile } = useQuery(convexQuery(api.profiles.myProfile, {}));
 
 	return (
 		<View className="flex-1 bg-background px-6" style={{ paddingTop: insets.top + 22 }}>
 			<Text className="text-3xl font-semibold text-foreground">Movimientos</Text>
-			<LoadBoundary message="No pudimos cargar tus movimientos." fallback={<MovementsSkeleton />}>
-				<MovementsList space={space} readOnly={readOnly} today={today} />
-			</LoadBoundary>
+			{/* Without a personal plan its cycle cannot open: Primeros pasos first, like Inicio. */}
+			{space === "personal" && profile && !profile.plan ? (
+				<EmptyPersonal />
+			) : (
+				<LoadBoundary message="No pudimos cargar tus movimientos." fallback={<MovementsSkeleton />}>
+					<MovementsList space={space} today={today} />
+				</LoadBoundary>
+			)}
 		</View>
 	);
 }

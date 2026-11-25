@@ -30,9 +30,8 @@ const row = (patch: Partial<Fields>): Fields => ({
 
 const plusOn = { plus: { active: true, payerName: null, payerIsMe: true } };
 const plusOff = { plus: { active: false, payerName: null, payerIsMe: false } };
-const noHousehold: { space: "personal" | "household"; readOnly: boolean; household: undefined } = {
+const noHousehold: { space: "personal" | "household"; household: undefined } = {
 	space: "personal",
-	readOnly: false,
 	household: undefined,
 };
 
@@ -68,8 +67,32 @@ describe("rowAction", () => {
 		expect(rowAction(row({ kind: "saving" }), noHousehold)).toBeNull();
 	});
 
-	it("opens Plus in a space that is read-only", () => {
-		expect(rowAction(row({}), { ...noHousehold, space: "household", readOnly: true })).toBe("plus");
+	it("in Nuestro espacio without Plus, your gasto or ingreso opens Plus", () => {
+		const space = { space: "household" as const, household: plusOff };
+		expect(rowAction(row({ kind: "expense" }), space)).toBe("plus");
+		expect(rowAction(row({ kind: "income" }), space)).toBe("plus");
+	});
+
+	it("in Nuestro espacio with Plus, a gasto or ingreso cannot be tapped yet: Registrar is only Personal", () => {
+		const space = { space: "household" as const, household: plusOn };
+		expect(rowAction(row({ kind: "expense" }), space)).toBeNull();
+		expect(rowAction(row({ kind: "income" }), space)).toBeNull();
+	});
+
+	it("in Nuestro espacio it waits for the household and does nothing without one", () => {
+		expect(rowAction(row({}), { space: "household", household: undefined })).toBeNull();
+		expect(rowAction(row({}), { space: "household", household: null })).toBeNull();
+	});
+
+	it("in Nuestro espacio what the other person wrote does nothing, with or without Plus", () => {
+		const theirs = row({ mine: false });
+		expect(rowAction(theirs, { space: "household", household: plusOff })).toBeNull();
+		expect(rowAction(theirs, { space: "household", household: plusOn })).toBeNull();
+	});
+
+	it("in Personal a gasto is edited whatever the household says", () => {
+		expect(rowAction(row({}), { ...noHousehold, household: plusOff })).toBe("edit");
+		expect(rowAction(row({}), { ...noHousehold, household: plusOn })).toBe("edit");
 	});
 
 	it("an aporte waits for the household to load", () => {
@@ -91,9 +114,13 @@ describe("rowAction", () => {
 		);
 	});
 
-	it("an aporte follows its household, not the space in the address", () => {
-		const personalReadOnly = { ...noHousehold, readOnly: true, household: plusOn };
-		expect(rowAction(row({ kind: "contribution" }), personalReadOnly)).toBe("edit");
+	it("an aporte is never tapped from Nuestro espacio, even with Plus", () => {
+		expect(
+			rowAction(row({ kind: "contribution" }), { space: "household", household: plusOn }),
+		).toBeNull();
+		expect(
+			rowAction(row({ kind: "contribution" }), { space: "household", household: plusOff }),
+		).toBeNull();
 	});
 });
 

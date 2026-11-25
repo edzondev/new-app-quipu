@@ -40,23 +40,22 @@ export function canEdit(row: Pick<Row, "mine" | "kind">, space: Space): boolean 
 }
 
 /**
- * What tapping a row does, like the web: edit it, open Plus when the space or the aporte's household
- * is read-only, or nothing. An aporte waits for the household to load.
+ * What tapping a row does: edit it, open Plus when the household has none, or nothing. Decided with the
+ * real household, like the web. An aporte waits for the household to load.
+ * Registrar only works in Personal for now, so in Nuestro espacio a gasto or ingreso cannot be edited yet:
+ * without Plus it leads to Plus, with Plus it does nothing.
  */
 export function rowAction(
 	row: Pick<Row, "mine" | "kind">,
-	{
-		space,
-		readOnly,
-		household,
-	}: { space: Space; readOnly: boolean; household: Household | undefined },
+	{ space, household }: { space: Space; household: Household | undefined },
 ): "edit" | "plus" | null {
 	if (!canEdit(row, space)) return null;
 	if (row.kind === "contribution") {
 		if (!household) return null;
 		return household.plus.active ? "edit" : "plus";
 	}
-	return readOnly ? "plus" : "edit";
+	if (space === "household") return household?.plus.active === false ? "plus" : null;
+	return "edit";
 }
 
 export function filterRows<T extends Pick<Row, "kind">>(rows: T[], filter: Filter): T[] {
