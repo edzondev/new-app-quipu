@@ -23,11 +23,46 @@ const REASON_LABELS: Record<Reason, string> = {
 
 const label = (envelope: Envelope | null) => (envelope ? ENVELOPE_LABELS[envelope] : "");
 
-export function filterRows(rows: Row[], filter: Filter) {
+type Space = "personal" | "household";
+/** The household as far as a row cares: null without one, undefined while it loads. */
+type Household = Pick<NonNullable<FunctionReturnType<typeof api.household.get>>, "plus"> | null;
+
+// The functions below ask only for the fields they read, so a test needs no id.
+const EDITABLE_KINDS: readonly Row["kind"][] = ["expense", "income", "contribution"];
+
+/** Only the author edits, and only gastos, ingresos and aportes: ahorros and retiros are edited in Ahorros. */
+export function canEdit(row: Pick<Row, "mine" | "kind">, space: Space): boolean {
+	return (
+		row.mine &&
+		EDITABLE_KINDS.includes(row.kind) &&
+		(row.kind !== "contribution" || space === "personal")
+	);
+}
+
+/**
+ * What tapping a row does: edit it, open Plus when the household has none, or nothing. Decided with the
+ * real household, like the web. An aporte waits for the household to load.
+ * Registrar only works in Personal for now, so in Nuestro espacio a gasto or ingreso cannot be edited yet:
+ * without Plus it leads to Plus, with Plus it does nothing.
+ */
+export function rowAction(
+	row: Pick<Row, "mine" | "kind">,
+	{ space, household }: { space: Space; household: Household | undefined },
+): "edit" | "plus" | null {
+	if (!canEdit(row, space)) return null;
+	if (row.kind === "contribution") {
+		if (!household) return null;
+		return household.plus.active ? "edit" : "plus";
+	}
+	if (space === "household") return household?.plus.active === false ? "plus" : null;
+	return "edit";
+}
+
+export function filterRows<T extends Pick<Row, "kind">>(rows: T[], filter: Filter): T[] {
 	return filter === "Todos" ? rows : rows.filter((row) => row.kind === FILTER_KIND[filter]);
 }
 
-function effectCents(row: Row) {
+function effectCents(row: Pick<Row, "kind" | "amountCents">) {
 	switch (row.kind) {
 		case "expense":
 			return -row.amountCents;
@@ -38,7 +73,7 @@ function effectCents(row: Row) {
 	}
 }
 
-export function dayTotalCents(rows: Row[]) {
+export function dayTotalCents(rows: Pick<Row, "kind" | "amountCents">[]) {
 	return rows.reduce((total, row) => total + effectCents(row), 0);
 }
 
@@ -48,8 +83,8 @@ export function signedAmount(cents: number) {
 }
 
 /** Rows come newest first, so each day's rows stay in the same order. */
-export function groupByDay(rows: Row[]) {
-	const byDate = new Map<string, Row[]>();
+export function groupByDay<T extends Pick<Row, "date">>(rows: T[]) {
+	const byDate = new Map<string, T[]>();
 	for (const row of rows) {
 		const day = byDate.get(row.date);
 		if (day) day.push(row);
@@ -60,7 +95,7 @@ export function groupByDay(rows: Row[]) {
 
 /** Texts of one row. `goalName` is the name of `row.goalId`, when it has one. */
 export function movementText(
-	row: Row,
+	row: Omit<Row, "id">,
 	goalName: string | null,
 ): { name: string; detail: string; amount: string; tone: Tone } {
 	const name = (fallback: string) => row.note || fallback;

@@ -1,5 +1,6 @@
 import { api } from "@quipu/backend/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Redirect, Tabs } from "expo-router";
 import type { ComponentType } from "react";
 import type { ColorValue } from "react-native";
@@ -20,7 +21,7 @@ function tabIcon(Icon: ComponentType<{ size?: number; color?: string }>) {
 }
 
 export default function TabsLayout() {
-	const profile = useQuery(api.profiles.myProfile);
+	const { data: profile } = useQuery(convexQuery(api.profiles.myProfile, {}));
 
 	if (profile === undefined) return <HomeLoading />;
 	// Same rules as apps/web/src/routes/_app.tsx, minus deletionRunsAt (no mobile screen for it yet).

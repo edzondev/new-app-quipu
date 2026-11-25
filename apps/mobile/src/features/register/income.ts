@@ -1,5 +1,5 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
-import { applyIncome, wholeSoles } from "@quipu/backend/shared/budget";
+import { applyIncome, getDailyBudget, wholeSoles } from "@quipu/backend/shared/budget";
 import { cycleNames, formatDay } from "@quipu/backend/shared/dates";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { todayLine } from "@/features/register/expense";
@@ -73,9 +73,23 @@ type TodayHome = Pick<
 export function incomeTodayLine(home: TodayHome, amountCents: number): string | null {
 	if (amountCents <= 0) return null;
 	const { envelopes } = applyIncome(home, amountCents, home.split);
-	return todayLine(
-		home,
-		envelopes.needsCents + envelopes.wantsCents - home.pendingCents,
-		home.spentTodayCents,
-	);
+	const after = getDailyBudget({
+		freeCents: envelopes.needsCents + envelopes.wantsCents - home.pendingCents,
+		spentTodayCents: home.spentTodayCents,
+		daysLeft: home.daysLeft,
+	});
+	return todayLine(home.leftCents, after.leftCents);
+}
+
+/** Only a new «Para este ciclo» income, in the last days of the cycle, asks which cycle it is for. */
+export function canAddEarlySalary({
+	isNew,
+	extra,
+	earlyWindow,
+}: {
+	isNew: boolean;
+	extra: IncomeDraft["extra"];
+	earlyWindow: boolean;
+}): boolean {
+	return isNew && extra === null && earlyWindow;
 }

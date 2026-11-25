@@ -29,4 +29,11 @@ paths:
 12. **Estados solo los del diseño.** Con datos de ejemplo no hay cargando, error ni sin conexión (sección O del diseño). Entran el día que se conecta la query real, y con la forma de O1, O2 y O3.
 13. **Sin dependencias nuevas sin permiso de Edzon.** Una skill de Expo que sugiere `expo-image`, `@expo/ui`, `expo-haptics` u otra no es permiso: pregunta. Se instala con `pnpm expo install`, nunca `pnpm add`. Íconos: `reicon-react-native`.
 14. **El diseño de Mira manda sobre `expo-native-ui`.** De esa skill toma lo que no choca (rendimiento, insets, controles que el HTML pide). No su estética: ni SF Symbols, ni HIG de iOS, ni colores del sistema.
-15. **Sin tests en móvil.** No hay runner y no se agrega. Lo compartido se prueba en el backend; el resto lo prueba Edzon en el dispositivo.
+15. **Tests solo de lógica pura, con Vitest** (`pnpm --filter mobile test`). El archivo que se prueba no importa `react-native`, `expo-*` ni componentes: si lo hace, saca la función pura a su propio `.ts`. Sin jest, sin tests de componentes y sin mocks de Convex. Lo que se ve en pantalla lo prueba Edzon en el dispositivo.
+
+- Bueno: `register/expense.ts` con `expense.test.ts` (la línea «Hoy te pasarás», un gasto de un día anterior).
+
+16. **Datos con React Query sobre Convex** (`lib/query-client.ts`, mismo cliente que la sesión). Se lee con `useQuery(convexQuery(api.x.y, args))`; una pantalla que carga datos usa `useSuspenseQueries({ queries: [queryOptions(convexQuery(...))] })` dentro de `<LoadBoundary message fallback>` (cargando y error, sin `if (!data)`); se escribe con `useMutation`. `convex/react` solo queda para la sesión (`useConvexAuth`). Sin helpers propios sobre la librería: lo que falta se resuelve con su API o su documentación.
+
+- **`useEnsureOpen(space, today)`** abre el ciclo una vez por espacio y día (queda en caché). Lo llama la pantalla que lee el ciclo; **una hoja nunca lo llama**: lee el caché que la pantalla de abajo ya llenó, con las mismas claves.
+- Bueno: `movements-screen.tsx` (`useEnsureOpen` y `useSuspenseQueries`) y `register-screen.tsx` (`useQuery`, sin esperar).

@@ -34,7 +34,7 @@ Desde la raíz, con Node >= 24 y pnpm 12.18.0.
 - Desarrollo: `pnpm dev` (web en el puerto 3000 y Convex). Pide `apps/web/.env.local` con `VITE_CONVEX_URL`.
 - Tipos: `pnpm typecheck` (web, móvil y backend)
 - Lint: `pnpm lint`
-- Tests: `pnpm --filter @quipu/backend test`. `pnpm test` en la raíz no corre nada y sale con 0: no lo uses.
+- Tests: `pnpm --filter @quipu/backend test` y `pnpm --filter mobile test` (solo lógica pura). `pnpm test` en la raíz no corre nada y sale con 0: no lo uses.
 - e2e web: `pnpm --filter web e2e` (Playwright). Lo que necesita: `.claude/rules/tests.md`.
 - Formato: `pnpm exec oxfmt <archivos>` escribe. `pnpm exec oxfmt --check` revisa. En Windows falla en archivos viejos por CRLF; formatea solo los tuyos.
 - Móvil: `pnpm --filter mobile android` (compila e instala el dev client), `pnpm --filter mobile start`. Bundle sin dispositivo: `pnpm --filter mobile exec expo export --platform android`. Paquetes con `pnpm expo install`, nunca `pnpm add`.
