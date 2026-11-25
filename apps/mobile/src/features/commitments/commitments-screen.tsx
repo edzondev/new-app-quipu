@@ -220,8 +220,8 @@ function CommitmentsList({ space, today }: { space: Space; today: string }) {
 						</Pressable>
 						{paidBeforeOpen ? (
 							<Animated.View entering={enter} exiting={exit}>
-								{groups.paidBefore.map((item) =>
-									item.status === "paid" ? renderItem(item, paidBeforeLine(item, today)) : null,
+								{groups.paidBefore.map(
+									(item) => item.status === "paid" && renderItem(item, paidBeforeLine(item, today)),
 								)}
 							</Animated.View>
 						) : null}
