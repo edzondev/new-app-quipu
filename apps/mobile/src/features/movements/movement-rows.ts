@@ -2,10 +2,10 @@ import type { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared/budget";
 import { monthName } from "@quipu/backend/shared/dates";
 import type { FunctionReturnType } from "convex/server";
+import { REASON_LABELS } from "@/features/savings/withdraw-form";
 
 export type Row = FunctionReturnType<typeof api.transactions.list>["rows"][number];
 type Envelope = NonNullable<Row["envelope"]>;
-type Reason = NonNullable<Row["reason"]>;
 
 export type Tone = "default" | "savings";
 
@@ -13,13 +13,6 @@ export const FILTERS = ["Todos", "Gastos", "Ingresos"] as const;
 export type Filter = (typeof FILTERS)[number];
 
 const FILTER_KIND = { Gastos: "expense", Ingresos: "income" } as const;
-
-const REASON_LABELS: Record<Reason, string> = {
-	emergency: "Emergencia",
-	unexpected: "Algo imprevisto",
-	mistake: "Me equivoqué al aportar",
-	other: "Otro",
-};
 
 const label = (envelope: Envelope | null) => (envelope ? ENVELOPE_LABELS[envelope] : "");
 
@@ -30,7 +23,7 @@ type Household = Pick<NonNullable<FunctionReturnType<typeof api.household.get>>,
 // The functions below ask only for the fields they read, so a test needs no id.
 const EDITABLE_KINDS: readonly Row["kind"][] = ["expense", "income", "contribution"];
 
-/** Only the author edits, and only gastos, ingresos and aportes: ahorros and retiros are edited in Ahorros. */
+/** What Registrar edits: only the author's gastos, ingresos and aportes. Ahorros and retiros have their own sheet. */
 export function canEdit(row: Pick<Row, "mine" | "kind">, space: Space): boolean {
 	return (
 		row.mine &&
@@ -40,15 +33,21 @@ export function canEdit(row: Pick<Row, "mine" | "kind">, space: Space): boolean 
 }
 
 /**
- * What tapping a row does: edit it, open Plus when the household has none, or nothing. Decided with the
- * real household, like the web. An aporte waits for the household to load.
- * Registrar only works in Personal for now, so in Nuestro espacio a gasto or ingreso cannot be edited yet:
- * without Plus it leads to Plus, with Plus it does nothing.
+ * What tapping a row does: edit it in Registrar ("edit"), in Aportar or Retirar ("editSaving"), open Plus
+ * when the household has none, or nothing. Decided with the real household, like the web. An aporte waits
+ * for the household to load. Registrar only works in Personal for now, so in Nuestro espacio a gasto or
+ * ingreso cannot be edited yet: without Plus it leads to Plus, with Plus it does nothing.
  */
 export function rowAction(
 	row: Pick<Row, "mine" | "kind">,
 	{ space, household }: { space: Space; household: Household | undefined },
-): "edit" | "plus" | null {
+): "edit" | "editSaving" | "plus" | null {
+	if (row.kind === "saving" || row.kind === "withdrawal") {
+		if (!row.mine) return null;
+		if (space === "personal") return "editSaving";
+		if (!household) return null;
+		return household.plus.active ? "editSaving" : "plus";
+	}
 	if (!canEdit(row, space)) return null;
 	if (row.kind === "contribution") {
 		if (!household) return null;

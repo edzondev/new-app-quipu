@@ -1,10 +1,9 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
-import { dueMonthText, dueMonthTitle } from "@quipu/backend/shared/commitments";
+import { dueMonthTitle } from "@quipu/backend/shared/commitments";
 import type { FunctionReturnType } from "convex/server";
 import { Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { OptionList } from "@/components/ui/option-list";
-import { SheetHeader } from "@/components/ui/sheet-header";
 import { monthDayOptions } from "@/features/commitments/commitment-form";
 import { useCommitmentActions } from "@/features/commitments/use-commitment-actions";
 import { DayRow } from "@/features/cycle/day-row";
@@ -45,16 +44,17 @@ export function DueMonthRow({
 	);
 }
 
-/** Any day of the charge's month, also a past one, like the web's calendar. It saves on the pick. */
+/**
+ * Any day of the charge's month, also a past one, like the web's calendar. It saves on the pick.
+ * Its title and text (`dueMonthTitle`, `dueMonthText`) go in the sheet's header, which stays in place.
+ */
 export function DueMonthList({
 	space,
 	item,
-	today,
 	onDone,
 }: {
 	space: Space;
 	item: Item;
-	today: string;
 	onDone: () => void;
 }) {
 	const actions = useCommitmentActions(space);
@@ -67,7 +67,6 @@ export function DueMonthList({
 
 	return (
 		<View>
-			<SheetHeader title={dueMonthTitle(month, today)} sub={dueMonthText(month, item.rule)} />
 			<View className="mt-1.5">
 				<OptionList
 					options={monthDayOptions(month)}

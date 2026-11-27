@@ -6,7 +6,8 @@ import { PlansView } from "./plans-view";
 import { usePlus } from "./use-plus";
 
 // The sheet unmounts its content when it closes, so each opening starts from the first view.
-function PlusContent({
+// Another sheet can show it in place of its own content (the goal form), so two sheets never stack.
+export function PlusContent({
 	feature,
 	onClose,
 	onTrial,
