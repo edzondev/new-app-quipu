@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { SectionList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Chips } from "@/components/ui/chips";
 import { LoadBoundary } from "@/components/ui/load-boundary";
@@ -25,10 +26,7 @@ import {
 	signedAmount,
 } from "@/features/movements/movement-rows";
 import { TAB_BAR_SPACE } from "@/features/navigation/tab-bar";
-
-function open(row: Row, action: "edit" | "plus") {
-	router.push(action === "plus" ? "/plus?feature=space" : `/register?edit=${row.id}`);
-}
+import { EditSavingSheet } from "@/features/savings/edit-saving-sheet";
 
 function MovementsSkeleton() {
 	return (
@@ -49,16 +47,29 @@ function MovementsSkeleton() {
 function MovementsList({ space, today }: { space: "personal" | "household"; today: string }) {
 	const insets = useSafeAreaInsets();
 	const [filterIndex, setFilterIndex] = useState(0);
+	const [editingId, setEditingId] = useState<Row["id"] | null>(null);
 	useEnsureOpen(space, today);
-	const [{ data: list }, { data: goals }, { data: household }] = useSuspenseQueries({
-		queries: [
-			queryOptions(convexQuery(api.transactions.list, { space, today })),
-			queryOptions(convexQuery(api.goals.list, { space })),
-			// An aporte is changed with the household's Plus, so its rows need it.
-			queryOptions(convexQuery(api.household.get, {})),
-		],
-	});
+	const [{ data: list }, { data: goals }, { data: household }, { data: fund }, { data: home }] =
+		useSuspenseQueries({
+			queries: [
+				queryOptions(convexQuery(api.transactions.list, { space, today })),
+				queryOptions(convexQuery(api.goals.list, { space })),
+				// An aporte is changed with the household's Plus, so its rows need it.
+				queryOptions(convexQuery(api.household.get, {})),
+				// Editing an ahorro or a retiro needs the fund and the Ahorro: the sheet opens filled.
+				queryOptions(convexQuery(api.goals.fund, { space, today })),
+				queryOptions(convexQuery(api.balances.getHome, { space, today })),
+			],
+		});
 	const filter = FILTERS[filterIndex];
+	// The sheet looks its row up in the live list: gone (deleted elsewhere), it closes.
+	const editing = list.rows.find((row) => row.id === editingId) ?? null;
+
+	function open(row: Row, action: "edit" | "editSaving" | "plus") {
+		if (action === "editSaving") setEditingId(row.id);
+		else router.push(action === "plus" ? "/plus?feature=space" : `/register?edit=${row.id}`);
+	}
+
 	// Registrar writes to Personal only, so the list offers it only there.
 	const canRegister = space === "personal";
 
@@ -74,46 +85,62 @@ function MovementsList({ space, today }: { space: "personal" | "household"; toda
 	);
 
 	return (
-		<SectionList
-			className="flex-1"
-			contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_SPACE }}
-			sections={groupByDay(filterRows(list.rows, filter))}
-			keyExtractor={(row) => row.id}
-			stickySectionHeadersEnabled={false}
-			ListHeaderComponent={header}
-			ListEmptyComponent={
-				<View>
-					<Text className="mt-[22px] text-sm text-muted-foreground">
-						Aún no hay {filter === "Todos" ? "movimientos" : filter.toLowerCase()} en este ciclo.
-					</Text>
-					{filter === "Todos" && canRegister ? (
-						<View className="mt-4">
-							<Button label="Registrar gasto" onPress={() => router.push("/register")} />
-						</View>
-					) : null}
-				</View>
-			}
-			renderSectionHeader={({ section }) => (
-				<View className="mt-[22px] flex-row items-baseline justify-between gap-2.5">
-					<Text className="shrink text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
-						{formatDayHeading(section.title, today)}
-					</Text>
-					<Text className="shrink-0 font-mono text-[13px] text-muted-foreground">
-						{signedAmount(dayTotalCents(section.data))}
-					</Text>
-				</View>
-			)}
-			renderItem={({ item }) => {
-				const action = rowAction(item, { space, household });
-				return (
-					<MovementRow
-						row={item}
-						goalName={goals.find((goal) => goal.id === item.goalId)?.name ?? null}
-						onPress={action ? () => open(item, action) : undefined}
+		<>
+			<SectionList
+				className="flex-1"
+				contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_SPACE }}
+				sections={groupByDay(filterRows(list.rows, filter))}
+				keyExtractor={(row) => row.id}
+				stickySectionHeadersEnabled={false}
+				ListHeaderComponent={header}
+				ListEmptyComponent={
+					<View>
+						<Text className="mt-[22px] text-sm text-muted-foreground">
+							Aún no hay {filter === "Todos" ? "movimientos" : filter.toLowerCase()} en este ciclo.
+						</Text>
+						{filter === "Todos" && canRegister ? (
+							<View className="mt-4">
+								<Button label="Registrar gasto" onPress={() => router.push("/register")} />
+							</View>
+						) : null}
+					</View>
+				}
+				renderSectionHeader={({ section }) => (
+					<View className="mt-[22px] flex-row items-baseline justify-between gap-2.5">
+						<Text className="shrink text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+							{formatDayHeading(section.title, today)}
+						</Text>
+						<Text className="shrink-0 font-mono text-[13px] text-muted-foreground">
+							{signedAmount(dayTotalCents(section.data))}
+						</Text>
+					</View>
+				)}
+				renderItem={({ item }) => {
+					const action = rowAction(item, { space, household });
+					return (
+						<MovementRow
+							row={item}
+							goalName={goals.find((goal) => goal.id === item.goalId)?.name ?? null}
+							onPress={action ? () => open(item, action) : undefined}
+						/>
+					);
+				}}
+			/>
+			<BottomSheet isPresented={editing !== null} onDismiss={() => setEditingId(null)}>
+				{editing ? (
+					<EditSavingSheet
+						key={editing.id}
+						space={space}
+						row={editing}
+						fund={fund}
+						goals={goals}
+						savingsCents={home.savingsCents}
+						// An answer that comes after this sheet closed must not close the next one.
+						onDone={() => setEditingId((current) => (current === editing.id ? null : current))}
 					/>
-				);
-			}}
-		/>
+				) : null}
+			</BottomSheet>
+		</>
 	);
 }
 
@@ -131,7 +158,8 @@ export function MovementsScreen() {
 				<EmptyPersonal />
 			) : (
 				<LoadBoundary message="No pudimos cargar tus movimientos." fallback={<MovementsSkeleton />}>
-					<MovementsList space={space} today={today} />
+					{/* A new space or day remounts the list: an open sheet never writes to the wrong one. */}
+					<MovementsList key={`${space}-${today}`} space={space} today={today} />
 				</LoadBoundary>
 			)}
 		</View>

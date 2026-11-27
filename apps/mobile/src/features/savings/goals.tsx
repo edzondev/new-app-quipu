@@ -1,5 +1,4 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
-import { FREE_PERSONAL_GOAL_CAP } from "@quipu/backend/shared/billing";
 import type { FunctionReturnType } from "convex/server";
 import { Pressable, Text, View } from "react-native";
 import Check from "reicon-react-native/icons/Check";
@@ -15,20 +14,38 @@ type Goal = FunctionReturnType<typeof api.goals.list>[number];
 
 const GOAL_COLORS = ["wants", "needs", "savings"] as const;
 
-function GoalCard({ goal, index, locked }: { goal: Goal; index: number; locked: boolean }) {
+/** Tapping the card opens «Editar meta» (decided 25 nov); «Aportar» stays while the goal is not reached. */
+function GoalCard({
+	goal,
+	index,
+	onContribute,
+	onEdit,
+}: {
+	goal: Goal;
+	index: number;
+	onContribute: () => void;
+	onEdit: () => void;
+}) {
 	const foreground = useThemeColor("--color-foreground");
 	const color = ENVELOPE_DOT[GOAL_COLORS[index % GOAL_COLORS.length]];
 	const savings = useThemeColor("--color-envelope-savings");
 	const done = goal.savedCents >= goal.targetCents;
-	const readOnly = locked && !done;
-	const line = readOnly
-		? "Activa Plus para aportar"
-		: done
-			? "Meta alcanzada"
-			: `${targetMonthLabel(goal.targetMonth)} · faltan S/ ${wholeSoles(missingCents(goal.savedCents, goal.targetCents))}`;
+	const line = done
+		? "Meta alcanzada"
+		: `${targetMonthLabel(goal.targetMonth)} · faltan S/ ${wholeSoles(missingCents(goal.savedCents, goal.targetCents))}`;
 
 	return (
-		<View className="mb-2.5 rounded-[22px] bg-muted px-4 py-3.5">
+		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={`Editar meta ${goal.name}`}
+			// TalkBack reads the card as one button, so its «Aportar» is offered as an action of it.
+			accessibilityActions={done ? [] : [{ name: "contribute", label: "Aportar" }]}
+			onAccessibilityAction={(event) => {
+				if (event.nativeEvent.actionName === "contribute") onContribute();
+			}}
+			onPress={onEdit}
+			className="mb-2.5 rounded-[22px] bg-muted px-4 py-3.5 active:opacity-80"
+		>
 			<View className="flex-row items-center justify-between gap-2">
 				<View className="min-w-0 flex-1">
 					<View className="flex-row items-center gap-2.5">
@@ -49,16 +66,11 @@ function GoalCard({ goal, index, locked }: { goal: Goal; index: number; locked: 
 						<Check size={14} color={savings} />
 						<Text className="text-[13px] font-semibold text-envelope-savings">Lista</Text>
 					</View>
-				) : readOnly ? (
-					<Text className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-						Solo lectura
-					</Text>
 				) : (
 					<Pressable
 						accessibilityRole="button"
 						accessibilityLabel={`Aportar a ${goal.name}`}
-						// Luego: hoja G2
-						onPress={() => {}}
+						onPress={onContribute}
 						className="min-h-11 shrink-0 flex-row items-center gap-1 active:opacity-60"
 					>
 						<Plus size={14} color={foreground} />
@@ -77,18 +89,20 @@ function GoalCard({ goal, index, locked }: { goal: Goal; index: number; locked: 
 					fill={color}
 				/>
 			</View>
-		</View>
+		</Pressable>
 	);
 }
 
 export function Goals({
 	goals,
-	hasPlus,
 	onNewGoal,
+	onContribute,
+	onEdit,
 }: {
 	goals: Goal[];
-	hasPlus: boolean;
 	onNewGoal: () => void;
+	onContribute: (id: Goal["id"]) => void;
+	onEdit: (id: Goal["id"]) => void;
 }) {
 	return (
 		<View className="mt-[22px]">
@@ -116,7 +130,8 @@ export function Goals({
 						key={goal.id}
 						goal={goal}
 						index={index}
-						locked={!hasPlus && index >= FREE_PERSONAL_GOAL_CAP}
+						onContribute={() => onContribute(goal.id)}
+						onEdit={() => onEdit(goal.id)}
 					/>
 				))
 			)}

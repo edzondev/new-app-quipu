@@ -46,7 +46,7 @@ describe("canEdit", () => {
 		expect(canEdit(row({ kind: "expense", mine: false }), "household")).toBe(false);
 	});
 
-	it("leaves ahorros and retiros to Ahorros", () => {
+	it("Registrar does not open ahorros or retiros: they have their own sheet", () => {
 		expect(canEdit(row({ kind: "saving" }), "personal")).toBe(false);
 		expect(canEdit(row({ kind: "withdrawal" }), "personal")).toBe(false);
 	});
@@ -64,7 +64,33 @@ describe("rowAction", () => {
 
 	it("does nothing for what you cannot edit", () => {
 		expect(rowAction(row({ mine: false }), noHousehold)).toBeNull();
-		expect(rowAction(row({ kind: "saving" }), noHousehold)).toBeNull();
+	});
+
+	it("your own ahorro or retiro opens Aportar or Retirar in edit mode", () => {
+		expect(rowAction(row({ kind: "saving" }), noHousehold)).toBe("editSaving");
+		expect(rowAction(row({ kind: "withdrawal" }), noHousehold)).toBe("editSaving");
+	});
+
+	it("an ahorro or retiro of the other person does nothing", () => {
+		const space = { space: "household" as const, household: plusOn };
+		expect(rowAction(row({ kind: "saving", mine: false }), space)).toBeNull();
+		expect(rowAction(row({ kind: "withdrawal", mine: false }), space)).toBeNull();
+	});
+
+	it("in Nuestro espacio your ahorro or retiro is edited with Plus and opens Plus without it", () => {
+		for (const kind of ["saving", "withdrawal"] as const) {
+			expect(rowAction(row({ kind }), { space: "household", household: plusOn })).toBe(
+				"editSaving",
+			);
+			expect(rowAction(row({ kind }), { space: "household", household: plusOff })).toBe("plus");
+		}
+	});
+
+	it("in Nuestro espacio an ahorro waits for the household and does nothing without one", () => {
+		expect(rowAction(row({ kind: "saving" }), { space: "household", household: undefined })).toBe(
+			null,
+		);
+		expect(rowAction(row({ kind: "saving" }), { space: "household", household: null })).toBeNull();
 	});
 
 	it("in Nuestro espacio without Plus, your gasto or ingreso opens Plus", () => {
