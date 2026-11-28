@@ -1,11 +1,109 @@
 import { type ReactNode, useState } from "react";
-import { Modal, Pressable, Text, useWindowDimensions, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 import { QuipuLogo } from "@/components/quipu-logo";
 import { Button } from "@/components/ui/button";
 import { useThemeColor } from "@/lib/use-theme-color";
-import { CordsBand } from "./cords-band";
-import { BanksIcon, DayNumberIcon, EnvelopesIcon, GoalsIcon } from "./welcome-icons";
+
+function LineIcon({ children }: { children: ReactNode }) {
+	const stroke = useThemeColor("--color-foreground");
+
+	return (
+		<Svg
+			width={20}
+			height={20}
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke={stroke}
+			strokeWidth={1.6}
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			{children}
+		</Svg>
+	);
+}
+
+function EnvelopesIcon() {
+	return (
+		<LineIcon>
+			<Path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+			<Path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+		</LineIcon>
+	);
+}
+
+function GoalsIcon() {
+	return (
+		<LineIcon>
+			<Circle cx={12} cy={12} r={10} />
+			<Circle cx={12} cy={12} r={6} />
+			<Circle cx={12} cy={12} r={2} />
+		</LineIcon>
+	);
+}
+
+function DayNumberIcon() {
+	return (
+		<LineIcon>
+			<Circle cx={12} cy={12} r={10} />
+			<Path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8M12 18V6" />
+		</LineIcon>
+	);
+}
+
+function BanksIcon() {
+	return (
+		<LineIcon>
+			<Path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z" />
+		</LineIcon>
+	);
+}
+
+const CORDS = [
+	{ d: "M-45 50C40-45 65 15 96 66s45 54 68 12S200-16 250 2s110 45 240 0", token: "needs" },
+	{ d: "M-45 76C35-17 56 46 80 91s50 57 77 9S204 10 249 26s110 45 240 0", token: "wants" },
+	{ d: "M-45 102C27 7 48 71 66 116s49 57 78 11S207 36 252 52s110 45 240 0", token: "savings" },
+] as const;
+
+function CordsBand() {
+	const colors = {
+		needs: useThemeColor("--color-envelope-needs"),
+		wants: useThemeColor("--color-envelope-wants"),
+		savings: useThemeColor("--color-envelope-savings"),
+	};
+
+	return (
+		<Svg
+			style={StyleSheet.absoluteFill}
+			viewBox="0 0 440 128"
+			preserveAspectRatio="xMidYMid slice"
+			accessibilityElementsHidden
+		>
+			{CORDS.map(({ d, token }) => (
+				<Path
+					key={token}
+					d={d}
+					fill="none"
+					stroke={colors[token]}
+					strokeWidth={10}
+					strokeLinecap="round"
+				/>
+			))}
+			<Ellipse
+				cx={108}
+				cy={83}
+				rx={8}
+				ry={10}
+				rotation={-28}
+				origin="108, 83"
+				fill={colors.needs}
+			/>
+			<Ellipse cx={353} cy={51} rx={8} ry={10} rotation={10} origin="353, 51" fill={colors.wants} />
+			<Ellipse cx={352} cy={77} rx={8} ry={10} fill={colors.savings} />
+		</Svg>
+	);
+}
 
 function Point({ icon, title, detail }: { icon: ReactNode; title: string; detail?: string }) {
 	return (

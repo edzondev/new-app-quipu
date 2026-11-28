@@ -2,7 +2,7 @@ import type { api } from "@quipu/backend/convex/_generated/api";
 import { ENVELOPE_LABELS, formatCents } from "@quipu/backend/shared/budget";
 import { monthName } from "@quipu/backend/shared/dates";
 import type { FunctionReturnType } from "convex/server";
-import { REASON_LABELS } from "@/features/savings/withdraw-form";
+import { REASON_LABELS } from "@/features/savings/savings";
 
 export type Row = FunctionReturnType<typeof api.transactions.list>["rows"][number];
 type Envelope = NonNullable<Row["envelope"]>;

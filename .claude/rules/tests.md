@@ -23,8 +23,8 @@ Backend: Vitest en `packages/backend` (`pnpm --filter @quipu/backend test`). Mó
 
 ## Móvil (Vitest, solo lógica pura)
 
-1. **Qué se prueba.** Funciones puras de dinero y reglas (`expense.ts`, `income.ts`, `today-spend.ts`, `movement-rows.ts`). El archivo y lo que importa no usan `react-native`, `expo-*` ni componentes; Vitest corre en Node. Si una función los necesita, sácala a su propio `.ts`.
-2. **Junto al archivo** (`expense.test.ts` al lado de `expense.ts`). Config en `apps/mobile/vitest.config.mts`; el alias `@/` apunta a `src`.
+1. **Qué se prueba.** Funciones puras de dinero y reglas (`register.ts`, `commitments.ts`, `savings.ts`, `today-spend.ts`, `movement-rows.ts`). El archivo y lo que importa no usan `react-native`, `expo-*` ni componentes; Vitest corre en Node. Si una función los necesita, sácala a la lógica pura de su módulo.
+2. **En `src/__tests__/`**, un archivo por cada `.ts` probado y con su nombre (`src/__tests__/register.test.ts` prueba `features/register/register.ts`). Importa con `@/`. Config en `apps/mobile/vitest.config.mts`; el alias `@/` apunta a `src`.
 3. **Sin casts ni ids inventados.** Las funciones piden solo los campos que leen (`Pick<Row, ...>`), así que una fila de prueba no necesita `id`.
 4. **Casos límite de plata.** Un centavo antes y después del borde, 0, montos con decimales, miles. La regla 2 de backend vale igual: rompe la línea y míralo fallar.
 5. **Sin tests de componentes, sin mocks de Convex y sin jest.** Lo que se ve lo prueba Edzon en el dispositivo.

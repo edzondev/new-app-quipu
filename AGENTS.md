@@ -20,7 +20,7 @@ This block is written and re-added by `turbo` before repository-scoped commands 
 ## Mapa
 
 - `apps/web`: TanStack Start, Router y Query, desplegada en Cloudflare. Rutas en `src/routes`, pantallas en `src/modules/<pantalla>`, piezas base de coss en `src/components/ui`.
-- `apps/mobile`: Expo Router, Uniwind y Convex. Rutas en `src/app`, pantallas en `src/features/<pantalla>`, piezas base en `src/components/ui`, tokens en `src/global.css`. Detección de gastos en `modules/quipu-detection`.
+- `apps/mobile`: Expo Router, Uniwind y Convex. Cada pantalla vive en su ruta de `src/app`; en `src/features/<módulo>` solo lo que usan varios archivos y la lógica pura del módulo; tests en `src/__tests__`; piezas base en `src/components/ui`, tokens en `src/global.css`. Detección de gastos en `modules/quipu-detection`.
 - `packages/backend`: Convex. Funciones en `convex/`, lógica compartida entre funciones en `convex/model/`, lógica pura (dinero, fechas, plan) en `shared/`, tests en `__tests__/`.
 - `docs/`: diseño, guías, auditoría y `estado.md`. Es local: no se versiona y no existe en un clon limpio.
 - `.claude/rules/`: reglas cortas por carpeta (`mobile.md`, `web-ui.md`, `web-rutas.md`, `backend.md`, `tests.md`).

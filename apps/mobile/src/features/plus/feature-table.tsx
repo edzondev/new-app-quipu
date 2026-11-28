@@ -6,7 +6,7 @@ import Check from "reicon-react-native/icons/Check";
 import HomeUser from "reicon-react-native/icons/HomeUser";
 import Target from "reicon-react-native/icons/Target";
 import { useThemeColor } from "@/lib/use-theme-color";
-import { PLUS_ROWS, type PlusFeature } from "./features";
+import { PLUS_ROWS, type PlusFeature } from "./plus";
 
 const ICONS: Record<PlusFeature, ComponentType<{ size?: number; color?: string }>> = {
 	space: HomeUser,
