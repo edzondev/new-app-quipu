@@ -1,20 +1,165 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
-import { NAME_MAX_LENGTH } from "@quipu/backend/shared/budget";
+import { formatCents, NAME_MAX_LENGTH, toCents, wholeSoles } from "@quipu/backend/shared/budget";
 import type { FunctionReturnType } from "convex/server";
 import { type ReactNode, useState } from "react";
 import { Keyboard, Pressable, Text, View } from "react-native";
+import AngleLeft from "reicon-react-native/icons/AngleLeft";
+import AngleRight from "reicon-react-native/icons/AngleRight";
 import { Button } from "@/components/ui/button";
+import { Chips } from "@/components/ui/chips";
+import { OptionList } from "@/components/ui/option-list";
 import { SheetHeader } from "@/components/ui/sheet-header";
 import { SheetViews } from "@/components/ui/sheet-views";
 import { TextField } from "@/components/ui/text-field";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
 import { DayRow } from "@/features/cycle/day-row";
 import { MoneyField } from "@/features/onboarding/money-field";
 import { PlusContent } from "@/features/plus/plus-sheet";
-import { ConfirmView, WarningLink, WarningText } from "./confirm-view";
-import { goalDraft, type GoalDraft, goalFields, removeGoalText, singleLine } from "./goal-form";
-import { GoalMonthList } from "./goal-month-list";
-import { targetMonthLabel } from "./goal-progress";
+import { useThemeColor } from "@/lib/use-theme-color";
+import { ConfirmView, WarningText } from "./confirm-view";
+import {
+	goalDraft,
+	type GoalDraft,
+	goalFields,
+	monthOptions,
+	removeGoalText,
+	singleLine,
+	targetMonthLabel,
+} from "./savings";
 import { useSavingActions } from "./use-saving-actions";
+
+function YearButton({
+	label,
+	disabled,
+	onPress,
+	children,
+}: {
+	label: string;
+	disabled: boolean;
+	onPress: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			accessibilityState={{ disabled }}
+			disabled={disabled}
+			onPress={onPress}
+			className={`size-11 items-center justify-center active:opacity-60 ${disabled ? "opacity-40" : ""}`}
+		>
+			{children}
+		</Pressable>
+	);
+}
+
+/** «¿Para cuándo?» (its title is in the sheet header): one year at a time, from this one on, like the web's month grid. Past months are not offered. */
+function GoalMonthList({
+	value,
+	today,
+	onPick,
+}: {
+	value: string;
+	today: string;
+	onPick: (month: string) => void;
+}) {
+	const foreground = useThemeColor("--color-foreground");
+	const thisYear = Number(today.slice(0, 4));
+	// Starts on the chosen month's year; one already past starts on this year.
+	const [year, setYear] = useState(Math.max(thisYear, Number(value.slice(0, 4)) || thisYear));
+
+	return (
+		<View>
+			<View className="mt-1.5 flex-row items-center justify-between">
+				<YearButton
+					label="Año anterior"
+					disabled={year <= thisYear}
+					onPress={() => setYear(year - 1)}
+				>
+					<AngleLeft size={20} color={foreground} />
+				</YearButton>
+				<Text className="font-mono text-base text-foreground">{year}</Text>
+				<YearButton label="Año siguiente" disabled={false} onPress={() => setYear(year + 1)}>
+					<AngleRight size={20} color={foreground} />
+				</YearButton>
+			</View>
+			<OptionList options={monthOptions(year, today)} value={value} onPick={onPick} />
+		</View>
+	);
+}
+
+/** G6: opens with the goal, or with the suggestion when there is none. Nuestro espacio has no suggestion. */
+export function FundGoalSheet({
+	space,
+	fundGoalCents,
+	suggestedCents,
+	onDone,
+}: {
+	space: "personal" | "household";
+	fundGoalCents: number | null;
+	suggestedCents: number | null;
+	onDone: () => void;
+}) {
+	const initial = fundGoalCents ?? suggestedCents;
+	const [amount, setAmount] = useState(initial ? formatCents(initial) : "");
+	const [removing, setRemoving] = useState(false);
+	const actions = useSavingActions(space);
+	const targetCents = toCents(amount);
+
+	async function save(cents: number | null) {
+		if (await actions.run({ kind: "setFundGoal", targetCents: cents })) onDone();
+	}
+
+	if (removing) {
+		return (
+			<ConfirmView
+				title="¿Quitar la meta?"
+				body="Tener un fondo de emergencia te protege. Tu plata se queda en el fondo."
+				confirmLabel="Quitar"
+				cancelLabel="Mantener meta"
+				pending={actions.pending}
+				error={actions.error}
+				onConfirm={() => void save(null)}
+				onCancel={() => setRemoving(false)}
+			/>
+		);
+	}
+
+	return (
+		<View>
+			<SheetHeader title="Meta del fondo" />
+			<View className="mt-2">
+				<MoneyField large label="Meta del fondo" value={amount} onChange={setAmount} />
+			</View>
+			{suggestedCents ? (
+				<>
+					<View className="mt-3.5">
+						<Chips
+							options={[`3 meses de Necesidades · S/ ${wholeSoles(suggestedCents)}`]}
+							selectedIndex={-1}
+							onChange={() => setAmount(formatCents(suggestedCents))}
+						/>
+					</View>
+					<Text className="mt-3 text-[13px] leading-[19px] text-muted-foreground">
+						Sugerimos 3 meses de lo que gastas en Necesidades. Puedes poner otra cifra.
+					</Text>
+				</>
+			) : null}
+			<WarningText>{actions.error}</WarningText>
+			<View className="mt-[18px] mb-2">
+				<Button
+					label="Guardar meta"
+					loading={actions.pending}
+					disabled={targetCents <= 0}
+					onPress={() => void save(targetCents)}
+				/>
+				{fundGoalCents ? (
+					<WarningTextButton label="Quitar meta" onPress={() => setRemoving(true)} />
+				) : null}
+			</View>
+		</View>
+	);
+}
 
 type Goal = FunctionReturnType<typeof api.goals.list>[number];
 
@@ -136,16 +281,6 @@ export function GoalSheet({
 							accessibilityLabel={`Para cuándo, ${targetMonthLabel(draft.month || null)}. Cambiar`}
 							onPress={() => setView("month")}
 						/>
-						{draft.month ? (
-							<Pressable
-								accessibilityRole="button"
-								accessibilityLabel="Quitar el mes"
-								onPress={() => change({ month: "" })}
-								className="min-h-11 justify-center self-start active:opacity-60"
-							>
-								<Text className="text-[13px] text-muted-foreground underline">Quitar</Text>
-							</Pressable>
-						) : null}
 						<WarningText>{actions.error}</WarningText>
 						<View className="mt-[18px] mb-2">
 							<Button
@@ -153,7 +288,9 @@ export function GoalSheet({
 								loading={actions.pending}
 								onPress={() => void save()}
 							/>
-							{goal ? <WarningLink label="Borrar meta" onPress={() => setView("remove")} /> : null}
+							{goal ? (
+								<WarningTextButton label="Borrar meta" onPress={() => setView("remove")} />
+							) : null}
 						</View>
 					</View>
 				)}

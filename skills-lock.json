@@ -79,11 +79,32 @@
 			"skillPath": "skills/ponytail-review/SKILL.md",
 			"computedHash": "fe7b781db99ce79d931cdc798b3fbccd84b82538de4a3fc5f6d9d466946d1458"
 		},
+		"react-native-best-practices": {
+			"source": "callstackincubator/agent-skills",
+			"commit": "59e9d17446a248b21d86f078fcd0bd2d36db1ca4",
+			"sourceType": "github",
+			"skillPath": "skills/react-native-best-practices/SKILL.md",
+			"computedHash": "03a527a04426ca72763396170997a51d6d07600100a549f09915a6b4e8dc10c1"
+		},
+		"typescript-best-practices": {
+			"source": "backnotprop/pstack",
+			"commit": "10a29379878504c75efb8ccefa8a2c06d2376341",
+			"sourceType": "github",
+			"skillPath": "skills/typescript-best-practices/SKILL.md",
+			"computedHash": "564c9de7156671d091801311af1bff19dabdcac091d1b159a1a82b8f2f5712d6"
+		},
 		"uniwind": {
 			"source": "uni-stack/uniwind",
 			"sourceType": "github",
 			"skillPath": "skills/uniwind/SKILL.md",
 			"computedHash": "87c76535f791a5acb7ad0f2e59cfe194ea1e6c16edfc463d4e1993f2d1f2a8b7"
+		},
+		"vercel-react-best-practices": {
+			"source": "vercel-labs/agent-skills",
+			"commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
+			"sourceType": "github",
+			"skillPath": "skills/react-best-practices/SKILL.md",
+			"computedHash": "7991ed4fbecdac23f47c1a40c243e00a212a9e7f3604db93959b3ae11dffe299"
 		}
 	}
 }

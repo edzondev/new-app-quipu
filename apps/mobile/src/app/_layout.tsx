@@ -16,9 +16,16 @@ import { ensureReminder } from "../../modules/quipu-detection";
 // (tabs) siempre queda debajo: un enlace directo a /register o /detection tiene a dónde volver.
 export const unstable_settings = { anchor: "(tabs)" };
 
-const registerOptions = {
+const sheetOptions = {
 	presentation: "transparentModal",
 	animation: "none",
+} as const;
+
+// A long form covers the tabs and rises from below. On iOS only ✕ closes it, so unsaved changes always ask.
+const fullScreenFormOptions = {
+	presentation: "fullScreenModal",
+	animation: "slide_from_bottom",
+	gestureEnabled: false,
 } as const;
 
 function Screens() {
@@ -47,8 +54,8 @@ function Screens() {
 			<Stack.Protected guard={isAuthenticated} redirectTo="/sign-in">
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-				<Stack.Screen name="register" options={registerOptions} />
-				<Stack.Screen name="plus" options={registerOptions} />
+				<Stack.Screen name="register" options={fullScreenFormOptions} />
+				<Stack.Screen name="plus" options={sheetOptions} />
 				<Stack.Screen name="detection" />
 				<Stack.Screen name="settings/index" />
 				<Stack.Screen name="settings/security" />

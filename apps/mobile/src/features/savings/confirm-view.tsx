@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 
 /** An amber line under a field or a button: the backend's message or a check that failed. */
@@ -8,19 +8,6 @@ export function WarningText({ children }: { children: string | null }) {
 		<Text accessibilityRole="alert" className="mt-3 text-[13px] text-warning-foreground">
 			{children}
 		</Text>
-	);
-}
-
-/** «Eliminar», «Borrar meta» or «Quitar meta» under the main button, like «Borrar compromiso». */
-export function WarningLink({ label, onPress }: { label: string; onPress: () => void }) {
-	return (
-		<Pressable
-			accessibilityRole="button"
-			onPress={onPress}
-			className="mt-3.5 min-h-11 items-center justify-center active:opacity-60"
-		>
-			<Text className="text-[13.5px] font-medium text-warning-foreground underline">{label}</Text>
-		</Pressable>
 	);
 }
 
