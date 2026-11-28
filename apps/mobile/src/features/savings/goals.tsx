@@ -44,7 +44,7 @@ function GoalCard({
 				if (event.nativeEvent.actionName === "contribute") onContribute();
 			}}
 			onPress={onEdit}
-			className="mb-2.5 rounded-[22px] bg-muted px-4 py-3.5 active:opacity-80"
+			className="border-b border-border py-3.5 active:opacity-80"
 		>
 			<View className="flex-row items-center justify-between gap-2">
 				<View className="min-w-0 flex-1">
@@ -136,7 +136,7 @@ export function Goals({
 				))
 			)}
 			{goals.length === 0 ? null : (
-				<View className="mt-1.5">
+				<View className="mt-3.5">
 					<Button label="Nueva meta" variant="secondary" onPress={onNewGoal} />
 				</View>
 			)}

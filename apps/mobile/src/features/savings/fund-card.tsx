@@ -27,7 +27,7 @@ export function FundCard({
 	const percent = fundGoalCents ? goalPercent(fundCents, fundGoalCents) : null;
 
 	return (
-		<View className="mt-3 rounded-[22px] bg-muted px-4 py-3.5">
+		<View className="mt-3 border-b border-border py-3.5">
 			<View className="flex-row items-center justify-between gap-2">
 				<Text className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
 					Fondo de emergencia
