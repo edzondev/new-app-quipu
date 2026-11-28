@@ -2,7 +2,7 @@ import type { api } from "@quipu/backend/convex/_generated/api";
 import { NAME_MAX_LENGTH } from "@quipu/backend/shared/budget";
 import type { FunctionReturnType } from "convex/server";
 import { type ReactNode, useState } from "react";
-import { Keyboard, Pressable, Text, View } from "react-native";
+import { Keyboard, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { SheetHeader } from "@/components/ui/sheet-header";
 import { SheetViews } from "@/components/ui/sheet-views";
@@ -138,14 +138,7 @@ export function GoalSheet({
 							onPress={() => setView("month")}
 						/>
 						{draft.month ? (
-							<Pressable
-								accessibilityRole="button"
-								accessibilityLabel="Quitar el mes"
-								onPress={() => change({ month: "" })}
-								className="min-h-11 justify-center self-start active:opacity-60"
-							>
-								<Text className="text-[13px] text-muted-foreground underline">Quitar</Text>
-							</Pressable>
+							<WarningTextButton label="Quitar" onPress={() => change({ month: "" })} />
 						) : null}
 						<WarningText>{actions.error}</WarningText>
 						<View className="mt-[18px] mb-2">
