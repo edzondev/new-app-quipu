@@ -6,10 +6,11 @@ import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Chips } from "@/components/ui/chips";
 import { SheetHeader } from "@/components/ui/sheet-header";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
 import type { Row } from "@/features/movements/movement-rows";
 import { MoneyField } from "@/features/onboarding/money-field";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
-import { ConfirmView, WarningLink, WarningText } from "./confirm-view";
+import { ConfirmView, WarningText } from "./confirm-view";
 import {
 	contributeAvailable,
 	contributeCents,
@@ -127,7 +128,7 @@ export function ContributeSheet({
 					disabled={cents === null}
 					onPress={() => void save()}
 				/>
-				{editing ? <WarningLink label="Eliminar" onPress={() => setDeleting(true)} /> : null}
+				{editing ? <WarningTextButton label="Eliminar" onPress={() => setDeleting(true)} /> : null}
 			</View>
 		</View>
 	);

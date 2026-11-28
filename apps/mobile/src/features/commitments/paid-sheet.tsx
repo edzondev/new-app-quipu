@@ -4,7 +4,8 @@ import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { SheetHeader } from "@/components/ui/sheet-header";
-import { RemoveConfirm, RemoveLink } from "@/features/commitments/commitment-actions";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
+import { RemoveConfirm } from "@/features/commitments/commitment-actions";
 import { paidBeforeLine } from "@/features/commitments/commitment-text";
 
 type Item = FunctionReturnType<typeof api.commitments.list>["items"][number];
@@ -42,7 +43,7 @@ export function PaidSheet({
 				S/ {formatCents(item.amountCents)}
 			</Text>
 			<View className="my-2">
-				<RemoveLink onPress={() => setRemoving(true)} />
+				<WarningTextButton label="Borrar compromiso" onPress={() => setRemoving(true)} />
 			</View>
 		</View>
 	);

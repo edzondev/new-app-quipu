@@ -14,6 +14,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { SheetHeader } from "@/components/ui/sheet-header";
 import { SheetViews } from "@/components/ui/sheet-views";
 import { TextField } from "@/components/ui/text-field";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
 import {
 	type CommitmentDraft,
 	commitmentFields,
@@ -29,7 +30,6 @@ import {
 	DueMonthList,
 	DueMonthRow,
 	RemoveConfirm,
-	RemoveLink,
 } from "@/features/commitments/commitment-actions";
 import { useCommitmentActions } from "@/features/commitments/use-commitment-actions";
 import { DayRow } from "@/features/cycle/day-row";
@@ -220,7 +220,9 @@ export function CommitmentSheet({
 						loading={actions.pending}
 						onPress={() => void save()}
 					/>
-					{item ? <RemoveLink onPress={() => setPicking("remove")} /> : null}
+					{item ? (
+						<WarningTextButton label="Borrar compromiso" onPress={() => setPicking("remove")} />
+					) : null}
 				</View>
 			</View>
 		);

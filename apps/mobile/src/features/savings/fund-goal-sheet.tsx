@@ -4,8 +4,9 @@ import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Chips } from "@/components/ui/chips";
 import { SheetHeader } from "@/components/ui/sheet-header";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
 import { MoneyField } from "@/features/onboarding/money-field";
-import { ConfirmView, WarningLink, WarningText } from "./confirm-view";
+import { ConfirmView, WarningText } from "./confirm-view";
 import { useSavingActions } from "./use-saving-actions";
 
 /** G6: opens with the goal, or with the suggestion when there is none. Nuestro espacio has no suggestion. */
@@ -74,7 +75,7 @@ export function FundGoalSheet({
 					onPress={() => void save(targetCents)}
 				/>
 				{fundGoalCents ? (
-					<WarningLink label="Quitar meta" onPress={() => setRemoving(true)} />
+					<WarningTextButton label="Quitar meta" onPress={() => setRemoving(true)} />
 				) : null}
 			</View>
 		</View>

@@ -5,10 +5,12 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { FullScreenForm } from "@/components/ui/full-screen-form";
 import { SectionLabel } from "@/components/ui/section-label";
 import { Segmented } from "@/components/ui/segmented";
-import { SheetHeader } from "@/components/ui/sheet-header";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
 import type { DetectedDraft } from "@/features/detection/params";
 import type { Row } from "@/features/movements/movement-rows";
 import { AporteFields } from "@/features/register/aporte-fields";
@@ -34,6 +36,7 @@ import { NoteField } from "@/features/register/note-field";
 import { type MovementKind, NOUNS } from "@/features/register/movement-kind";
 import { type SaveValues, useMovementActions } from "@/features/register/use-movement-actions";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
+import { hasChanges } from "@/lib/has-changes";
 import { useThemeColor } from "@/lib/use-theme-color";
 
 type Home = FunctionReturnType<typeof api.balances.getHome>;
@@ -52,7 +55,7 @@ function initialKind(editing: Row | null, detected: DetectedDraft | null): Movem
 	return kind === "income" || kind === "contribution" ? kind : "expense";
 }
 
-function sheetTitle(detected: DetectedDraft | null, editing: Row | null) {
+function formTitle(detected: DetectedDraft | null, editing: Row | null) {
 	if (editing) {
 		if (editing.kind === "income") return "Editar ingreso";
 		return editing.kind === "contribution" ? "Editar aporte" : "Editar gasto";
@@ -94,6 +97,10 @@ export function RegisterForm({
 	const actions = useMovementActions();
 	const muted = useThemeColor("--color-muted-foreground");
 	const amountCents = toCents(amount);
+	const draft = { kind, amount, note, envelope, toEnvelope, income };
+	// The first render's draft: what the form opened with.
+	const [initial] = useState(draft);
+	const changed = hasChanges(initial, draft);
 
 	const kinds = household ? KINDS_WITH_APORTE : KINDS;
 	const isNewIncome = kind === "income" && !editing;
@@ -148,22 +155,30 @@ export function RegisterForm({
 		if (editing && (await actions.remove(kind, editing.id))) succeeded();
 	}
 
-	if (editing && deleting) {
-		return (
-			<DeleteFlow
-				row={editing}
-				kind={kind}
-				pending={actions.pending}
-				error={actions.error}
-				onCancel={() => setDeleting(false)}
-				onConfirm={() => void remove()}
-			/>
-		);
-	}
-
 	return (
-		<View>
-			<SheetHeader title={sheetTitle(detected, editing)} sub={detected?.bank} />
+		<FullScreenForm
+			title={formTitle(detected, editing)}
+			sub={detected?.bank}
+			changed={changed}
+			onClose={onClose}
+			footer={
+				<Button
+					label={
+						editing
+							? "Guardar cambios"
+							: kind === "contribution"
+								? "Aportar"
+								: saveLabel(cycles, income)
+					}
+					loading={actions.pending}
+					// A new income waits for the cycle: its window decides whether the cycle is asked.
+					disabled={
+						!canSaveAmount(amountCents) || (isNewIncome && !home) || (editing !== null && !changed)
+					}
+					onPress={() => void save()}
+				/>
+			}
+		>
 			{editing ? null : (
 				<View className="mt-2.5">
 					<Segmented
@@ -271,39 +286,27 @@ export function RegisterForm({
 				/>
 			) : null}
 
-			{editing ? (
-				<Pressable
-					accessibilityRole="button"
-					onPress={() => setDeleting(true)}
-					className="mt-3.5 min-h-11 items-center justify-center active:opacity-60"
-				>
-					<Text className="text-[13.5px] font-medium text-warning-foreground underline">
-						{`Eliminar ${NOUNS[kind]}`}
-					</Text>
-				</Pressable>
-			) : null}
-
 			{actions.error ? (
 				<Text accessibilityRole="alert" className="mt-3.5 text-[13px] text-warning-foreground">
 					{actions.error}
 				</Text>
 			) : null}
 
-			<View className="mt-[18px] mb-2">
-				<Button
-					label={
-						editing
-							? "Guardar cambios"
-							: kind === "contribution"
-								? "Aportar"
-								: saveLabel(cycles, income)
-					}
-					loading={actions.pending}
-					// A new income waits for the cycle: its window decides whether the cycle is asked.
-					disabled={!canSaveAmount(amountCents) || (isNewIncome && !home)}
-					onPress={() => void save()}
-				/>
-			</View>
-		</View>
+			{editing ? (
+				<>
+					<WarningTextButton label={`Eliminar ${NOUNS[kind]}`} onPress={() => setDeleting(true)} />
+					<BottomSheet isPresented={deleting} onDismiss={() => setDeleting(false)}>
+						<DeleteFlow
+							row={editing}
+							kind={kind}
+							pending={actions.pending}
+							error={actions.error}
+							onCancel={() => setDeleting(false)}
+							onConfirm={() => void remove()}
+						/>
+					</BottomSheet>
+				</>
+			) : null}
+		</FullScreenForm>
 	);
 }

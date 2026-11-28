@@ -6,10 +6,11 @@ import { Chips } from "@/components/ui/chips";
 import { SectionLabel } from "@/components/ui/section-label";
 import { SheetHeader } from "@/components/ui/sheet-header";
 import { TextField } from "@/components/ui/text-field";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
 import type { Row } from "@/features/movements/movement-rows";
 import { MoneyField } from "@/features/onboarding/money-field";
 import { ENVELOPE_DOT } from "@/lib/envelope-dot";
-import { ConfirmView, WarningLink, WarningText } from "./confirm-view";
+import { ConfirmView, WarningText } from "./confirm-view";
 import { singleLine } from "./goal-form";
 import { useSavingActions } from "./use-saving-actions";
 import {
@@ -122,7 +123,7 @@ export function WithdrawSheet({
 					disabled={!fields}
 					onPress={() => void save()}
 				/>
-				{editing ? <WarningLink label="Eliminar" onPress={() => setDeleting(true)} /> : null}
+				{editing ? <WarningTextButton label="Eliminar" onPress={() => setDeleting(true)} /> : null}
 			</View>
 		</View>
 	);

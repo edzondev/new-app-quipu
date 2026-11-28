@@ -1,7 +1,7 @@
 import type { api } from "@quipu/backend/convex/_generated/api";
 import { dueMonthTitle } from "@quipu/backend/shared/commitments";
 import type { FunctionReturnType } from "convex/server";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { OptionList } from "@/components/ui/option-list";
 import { monthDayOptions } from "@/features/commitments/commitment-form";
@@ -76,21 +76,6 @@ export function DueMonthList({
 			</View>
 			<ErrorLine error={actions.error} />
 		</View>
-	);
-}
-
-/** «Borrar compromiso» in amber under the save button, like «Eliminar gasto» in Registrar. */
-export function RemoveLink({ onPress }: { onPress: () => void }) {
-	return (
-		<Pressable
-			accessibilityRole="button"
-			onPress={onPress}
-			className="mt-3.5 min-h-11 items-center justify-center active:opacity-60"
-		>
-			<Text className="text-[13.5px] font-medium text-warning-foreground underline">
-				Borrar compromiso
-			</Text>
-		</Pressable>
 	);
 }
 

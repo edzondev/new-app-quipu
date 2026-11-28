@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { SheetHeader } from "@/components/ui/sheet-header";
 import { SheetViews } from "@/components/ui/sheet-views";
 import { TextField } from "@/components/ui/text-field";
+import { WarningTextButton } from "@/components/ui/warning-text-button";
 import { DayRow } from "@/features/cycle/day-row";
 import { MoneyField } from "@/features/onboarding/money-field";
 import { PlusContent } from "@/features/plus/plus-sheet";
-import { ConfirmView, WarningLink, WarningText } from "./confirm-view";
+import { ConfirmView, WarningText } from "./confirm-view";
 import { goalDraft, type GoalDraft, goalFields, removeGoalText, singleLine } from "./goal-form";
 import { GoalMonthList } from "./goal-month-list";
 import { targetMonthLabel } from "./goal-progress";
@@ -153,7 +154,9 @@ export function GoalSheet({
 								loading={actions.pending}
 								onPress={() => void save()}
 							/>
-							{goal ? <WarningLink label="Borrar meta" onPress={() => setView("remove")} /> : null}
+							{goal ? (
+								<WarningTextButton label="Borrar meta" onPress={() => setView("remove")} />
+							) : null}
 						</View>
 					</View>
 				)}

@@ -2,16 +2,12 @@ import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@quipu/backend/convex/_generated/api";
 import { getLimaDate } from "@quipu/backend/shared/dates";
 import { useQuery } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { useCloseScreen } from "@/components/ui/full-screen-form";
 import { type DetectedDraft, parseDetected } from "@/features/detection/params";
 import { canEdit } from "@/features/movements/movement-rows";
 import { RegisterForm } from "@/features/register/register-form";
-
-function close() {
-	router.back();
-}
 
 /**
  * Reads the cache that Inicio and Movimientos already filled, with the same keys: it opens no cycle and
@@ -31,8 +27,14 @@ function RegisterBody({
 	const { data: household } = useQuery(convexQuery(api.household.get, {}));
 	const { data: list } = useQuery(convexQuery(api.transactions.list, editId ? personal : "skip"));
 
-	const editing = list?.rows.find((row) => row.id === editId && canEdit(row, "personal")) ?? null;
-	// The row is still loading, or it is gone (just deleted here, or from another device): nothing to edit.
+	const found = list?.rows.find((row) => row.id === editId && canEdit(row, "personal")) ?? null;
+	// Gone (just deleted here, or from another device) or not editable: the screen closes.
+	const close = useCloseScreen(editId !== null && list !== undefined && !found);
+	// The last row found stays while the screen slides away, so the form does not blank out under it.
+	const [lastFound, setLastFound] = useState(found);
+	if (found !== null && found !== lastFound) setLastFound(found);
+	const editing = found ?? lastFound;
+	// The row is still loading: nothing to edit yet.
 	if (editId !== null && !editing) return null;
 
 	return (
@@ -52,12 +54,8 @@ export function RegisterScreen() {
 	const params = useLocalSearchParams();
 	const detected = parseDetected(params);
 	const editId = typeof params.edit === "string" ? params.edit : null;
-	// The day is read once, when the sheet opens: a change underneath must not wipe what is typed.
+	// The day is read once, when the screen opens: a change underneath must not wipe what is typed.
 	const [today] = useState(getLimaDate);
 
-	return (
-		<BottomSheet isPresented onDismiss={close}>
-			<RegisterBody today={today} editId={editId} detected={detected} />
-		</BottomSheet>
-	);
+	return <RegisterBody today={today} editId={editId} detected={detected} />;
 }
