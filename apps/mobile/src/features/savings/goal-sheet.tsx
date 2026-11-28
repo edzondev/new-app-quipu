@@ -137,9 +137,6 @@ export function GoalSheet({
 							accessibilityLabel={`Para cuándo, ${targetMonthLabel(draft.month || null)}. Cambiar`}
 							onPress={() => setView("month")}
 						/>
-						{draft.month ? (
-							<WarningTextButton label="Quitar" onPress={() => change({ month: "" })} />
-						) : null}
 						<WarningText>{actions.error}</WarningText>
 						<View className="mt-[18px] mb-2">
 							<Button

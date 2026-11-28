@@ -143,20 +143,7 @@ function GoalForm({ space, goal, draft, onClose, onNeedsPlus }: GoalFormProps) {
 
 					<form.Field name="month">
 						{(field) => (
-							<div>
-								<MonthField value={field.state.value} onChange={field.handleChange} today={today} />
-								{field.state.value ? (
-									<Button
-										type="button"
-										variant="link"
-										size="sm"
-										className="px-0 text-muted-foreground"
-										onClick={() => field.handleChange("")}
-									>
-										Quitar
-									</Button>
-								) : null}
-							</div>
+							<MonthField value={field.state.value} onChange={field.handleChange} today={today} />
 						)}
 					</form.Field>
 
